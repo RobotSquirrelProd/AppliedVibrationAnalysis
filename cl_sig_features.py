@@ -1,6 +1,10 @@
+import matplotlib.pyplot as plt
+import numpy as np
+import scipy.signal as sig
+
 class cl_sig_features:
     
-    """Class to manage signal features on scope data
+    """Class to manage signal features on scope data and other signals
     
     Example usage:
         cl_test = cl_sig_features(np.array([1.,2., 3.]),1.1) 
@@ -27,6 +31,7 @@ class cl_sig_features:
         self.__np_d_rpm = np.zeros_like(self.np_d_ch1)
         self.__d_thresh = np.NaN
         self.__d_events_per_rev = np.NaN
+        
         
     @property
     def np_d_ch1(self):
