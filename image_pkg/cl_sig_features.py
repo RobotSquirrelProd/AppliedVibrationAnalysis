@@ -1,8 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy.signal as sig
-from scipy.fft import rfft, rfftfreq
-import math
 
 class cl_sig_features:
     
@@ -162,7 +160,7 @@ class cl_sig_features:
     # Method for calculating the spectrum for a real signal
     def d_fft_real(self):
         """Calculate the half spectrum since this is a real-valued signal"""
-        d_y = rfft(self.np_d_ch1)
+        d_y = rfft(np_d_ch1)
         d_ws = rfftfreq(self.i_ns, 1./self.d_fs)
         return([d_ws, d_y])
     
