@@ -34,6 +34,8 @@ class cl_sig_features:
         self.__d_thresh = np.NaN
         self.__d_events_per_rev = np.NaN
         self.__str_eu = 'volts'
+        self.__str_plot_desc = 'Test Data'
+        self.ylim_tb = [0]
         
         
     @property
@@ -151,10 +153,20 @@ class cl_sig_features:
         """Events per revolution"""
         return self.__d_events_per_rev
 
+    @property 
+    def ylim_tb(self):
+        """Timebase vertical limits"""
+        return self.__ylim_tb
+        
     @property
     def str_eu(self):
         """Engineering unit descriptor"""
         return self.__str_eu
+        
+    @property
+    def str_plot_desc(self):
+        """Plot description"""
+        return self.__str_plot_desc
     
     @np_d_ch1.setter
     def np_d_ch1(self, np_d_ch1):
@@ -163,10 +175,24 @@ class cl_sig_features:
     @timebase_scale.setter
     def timebase_scale(self, timebase_scale):
         self.__timebase_scale = timebase_scale
-
+        
+    @ylim_tb.setter
+    def ylim_tb(self, ylim_tb):
+    
+        # Only use limits if they are valid
+        if len(ylim_tb) == 2:
+            self.__ylim_tb = ylim_tb;
+        else:
+            self.__ylim_tb = np.array([np.max(self.__np_d_ch1), np.min(self.__np_d_ch1)])
+            
+            
     @str_eu.setter
     def str_eu(self, str_eu):
         self.__str_eu = str_eu
+        
+    @str_plot_desc.setter
+    def str_plot_desc (self, str_plot_desc):
+        self.__str_plot_desc  = str_plot_desc 
 
 
     # Method for calculating the spectrum for a real signal
@@ -200,6 +226,8 @@ class cl_sig_features:
         plt.grid()
         plt.xlabel("Time, seconds")
         plt.ylabel("Channel output, " + self.__str_eu)
+        plt.ylim(self.__ylim_tb)
+        plt.title(self.__str_plot_desc + " Timebase")
         plt.legend(['as-aquired', self.str_filt_desc_short, 
             self.str_filt1_desc_short])
 
@@ -224,6 +252,7 @@ class cl_sig_features:
         plt.grid()
         plt.xlabel("Frequency, hertz")
         plt.ylabel("Channel amplitude, " + self.__str_eu)
+        plt.title(self.__str_plot_desc  + " Spectrum")
 
         # Save off the handle to the plot
         self.__plot_handle = plt.gcf()
@@ -251,7 +280,7 @@ class cl_sig_features:
         plt.xlabel('Time, seconds')
         plt.ylabel('Amplitude, ' + self.__str_eu)
         plt.legend(['as-aquired', 'eventtimes'])
-        plt.title('Amplitude and eventtimes vs. time')
+        plt.title(self.__str_plot_desc  + ' Amplitude and eventtimes vs. time')
         self.__plot_handle = plt.gcf()
         return [self.__plot_handle, self.__np_d_eventtimes]    
     
