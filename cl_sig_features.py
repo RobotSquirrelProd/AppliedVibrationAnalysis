@@ -33,6 +33,7 @@ class cl_sig_features:
         self.__np_d_rpm = np.zeros_like(self.np_d_ch1)
         self.__d_thresh = np.NaN
         self.__d_events_per_rev = np.NaN
+        self.__str_eu = 'volts'
         
         
     @property
@@ -149,6 +150,11 @@ class cl_sig_features:
     def d_events_per_rev(self):
         """Events per revolution"""
         return self.__d_events_per_rev
+
+    @property
+    def str_eu(self):
+        """Engineering unit descriptor"""
+        return self.__str_eu
     
     @np_d_ch1.setter
     def np_d_ch1(self, np_d_ch1):
@@ -158,12 +164,25 @@ class cl_sig_features:
     def timebase_scale(self, timebase_scale):
         self.__timebase_scale = timebase_scale
 
+    @str_eu.setter
+    def str_eu(self, str_eu):
+        self.__str_eu = str_eu
+
 
     # Method for calculating the spectrum for a real signal
     def d_fft_real(self):
         """Calculate the half spectrum since this is a real-valued signal"""
         d_y = rfft(self.np_d_ch1)
+        self.__i_ns_rfft = len(d_y)
+
+        # Scale the fft. I'm using the actual number
+        # of points to scale.
+        d_y = d_y/(self.__i_ns_rfft-1)
+
+        # Calculate the frequency scale
         d_ws = rfftfreq(self.i_ns, 1./self.d_fs)
+
+        # Return the values
         return([d_ws, d_y])
     
 
@@ -180,7 +199,7 @@ class cl_sig_features:
         plt.plot(self.d_time, self.np_d_ch1_filt1)
         plt.grid()
         plt.xlabel("Time, seconds")
-        plt.ylabel("Channel output, volts")
+        plt.ylabel("Channel output, " + self.__str_eu)
         plt.legend(['as-aquired', self.str_filt_desc_short, 
             self.str_filt1_desc_short])
         plt.show()
@@ -199,7 +218,7 @@ class cl_sig_features:
         plt.plot(self.__spec[0], np.abs(self.__spec[1]))
         plt.grid()
         plt.xlabel("Frequency, hertz")
-        plt.ylabel("Channel amplitude, volts")
+        plt.ylabel("Channel amplitude, " + self.__str_eu)
         plt.show()
         self.__plot_handle = plt.gcf()
         return [self.__plot_handle, self.__spec[0], self.__spec[1]]    
@@ -220,7 +239,7 @@ class cl_sig_features:
         plt.plot(self.__d_time, self.np_d_ch1)
         plt.plot(self.np_d_eventtimes, self.__np_d_eventvalue, "ok")
         plt.xlabel('Time, seconds')
-        plt.ylabel('Amplitude, volts')
+        plt.ylabel('Amplitude, ' + self.__str_eu)
         plt.legend(['as-aquired', 'eventtimes'])
         plt.title('Amplitude and eventtimes vs. time')
         self.__plot_handle = plt.gcf()
@@ -242,7 +261,7 @@ class cl_sig_features:
         ax1.plot(self.__d_time, self.np_d_ch1)
         ax2.plot(self.np_d_eventtimes, self.__np_d_rpm, "ok")
         ax1.set_xlabel('Time, seconds')
-        ax1.set_ylabel('Amplitude, volts')
+        ax1.set_ylabel('Amplitude, ' + self.__str_eu)
         ax2.set_ylabel('Event speed, RPM')
         plt.legend(['as-aquired', 'RPM'])
         plt.title('Amplitude and eventtimes vs. time')
