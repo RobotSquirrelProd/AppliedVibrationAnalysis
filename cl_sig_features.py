@@ -34,10 +34,16 @@ class cl_sig_features:
         self.__d_thresh = np.NaN
         self.__d_events_per_rev = np.NaN
         self.__str_eu = 'volts'
-        self.__str_plot_desc = 'Test Data'
+        self.str_plot_desc = 'Test Data'
         self.ylim_tb = [0]
+        self.b_spec_peak = False
         
         
+    @property
+    def b_spec_peak(self):
+        """Boolean set to true to label peak in spectrum"""
+        return self.__b_spec_peak
+    
     @property
     def np_d_ch1(self):
         """Numpy array containing the scope data"""
@@ -167,6 +173,10 @@ class cl_sig_features:
     def str_plot_desc(self):
         """Plot description"""
         return self.__str_plot_desc
+
+    @b_spec_peak.setter
+    def b_spec_peak(self, b_spec_peak):
+        self.__b_spec_peak = b_spec_peak
     
     @np_d_ch1.setter
     def np_d_ch1(self, np_d_ch1):
@@ -247,12 +257,23 @@ class cl_sig_features:
         handle to the plot
         """
         self.__spec = self.d_fft_real()
+        d_mag = np.abs(self.__spec[1])
         plt.figure()
-        plt.plot(self.__spec[0], np.abs(self.__spec[1]))
+        plt.plot(self.__spec[0], d_mag)
         plt.grid()
         plt.xlabel("Frequency, hertz")
         plt.ylabel("Channel amplitude, " + self.__str_eu)
         plt.title(self.__str_plot_desc  + " Spectrum")
+
+        # Annotate the peak
+        if self.__b_spec_peak:
+            idx_max = np.argmax(d_mag)
+            d_ws_peak = self.__spec[0][idx_max]
+            d_mag_peak = d_mag[idx_max]
+            plt.plot(d_ws_peak, d_mag_peak, 'ok')
+            str_label = ('%0.3f' % d_mag_peak + ' ' + self.__str_eu + ' @ ' + '%0.2f' % d_ws_peak + ' Hz')
+            plt.annotate(str_label, [d_ws_peak+(0.02 * (self.__spec[0][-1]-self.__spec[0][0])), d_mag_peak*0.95])
+            
 
         # Save off the handle to the plot
         self.__plot_handle = plt.gcf()
