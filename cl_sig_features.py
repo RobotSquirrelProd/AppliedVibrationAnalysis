@@ -202,8 +202,13 @@ class cl_sig_features:
         plt.ylabel("Channel output, " + self.__str_eu)
         plt.legend(['as-aquired', self.str_filt_desc_short, 
             self.str_filt1_desc_short])
-        plt.show()
+
+        # Save off the handle to the plot
         self.__plot_handle = plt.gcf()
+
+        # Show the plot, creating a new figure.
+        plt.show()
+        
         return self.__plot_handle    
     
     # Plotting method for single-sided (real signal) spectrum
@@ -219,8 +224,13 @@ class cl_sig_features:
         plt.grid()
         plt.xlabel("Frequency, hertz")
         plt.ylabel("Channel amplitude, " + self.__str_eu)
-        plt.show()
+
+        # Save off the handle to the plot
         self.__plot_handle = plt.gcf()
+
+        # Show the plot, creating a new figure.
+        plt.show()
+       
         return [self.__plot_handle, self.__spec[0], self.__spec[1]]    
     
     # Plotting method for the eventtimes
