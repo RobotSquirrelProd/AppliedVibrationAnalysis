@@ -304,7 +304,7 @@ class cl_sig_features:
         # Channel 2
         if self.__b_ch2:
             i_ch = 1
-            axs[i_ch].plot(self.d_time, self.np_d_ch1)
+            axs[i_ch].plot(self.d_time, self.np_d_ch2)
             axs[i_ch].grid()
             axs[i_ch].set_xlabel("Time, seconds")
             axs[i_ch].set_ylabel("Channel output, " + self.__str_eu)
