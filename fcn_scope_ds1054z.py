@@ -91,7 +91,7 @@ def b_setup_scope(scope_con, lst_ch_active = [True, False, False, False],
     if b_single:
         
         # Set the scope to capture after trigger
-        b_set_trigger(d_trigger_level)
+        b_set_trigger(scope_con, d_trigger_level)
         
     else:
         
