@@ -101,7 +101,11 @@ def b_setup_scope(scope_con, lst_ch_active = [True, False, False, False],
         
     return scope_con.get_channel_scale(1)
 
-
+# This one is a little tricky because it can take time to acquire the signal so there 
+# are pause statements to allow data to accumulate at the scope. If the acquisition 
+# terminates before the sampling is complete there will be NaN's in the list. In this 
+# case the NaN's are converte zeros to allow processing to continue. It can be helpful 
+# to see a partial waveform to troubleshoot timing at the scope.
 def d_get_data(scope_con, lst_ch_active = [True, False, False, False], timebase_scale=5e-2):
     """Get data from the scope
     

@@ -29,6 +29,12 @@ class cl_sig_features:
 
     def __init__(self, np_d_ch1, timebase_scale):
         self.__np_d_ch1 = np_d_ch1
+        self.__np_d_ch2 = []
+        self.__b_ch2 = False
+        self.__np_d_ch3 = []
+        self.__b_ch3 = False
+        self.__np_d_ch4 = []
+        self.__b_ch4 = False
         self.__timebase_scale = float(timebase_scale)
         self.__np_d_rpm = np.zeros_like(self.np_d_ch1)
         self.__d_thresh = np.NaN
@@ -43,7 +49,7 @@ class cl_sig_features:
     def b_spec_peak(self):
         """Boolean set to true to label peak in spectrum"""
         return self.__b_spec_peak
-    
+
     @property
     def np_d_ch1(self):
         """Numpy array containing the scope data"""
@@ -143,7 +149,22 @@ class cl_sig_features:
     def np_d_eventtimes(self):
         """Numpy array of trigger event times"""
         return self.__np_d_eventtimes
+        
+    @property
+    def np_d_ch2(self):
+        """Nump array of values for channel 2"""
+        return self.__np_d_ch2
     
+    @property
+    def np_d_ch3(self):
+        """Nump array of values for channel 3"""
+        return self.__np_d_ch3
+
+    @property
+    def np_d_ch4(self):
+        """Nump array of values for channel 4"""
+        return self.__np_d_ch4
+
     @property
     def d_thresh(self):
         """Trigger threshold value"""
@@ -182,6 +203,21 @@ class cl_sig_features:
     def np_d_ch1(self, np_d_ch1):
         self.__np_d_ch1 = np_d_ch1
 
+    @np_d_ch2.setter
+    def np_d_ch2(self, np_d_ch2):
+        self.__np_d_ch2 = np_d_ch2
+        self.__b_ch2 = True
+        
+    @np_d_ch3.setter
+    def np_d_ch3(self, np_d_ch3):
+        self.__np_d_ch3 = np_d_ch3 
+        self.__b_ch3 = True
+
+    @np_d_ch4.setter
+    def np_d_ch4(self, np_d_ch4):
+        self.__np_d_ch4 = np_d_ch4 
+        self.__b_ch4 = True
+        
     @timebase_scale.setter
     def timebase_scale(self, timebase_scale):
         self.__timebase_scale = timebase_scale
@@ -229,17 +265,56 @@ class cl_sig_features:
         Return values:
         handle to the plot
         """
-        plt.figure()
-        plt.plot(self.d_time, self.np_d_ch1)
-        plt.plot(self.d_time, self.np_d_ch1_filt)
-        plt.plot(self.d_time, self.np_d_ch1_filt1)
-        plt.grid()
-        plt.xlabel("Time, seconds")
-        plt.ylabel("Channel output, " + self.__str_eu)
-        plt.ylim(self.__ylim_tb)
-        plt.title(self.__str_plot_desc + " Timebase")
-        plt.legend(['as-aquired', self.str_filt_desc_short, 
+        
+        # How many plots, assuming 1 is given?
+        i_plots = 1
+        if self.__b_ch2:
+            i_plots += 1
+
+        if self.__b_ch3:
+            i_plots += 1
+
+        if self.__b_ch4:
+            i_plots += 1
+            
+            
+        # Figure with subplots
+        fig, axs = plt.subplots(i_plots)
+        fig.suptitle('Oscilloscope data')
+        
+        # Channel 1
+        i_ch = 0
+        
+        # Branching because a single axis is not scriptable
+        if i_plots > 1 :
+            ax1 = axs[i_ch]
+        else:
+            ax1 = axs
+        ax1.plot(self.d_time, self.np_d_ch1)
+        ax1.plot(self.d_time, self.np_d_ch1_filt)
+        ax1.plot(self.d_time, self.np_d_ch1_filt1)
+        ax1.grid()
+        ax1.set_xlabel("Time, seconds")
+        ax1.set_ylabel("Channel output, " + self.__str_eu)
+        ax1.set_ylim(self.__ylim_tb)
+        ax1.set_title(self.__str_plot_desc + " Timebase")
+        ax1.legend(['as-aquired', self.str_filt_desc_short, 
             self.str_filt1_desc_short])
+            
+        # Channel 2
+        if self.__b_ch2:
+            i_ch = 1
+            axs[i_ch].plot(self.d_time, self.np_d_ch1)
+            axs[i_ch].grid()
+            axs[i_ch].set_xlabel("Time, seconds")
+            axs[i_ch].set_ylabel("Channel output, " + self.__str_eu)
+            axs[i_ch].set_ylim(self.__ylim_tb)
+            axs[i_ch].set_title(self.__str_plot_desc + " Timebase")
+            axs[i_ch].legend(['as-aquired'])
+
+        
+        # Set the layout
+        plt.tight_layout()
 
         # Save off the handle to the plot
         self.__plot_handle = plt.gcf()
@@ -507,12 +582,33 @@ class cl_sig_features:
         """
         str_file = str_data_prefix + '_' '%03.0f' % idx_data + '.csv'
         file_data = open(str_file,'w+')
-        file_data.write('X,CH1,Start,Increment,\n')
-        str_line = 'Sequence,Volt,Volt,0.000000e-03,' + str(self.d_t_del)
-        file_data.write(str_line+'\n')
+        str_header = 'X,CH1,'
+        str_units = 'Sequence,Volt,'
+        if self.__b_ch2:
+            str_header = str_header + 'CH2,'
+            str_units = str_units + 'Volt,'
+        if self.__b_ch3:
+            str_header = str_header + 'CH3,'
+            str_units = str_units + 'Volt,'
+        if self.__b_ch4:
+            str_header = str_header + 'CH4,'
+            str_units = str_units + 'Volt,'
+        
+        str_header = str_header + 'Start,Increment,\n'
+        str_units = str_units + 'Volt,0.000000e-03,' + str(self.d_t_del)   +'\n'  
+        file_data.write(str_header)
+        file_data.write(str_units)
 
         for idx_line in range(0, self.i_ns):
-            str_line = str(idx_line) + ',' + '%0.5f' % self.np_d_ch1[idx_line] + ',' + ','
+            str_line = str(idx_line) + ',' + '%0.5f' % self.np_d_ch1[idx_line] + ',' 
+            if self.__b_ch2:
+                str_line = str_line + '%0.5f' % self.np_d_ch2[idx_line] + ','  
+            if self.__b_ch3:
+                str_line = str_line + '%0.5f' % self.np_d_ch3[idx_line] + ','  
+            if self.__b_ch4:
+                str_line = str_line + '%0.5f' % self.np_d_ch4[idx_line] + ','  
+    
+            str_line = str_line + ','
             file_data.write(str_line+'\n')
 
         file_data.close()
