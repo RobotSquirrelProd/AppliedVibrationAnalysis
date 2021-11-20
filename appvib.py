@@ -2,12 +2,53 @@ import matplotlib.pyplot as plt
 import numpy as np
 import scipy.signal as sig
 from scipy.fft import rfft, rfftfreq
+import abc as abc
 
 
 class ClSig:
     """Class to manage signals. Abstract base class"""
 
-    def __init__(self):
+    def __init__(self, np_sig):
+        self.__b_complex = False
+        self.__np_sig = np_sig
+        self.ylim_tb = [0]
+        self.i_ns()
+
+    @property
+    def b_complex(self):
+        """Boolean set to true if signal is complex valued"""
+        return self.__b_complex
+
+    @property
+    def np_sig(self):
+        """Numpy array containing the signal"""
+        return self.__np_sig
+
+    @property
+    def i_ns(self):
+        """Number of samples in the scope data"""
+        self.__i_ns = len(self.np_sig)
+        return self.__i_ns
+
+    @b_complex.setter
+    def b_complex(self, b_complex):
+        self.__b_complex = b_complex
+
+    @property
+    def ylim_tb(self):
+        """Real-valued Timebase vertical limits"""
+        return self.__ylim_tb
+
+    @np_sig.setter
+    def np_sig(self, np_sig):
+        self.__np_sig = np_sig
+
+    @ylim_tb.setter
+    def ylim_tb(self, ylim_tb):
+        self.set_ylim_tb(ylim_tb)
+
+    @abc.abstractmethod
+    def set_ylim_tb(self, ylim_tb):
         pass
 
 
@@ -15,16 +56,59 @@ class ClSigReal(ClSig):
     """Class for storing, plotting, and manipulating real-valued
        signals"""
 
-    def __init__(self):
-        pass
+    def __init__(self, np_sig):
+        ClSig.b_complex = False
+        ClSig.np_sig = np_sig
+        self.set_ylim_tb([0])
+
+    @property
+    def np_sig(self):
+        """Numpy array containing the signal"""
+        return ClSig.np_sig
+
+    @property
+    def ylim_tb(self):
+        """Real-valued Timebase vertical limits"""
+        return ClSig.ylim_tb
+
+    def set_ylim_tb(self, ylim_tb):
+        """Setter for the real-valued y limits"""
+        # Only use limits if they are valid
+        if len(ylim_tb) == 2:
+            ClSig.ylim_tb = ylim_tb
+        else:
+            ClSig.ylim_tb = np.array(
+                [np.max(ClSig.np_sig), np.min(ClSig.np_sig)])
 
 
 class ClSigComp(ClSig):
     """Class for storing, plotting, and manipulating complex-valued
        signals"""
 
-    def __init__(self):
-        pass
+    def __init__(self, np_sig):
+        ClSig.b_complex = True
+        ClSig.np_sig = np_sig
+        self.set_ylim_tb([0])
+
+    @property
+    def np_sig(self):
+        """Numpy array containing the signal"""
+        return ClSig.np_sig
+
+    @property
+    def ylim_tb(self):
+        """Magnitude Timebase vertical limits"""
+        return ClSig.ylim_tb
+
+    def set_ylim_tb(self, ylim_tb):
+        """Setter for the complex-valued y limits"""
+        # Only use limits if they are valid
+        if len(ylim_tb) == 2:
+            self.__ylim_tb = ylim_tb
+        else:
+            np_sig_abs = np.abs(ClSig.np_sig)
+            self.__ylim_tb = np.array(
+                [np.max(np_sig_abs), np.min(np_sig_abs)])
 
 
 class ClSigFeatures(ClSigReal, ClSigComp):
@@ -51,7 +135,12 @@ class ClSigFeatures(ClSigReal, ClSigComp):
     """
 
     def __init__(self, np_d_ch1, timebase_scale):
-        self.__np_d_ch1 = np_d_ch1
+
+        # Begin inheritance test, overiding MRO to call directly
+        self.__ClSig1 = ClSigReal(np_d_ch1)
+        if np.iscomplexobj(np_d_ch1):
+            self.__ClSig1 = ClSigComp(np_d_ch1)
+
         self.__np_d_ch2 = []
         self.__b_ch2 = False
         self.__np_d_ch3 = []
@@ -59,12 +148,11 @@ class ClSigFeatures(ClSigReal, ClSigComp):
         self.__np_d_ch4 = []
         self.__b_ch4 = False
         self.__timebase_scale = float(timebase_scale)
-        self.__np_d_rpm = np.zeros_like(self.np_d_ch1)
+        self.__np_d_rpm = np.zeros_like(self.__ClSig1.np_sig)
         self.__d_thresh = np.NaN
         self.__d_events_per_rev = np.NaN
         self.__str_eu = 'volts'
         self.str_plot_desc = 'Test Data'
-        self.ylim_tb = [0]
         self.b_spec_peak = False
 
     @property
@@ -75,18 +163,12 @@ class ClSigFeatures(ClSigReal, ClSigComp):
     @property
     def np_d_ch1(self):
         """Numpy array containing the scope data"""
-        return self.__np_d_ch1
+        return self.__ClSig1.np_sig
 
     @property
     def timebase_scale(self):
         """Scope time scale"""
         return self.__timebase_scale
-
-    @property
-    def i_ns(self):
-        """Number of samples in the scope data"""
-        self.__i_ns = len(self.__np_d_ch1)
-        return self.__i_ns
 
     @property
     def d_t_del(self):
@@ -205,11 +287,6 @@ class ClSigFeatures(ClSigReal, ClSigComp):
         return self.__d_events_per_rev
 
     @property
-    def ylim_tb(self):
-        """Timebase vertical limits"""
-        return self.__ylim_tb
-
-    @property
     def str_eu(self):
         """Engineering unit descriptor"""
         return self.__str_eu
@@ -251,16 +328,6 @@ class ClSigFeatures(ClSigReal, ClSigComp):
     def timebase_scale(self, timebase_scale):
         self.__timebase_scale = timebase_scale
 
-    @ylim_tb.setter
-    def ylim_tb(self, ylim_tb):
-
-        # Only use limits if they are valid
-        if len(ylim_tb) == 2:
-            self.__ylim_tb = ylim_tb
-        else:
-            self.__ylim_tb = np.array(
-                [np.max(self.__np_d_ch1), np.min(self.__np_d_ch1)])
-
     @str_eu.setter
     def str_eu(self, str_eu):
         self.__str_eu = str_eu
@@ -270,7 +337,6 @@ class ClSigFeatures(ClSigReal, ClSigComp):
         self.__str_plot_desc = str_plot_desc
 
     # Method for calculating the spectrum for a real signal
-
     def d_fft_real(self):
         """Calculate the half spectrum since this is a real-valued signal"""
         d_y = rfft(self.np_d_ch1)
@@ -324,7 +390,7 @@ class ClSigFeatures(ClSigReal, ClSigComp):
         ax1.grid()
         ax1.set_xlabel("Time, seconds")
         ax1.set_ylabel("Channel output, " + self.__str_eu)
-        ax1.set_ylim(self.__ylim_tb)
+        ax1.set_ylim(self.__ClSig1.ylim_tb)
         ax1.set_title(self.__str_plot_desc + " Timebase")
         ax1.legend(['as-aquired', self.str_filt_desc_short,
                     self.str_filt1_desc_short])
