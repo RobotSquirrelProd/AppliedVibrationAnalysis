@@ -9,10 +9,16 @@ class ClSig:
     """Class to manage signals. Abstract base class"""
 
     def __init__(self, np_sig):
+        self.__ylim_tb = None
         self.__b_complex = False
         self.__np_sig = np_sig
         self.ylim_tb = [0]
-        self.i_ns()
+        self.__get_num_samples()
+
+    # Calculate the number of samples in the signal
+    def __get_num_samples(self):
+        """Calculate number of samples in the signal"""
+        self.__i_ns = len(self.np_sig)
 
     @property
     def b_complex(self):
@@ -27,7 +33,7 @@ class ClSig:
     @property
     def i_ns(self):
         """Number of samples in the scope data"""
-        self.__i_ns = len(self.np_sig)
+        self.__get_num_samples ()
         return self.__i_ns
 
     @b_complex.setter
@@ -61,20 +67,6 @@ class ClSigReal(ClSig):
         ClSig.np_sig = np_sig
         self.set_ylim_tb([0])
 
-    @staticmethod
-    def b_smoke():
-        """Internal smoke test"""
-
-        # This initialized to True. Any failed test will flip to False
-        b_smoke_test = True
-        # Basic test: pass data into object, read it back
-        np_test = np.array([0.1, 1.0, 10.0])
-        ClSig.np_sig = np_test
-        np_sig = ClSig.np_sig
-        if abs(np_test[0] - np_sig[0]) > 1e-12:
-            b_smoke_test = False
-
-        return b_smoke_test
     @property
     def np_sig(self):
         """Numpy array containing the signal"""
