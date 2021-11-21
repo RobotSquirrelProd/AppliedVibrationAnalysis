@@ -61,6 +61,20 @@ class ClSigReal(ClSig):
         ClSig.np_sig = np_sig
         self.set_ylim_tb([0])
 
+    @staticmethod
+    def b_smoke():
+        """Internal smoke test"""
+
+        # This initialized to True. Any failed test will flip to False
+        b_smoke_test = True
+        # Basic test: pass data into object, read it back
+        np_test = np.array([0.1, 1.0, 10.0])
+        ClSig.np_sig = np_test
+        np_sig = ClSig.np_sig
+        if abs(np_test[0] - np_sig[0]) > 1e-12:
+            b_smoke_test = False
+
+        return b_smoke_test
     @property
     def np_sig(self):
         """Numpy array containing the signal"""
@@ -301,6 +315,10 @@ class ClSigFeatures(ClSigReal, ClSigComp):
         """Output (.csv) file name"""
         return self.__str_file
 
+    @property
+    def ylim_tb(self):
+        return self.__ClSig1.ylim_tb
+
     @b_spec_peak.setter
     def b_spec_peak(self, b_spec_peak):
         self.__b_spec_peak = b_spec_peak
@@ -335,6 +353,10 @@ class ClSigFeatures(ClSigReal, ClSigComp):
     @str_plot_desc.setter
     def str_plot_desc(self, str_plot_desc):
         self.__str_plot_desc = str_plot_desc
+
+    @ylim_tb.setter
+    def ylim_tb(self, ylim_tb):
+        self.__ClSig1.set_ylim_tb(ylim_tb)
 
     # Method for calculating the spectrum for a real signal
     def d_fft_real(self):
@@ -402,7 +424,7 @@ class ClSigFeatures(ClSigReal, ClSigComp):
             axs[i_ch].grid()
             axs[i_ch].set_xlabel("Time, seconds")
             axs[i_ch].set_ylabel("Channel output, " + self.__str_eu)
-            axs[i_ch].set_ylim(self.__ylim_tb)
+            axs[i_ch].set_ylim(self.__ClSig1.ylim_tb)
             axs[i_ch].set_title(self.__str_plot_desc + " Timebase")
             axs[i_ch].legend(['as-aquired'])
 
