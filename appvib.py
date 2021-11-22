@@ -18,7 +18,7 @@ class ClSig:
     # Calculate the number of samples in the signal
     def __get_num_samples(self):
         """Calculate number of samples in the signal"""
-        self.__i_ns = len(self.np_sig)
+        self.__i_ns = len(self.__np_sig)
 
     @property
     def b_complex(self):
@@ -33,7 +33,7 @@ class ClSig:
     @property
     def i_ns(self):
         """Number of samples in the scope data"""
-        self.__get_num_samples ()
+        self.__get_num_samples()
         return self.__i_ns
 
     @b_complex.setter
@@ -63,6 +63,7 @@ class ClSigReal(ClSig):
        signals"""
 
     def __init__(self, np_sig):
+        super().__init__(np_sig)
         ClSig.b_complex = False
         ClSig.np_sig = np_sig
         self.set_ylim_tb([0])
@@ -76,6 +77,11 @@ class ClSigReal(ClSig):
     def ylim_tb(self):
         """Real-valued Timebase vertical limits"""
         return ClSig.ylim_tb
+
+    @ylim_tb.setter
+    def ylim_tb(self, ylim_tb):
+        """Vertical limits for timebase (tb) plots"""
+        self.set_ylim_tb(ylim_tb)
 
     def set_ylim_tb(self, ylim_tb):
         """Setter for the real-valued y limits"""
