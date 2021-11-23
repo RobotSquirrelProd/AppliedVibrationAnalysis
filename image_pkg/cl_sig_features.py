@@ -11,13 +11,13 @@ class cl_sig_features:
         
     Should produce:
     
-        print('np_d_ch1: '+ np.array2string(cl_test.np_d_ch1))
+        print('np_d_sig: '+ np.array2string(cl_test.np_d_sig))
         print('timebase_scale: ' + '%0.3f' % cl_test.timebase_scale)
         print('i_ns: ' + '%3.f' % cl_test.i_ns)
         print('d_t_del: ' + '%0.3f' % cl_test.d_t_del)
         print('d_time' + np.array2string(cl_test.d_time))
         
-        np_d_ch1: [1. 2. 3.]
+        np_d_sig: [1. 2. 3.]
         timebase_scale: 1.000
         i_ns:   3
         d_t_del: 4.000

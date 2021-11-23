@@ -127,7 +127,7 @@ def d_get_data(scope_con, lst_ch_active = [True, False, False, False], timebase_
     
     Return values:
     lst_d_ch -- list of numpy array of values from the scope:
-        [np_d_ch1, np_d_ch2, np_d_ch3, np_d_ch4]. If channel
+        [np_d_sig, np_d_ch2, np_d_ch3, np_d_ch4]. If channel
         was not selected for data capture it will be empty ([])
     """
 

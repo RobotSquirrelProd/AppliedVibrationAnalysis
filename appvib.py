@@ -80,7 +80,9 @@ class ClSigReal(ClSig):
 
     @property
     def ylim_tb(self):
-        """Real-valued Timebase vertical limits"""
+        """Real-valued Timebase vertical limits
+        @return: plot y-limits
+        """
         return self.__ylim_tb
 
     @ylim_tb.setter
@@ -163,13 +165,13 @@ class ClSigFeatures:
 
     Should produce:
 
-        print('np_d_ch1: '+ np.array2string(cl_test.np_d_ch1))
+        print('np_d_sig: '+ np.array2string(cl_test.np_d_sig))
         print('timebase_scale: ' + '%0.3f' % cl_test.timebase_scale)
         print('i_ns: ' + '%3.f' % cl_test.i_ns)
         print('d_t_del: ' + '%0.3f' % cl_test.d_t_del)
         print('d_time' + np.array2string(cl_test.d_time))
 
-        np_d_ch1: [1. 2. 3.]
+        np_d_sig: [1. 2. 3.]
         timebase_scale: 1.000
         i_ns:   3
         d_t_del: 4.000
@@ -179,19 +181,16 @@ class ClSigFeatures:
 
     def __init__(self, np_d_ch1, d_fs):
 
-        # Begin inheritance test, overriding MRO to call directly
-        self.__ClSig1 = ClSigReal(np_d_ch1)
-        if np.iscomplexobj(np_d_ch1):
-            self.__ClSig1 = ClSigComp(np_d_ch1)
+        # Instantiation of class so begin list and add first signal
+        self.__lst_cl_sgs = []
+        self.__lst_b_active = []
+        self.idx_add_sig(np_d_ch1)
 
-        self.__np_d_ch2 = []
-        self.__b_ch2 = False
-        self.__np_d_ch3 = []
-        self.__b_ch3 = False
-        self.__np_d_ch4 = []
-        self.__b_ch4 = False
+        # Instantiate and save common signal features
         self.__d_fs = d_fs
-        self.__np_d_rpm = np.zeros_like(self.__ClSig1.np_sig)
+        self.__d_time = self.__get_d_time
+        self.__np_d_rpm = np.zeros_like(self.__lst_cl_sgs[0].np_sig)
+
         self.__d_thresh = np.NaN
         self.__d_events_per_rev = np.NaN
         self.__str_eu = 'volts'
@@ -200,7 +199,7 @@ class ClSigFeatures:
 
     @property
     def b_complex(self):
-        return self.__ClSig1.b_complex
+        return self.__lst_cl_sgs[0].b_complex
 
     @property
     def b_spec_peak(self):
@@ -208,14 +207,50 @@ class ClSigFeatures:
         return self.__b_spec_peak
 
     @property
-    def np_d_ch1(self):
-        """Numpy array containing the scope data"""
-        return self.__ClSig1.np_sig
+    def np_d_sig(self):
+        """Numpy array containing the first signal"""
+        return self.__lst_cl_sgs[0].np_sig
+
+    def get_np_d_sig(self, idx=0):
+        """Numpy array containing arbitrary signal"""
+        return self.__lst_cl_sgs[idx].np_sig
+
+    @np_d_sig.setter
+    def np_d_sig(self, lst_in):
+        np_sig_in = lst_in[0]
+        idx = lst_in[1]
+        self.__lst_cl_sgs[idx].np_sig = np_sig_in
+        self.__lst_b_active[idx] = True
+
+    def idx_add_sig(self, np_sig_in):
+        """Add another signal to this object.
+        returns index to the newly added signal.
+        """
+
+        # TO DO: try/catch and raise exception
+        # Does the incoming signal have the same number of
+        # samples as the ones already present?
+        if len(self.__lst_cl_sgs) > 0:
+
+            if len(np_sig_in) != self.i_ns:
+                raise Exception('Cannot add signal with different number of samples')
+
+        # Add the signals, looking for complex and real
+        self.__lst_cl_sgs.append(ClSigReal(np_sig_in))
+        if np.iscomplexobj(np_sig_in):
+            self.__lst_cl_sgs[0] = ClSigComp(np_sig_in)
+
+        # Mark this one as active
+        self.__lst_b_active.append(True)
+
+        # Success, return True
+        return len(self.__lst_cl_sgs)-1
 
     @property
     def i_ns(self):
-        """Number of samples, assumed to the be same for all samples"""
-        return self.__ClSig1.i_ns
+        """Number of samples"""
+        # assumed to the be same for all signals, just return the first index
+        return self.__lst_cl_sgs[0].i_ns
 
     @property
     def d_t_del(self):
@@ -223,9 +258,13 @@ class ClSigFeatures:
         return 1.0/self.__d_fs
 
     @property
+    def __get_d_time(self):
+        return np.linspace(0, (self.i_ns-1), self.i_ns)*self.d_t_del
+
+    @property
     def d_time(self):
         """Numpy array with time values, in seconds"""
-        self.__d_time = np.linspace(0, (self.i_ns-1), self.i_ns)*self.d_t_del
+        self.__d_time = self.__get_d_time
         return self.__d_time
 
     @property
@@ -242,7 +281,7 @@ class ClSigFeatures:
 
         # If there are enough samples, filter
         if (self.i_ns > self.__i_win_len):
-            self.__np_d_ch1_filt = sig.savgol_filter(self.np_d_ch1,
+            self.__np_d_ch1_filt = sig.savgol_filter(self.np_d_sig,
                                                      self.__i_win_len,
                                                      self.__i_poly_order)
             self.__str_filt_desc = ('Savitsky-Golay | Window Length: ' +
@@ -252,7 +291,7 @@ class ClSigFeatures:
             self.__str_filt_desc_short = 'SGolay'
 
         else:
-            self.__np_d_ch1_filt = self.np_d_ch1
+            self.__np_d_ch1_filt = self.np_d_sig
             self.__str_filt_desc = 'No Savitsky-Golay filtering'
             self.__str_filt_desc_short = 'No S-G Filter'
 
@@ -269,7 +308,7 @@ class ClSigFeatures:
 
         self.__sos = sig.butter(self.__i_poles, self.__d_wn, btype='low',
                                 fs=self.d_fs, output='sos')
-        self.__np_d_ch1_filt1 = sig.sosfilt(self.__sos, self.np_d_ch1)
+        self.__np_d_ch1_filt1 = sig.sosfilt(self.__sos, self.np_d_sig)
         self.__str_filt1_desc = ('Butterworth | Poles: ' +
                                  '%2.f' % self.__i_poles +
                                  ' | Lowpass corner (Hz): ' +
@@ -303,21 +342,6 @@ class ClSigFeatures:
         return self.__np_d_eventtimes
 
     @property
-    def np_d_ch2(self):
-        """Numpy array of values for channel 2"""
-        return self.__np_d_ch2
-
-    @property
-    def np_d_ch3(self):
-        """Numpy array of values for channel 3"""
-        return self.__np_d_ch3
-
-    @property
-    def np_d_ch4(self):
-        """Numpy array of values for channel 4"""
-        return self.__np_d_ch4
-
-    @property
     def d_thresh(self):
         """Trigger threshold value"""
         return self.__d_thresh
@@ -347,36 +371,9 @@ class ClSigFeatures:
         """Output (.csv) file name"""
         return self.__str_file
 
-    # @property
-    # def ylim_tb(self):
-    #     return self.__ClSig1.ylim_tb
-
-    # @ylim_tb.setter
-    # def ylim_tb(self, ylim_tb):
-    #     self.__ClSig1.set_ylim_tb(ylim_tb)
-
     @b_spec_peak.setter
     def b_spec_peak(self, b_spec_peak):
         self.__b_spec_peak = b_spec_peak
-
-    @np_d_ch1.setter
-    def np_d_ch1(self, np_d_ch1):
-        self.__np_d_ch1 = np_d_ch1
-
-    @np_d_ch2.setter
-    def np_d_ch2(self, np_d_ch2):
-        self.__np_d_ch2 = np_d_ch2
-        self.__b_ch2 = True
-
-    @np_d_ch3.setter
-    def np_d_ch3(self, np_d_ch3):
-        self.__np_d_ch3 = np_d_ch3
-        self.__b_ch3 = True
-
-    @np_d_ch4.setter
-    def np_d_ch4(self, np_d_ch4):
-        self.__np_d_ch4 = np_d_ch4
-        self.__b_ch4 = True
 
     @str_eu.setter
     def str_eu(self, str_eu):
@@ -389,7 +386,7 @@ class ClSigFeatures:
     # Method for calculating the spectrum for a real signal
     def d_fft_real(self):
         """Calculate the half spectrum since this is a real-valued signal"""
-        d_y = rfft(self.np_d_ch1)
+        d_y = rfft(self.np_d_sig)
         self.__i_ns_rfft = len(d_y)
 
         # Scale the fft. I'm using the actual number
@@ -400,7 +397,7 @@ class ClSigFeatures:
         d_ws = rfftfreq(self.i_ns, 1./self.d_fs)
 
         # Return the values
-        return([d_ws, d_y])
+        return [d_ws, d_y]
 
     # Plotting method, time domain signals.
 
@@ -412,15 +409,10 @@ class ClSigFeatures:
         """
 
         # How many plots, assuming 1 is given?
-        i_plots = 1
-        if self.__b_ch2:
-            i_plots += 1
-
-        if self.__b_ch3:
-            i_plots += 1
-
-        if self.__b_ch4:
-            i_plots += 1
+        i_plots = 0
+        for b_obj in self.__lst_b_active:
+            if b_obj:
+                i_plots += 1
 
         # Figure with subplots
         fig, axs = plt.subplots(i_plots)
@@ -434,27 +426,28 @@ class ClSigFeatures:
             ax1 = axs[i_ch]
         else:
             ax1 = axs
-        ax1.plot(self.d_time, self.np_d_ch1)
+        ax1.plot(self.d_time, self.np_d_sig)
         ax1.plot(self.d_time, self.np_d_ch1_filt)
         ax1.plot(self.d_time, self.np_d_ch1_filt1)
         ax1.grid()
         ax1.set_xlabel("Time, seconds")
         ax1.set_ylabel("Channel output, " + self.__str_eu)
-        ax1.set_ylim(self.__ClSig1.ylim_tb)
+        ax1.set_ylim(self.__lst_cl_sgs[0].ylim_tb)
         ax1.set_title(self.__str_plot_desc + " Timebase")
-        ax1.legend(['as-aquired', self.str_filt_desc_short,
+        ax1.legend(['as-acquired', self.str_filt_desc_short,
                     self.str_filt1_desc_short])
 
         # Channel 2
-        if self.__b_ch2:
-            i_ch = 1
-            axs[i_ch].plot(self.d_time, self.np_d_ch2)
-            axs[i_ch].grid()
-            axs[i_ch].set_xlabel("Time, seconds")
-            axs[i_ch].set_ylabel("Channel output, " + self.__str_eu)
-            axs[i_ch].set_ylim(self.__ClSig1.ylim_tb)
-            axs[i_ch].set_title(self.__str_plot_desc + " Timebase")
-            axs[i_ch].legend(['as-aquired'])
+        if len(self.__lst_b_active) > 1:
+            if self.__lst_b_active[1]:
+                i_ch = 1
+                axs[i_ch].plot(self.d_time, self.get_np_d_sig(idx=1))
+                axs[i_ch].grid()
+                axs[i_ch].set_xlabel("Time, seconds")
+                axs[i_ch].set_ylabel("Channel output, " + self.__str_eu)
+                axs[i_ch].set_ylim(self.__lst_cl_sgs[0].ylim_tb)
+                axs[i_ch].set_title(self.__str_plot_desc + " Timebase")
+                axs[i_ch].legend(['as-acquired'])
 
         # Set the layout
         plt.tight_layout()
@@ -517,7 +510,7 @@ class ClSigFeatures:
 
         # Put up the the plot time
         plt.figure()
-        plt.plot(self.__d_time, self.np_d_ch1)
+        plt.plot(self.__d_time, self.np_d_sig)
         plt.plot(self.np_d_eventtimes, self.__np_d_eventvalue, "ok")
         plt.xlabel('Time, seconds')
         plt.ylabel('Amplitude, ' + self.__str_eu)
@@ -539,7 +532,7 @@ class ClSigFeatures:
 
         ax2 = ax1.twinx()
 
-        ax1.plot(self.__d_time, self.np_d_ch1)
+        ax1.plot(self.__d_time, self.np_d_sig)
         ax2.plot(self.np_d_eventtimes, self.__np_d_rpm, "ok")
         ax1.set_xlabel('Time, seconds')
         ax1.set_ylabel('Amplitude, ' + self.__str_eu)
@@ -591,7 +584,7 @@ class ClSigFeatures:
 
         # Use smoothing and derivative functions of S-G filter for
         # estimating rise/fall
-        self.__np_d_ch1_dir = sig.savgol_filter(self.np_d_ch1,
+        self.__np_d_ch1_dir = sig.savgol_filter(self.np_d_sig,
                                                 i_kernel, 1, deriv=1)
 
         # Initiate state machine: one state for rising signal,
@@ -599,14 +592,14 @@ class ClSigFeatures:
         # 'down', (i_direction = 1)
         self.__d_hyst_abs = 0.
         idx_event = 0
-        self.__np_d_eventtimes = np.zeros_like(self.np_d_ch1)
+        self.__np_d_eventtimes = np.zeros_like(self.np_d_sig)
         if i_direction == 0:
 
             # Define the absolute hysteretic value, rising
             self.__d_hyst_ab = self.__d_thresh - d_hyst
 
             # Loop through the signal
-            for idx, x in enumerate(self.np_d_ch1):
+            for idx, x in enumerate(self.np_d_sig):
 
                 # Intermediate results
                 if b_verbose:
@@ -637,7 +630,7 @@ class ClSigFeatures:
                         # Interpolate to estimate the actual crossing from
                         # the 2 nearest points
                         xp = np.array(
-                            [self.np_d_ch1[idx-1], self.np_d_ch1[idx]])
+                            [self.np_d_sig[idx - 1], self.np_d_sig[idx]])
                         fp = np.array(
                             [self.__d_time[idx-1], self.__d_time[idx]])
                         self.__np_d_eventtimes[idx_event] = np.interp(
@@ -659,7 +652,7 @@ class ClSigFeatures:
             self.__d_hyst_ab = self.__d_thresh + d_hyst
 
             # Loop through the signal
-            for idx, x in enumerate(self.np_d_ch1):
+            for idx, x in enumerate(self.np_d_sig):
 
                 # Intermediate results
                 if b_verbose:
@@ -690,7 +683,7 @@ class ClSigFeatures:
                         # Interpolate to estimate the actual crossing from
                         # the 2 nearest points
                         xp = np.array(
-                            [self.np_d_ch1[idx-1], self.np_d_ch1[idx]])
+                            [self.np_d_sig[idx - 1], self.np_d_sig[idx]])
                         fp = np.array(
                             [self.__d_time[idx-1], self.__d_time[idx]])
                         self.__np_d_eventtimes[idx_event] = np.interp(
@@ -747,17 +740,13 @@ class ClSigFeatures:
         """
         self.__str_file = str_data_prefix + '_' '%03.0f' % idx_data + '.csv'
         file_data = open(self.__str_file, 'w+')
-        str_header = 'X,CH1,'
-        str_units = 'Sequence,Volt,'
-        if self.__b_ch2:
-            str_header = str_header + 'CH2,'
+        str_header = 'X,'
+        str_units = 'Sequence,'
+        idx_ch = 1
+        for b_obj in self.__lst_b_active:
+            str_header = str_header + 'CH' + '%0.0f' % idx_ch +  ','
             str_units = str_units + 'Volt,'
-        if self.__b_ch3:
-            str_header = str_header + 'CH3,'
-            str_units = str_units + 'Volt,'
-        if self.__b_ch4:
-            str_header = str_header + 'CH4,'
-            str_units = str_units + 'Volt,'
+            idx_ch = idx_ch + 1
 
         str_header = str_header + 'Start,Increment,\n'
         str_units = str_units + 'Volt,0.000000e-03,' + str(self.d_t_del) + '\n'
@@ -765,16 +754,12 @@ class ClSigFeatures:
         file_data.write(str_units)
 
         for idx_line in range(0, self.i_ns):
-            str_line = str(idx_line) + ',' + \
-                '%0.5f' % self.np_d_ch1[idx_line] + ','
-            if self.__b_ch2:
-                str_line = str_line + '%0.5f' % self.np_d_ch2[idx_line] + ','
-            if self.__b_ch3:
-                str_line = str_line + '%0.5f' % self.np_d_ch3[idx_line] + ','
-            if self.__b_ch4:
-                str_line = str_line + '%0.5f' % self.np_d_ch4[idx_line] + ','
+            str_line = str(idx_line)
 
-            str_line = str_line + ','
+            # add samples from each signal to the file
+            for cl_obj in self.__lst_cl_sgs:
+                str_line = str_line + ',' + '%0.5f' % cl_obj.np_sig[idx_line]
+
             file_data.write(str_line+'\n')
 
         file_data.close()
