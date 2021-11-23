@@ -27,19 +27,12 @@ class ClSig(abc.ABC):
         """Number of samples in the scope data"""
         pass
 
-    # @property
-    # def ylim_tb(self):
-    #     """Real-valued Timebase vertical limits"""
-    #     return self.__ylim_tb
+    @property
+    @abc.abstractmethod
+    def ylim_tb(self):
+        """Real-valued Timebase vertical limits"""
+        pass
 
-    # @np_sig.setter
-    # def np_sig(self, np_sig):
-    #     self.__np_sig = np_sig
-    #
-    # @ylim_tb.setter
-    # def ylim_tb(self, ylim_tb):
-    #     self.set_ylim_tb(ylim_tb)
-    #
     @abc.abstractmethod
     def set_ylim_tb(self, ylim_tb):
         pass
@@ -54,7 +47,8 @@ class ClSigReal(ClSig):
         self.__b_complex = False
         self.__np_sig = np_sig
         self.__i_ns = self.__get_num_samples()
-        # self.set_ylim_tb([0])
+        self.__ylim_tb = [0]
+        self.set_ylim_tb(self.__ylim_tb)
 
     @property
     def np_sig(self):
@@ -81,31 +75,27 @@ class ClSigReal(ClSig):
 
     @property
     def i_ns(self):
+        self.__i_ns = self.__get_num_samples()
         return self.__i_ns
 
-    @i_ns.setter
-    def i_ns(self):
-        self.__i_ns = self.__get_num_samples()
+    @property
+    def ylim_tb(self):
+        """Real-valued Timebase vertical limits"""
+        return self.__ylim_tb
 
-    #
-    # @property
-    # def ylim_tb(self):
-    #     """Real-valued Timebase vertical limits"""
-    #     return super(ClSigReal, self).ylim_tb
-    #
-    # @ylim_tb.setter
-    # def ylim_tb(self, ylim_tb):
-    #     """Vertical limits for timebase (tb) plots"""
-    #     self.set_ylim_tb(ylim_tb)
-    #
+    @ylim_tb.setter
+    def ylim_tb(self, ylim_tb):
+        """Vertical limits for timebase (tb) plots"""
+        self.set_ylim_tb(ylim_tb)
+
     def set_ylim_tb(self, ylim_tb):
         """Setter for the real-valued y limits"""
         # Only use limits if they are valid
         if len(ylim_tb) == 2:
-            ClSig.ylim_tb = ylim_tb
+            self.__ylim_tb = ylim_tb
         else:
-            ClSig.ylim_tb = np.array(
-                [np.max(ClSig.np_sig), np.min(ClSig.np_sig)])
+            self.__ylim_tb = np.array(
+                [np.max(self.__np_sig), np.min(self.__np_sig)])
 
 
 class ClSigComp(ClSig):
@@ -117,17 +107,14 @@ class ClSigComp(ClSig):
         self.__b_complex = True
         self.__np_sig = np_sig
         self.__i_ns = self.__get_num_samples()
-        # self.set_ylim_tb([0])
+        self.__ylim_tb = [0]
+        self.set_ylim_tb(self.__ylim_tb)
 
     @property
     def np_sig(self):
         """Numpy array containing the signal"""
+        self.__i_ns = self.__get_num_samples()
         return self.__np_sig
-
-    @np_sig.setter
-    def np_sig(self, np_sig):
-        self.__np_sig = np_sig
-        self.__i_ns = ClSig.get_num_samples(self.__np_sig)
 
     @property
     def b_complex(self):
@@ -150,20 +137,24 @@ class ClSigComp(ClSig):
     def i_ns(self):
         self.__i_ns = self.__get_num_samples()
 
-    # @property
-    # def ylim_tb(self):
-    #     """Magnitude Timebase vertical limits"""
-    #     return ClSig.ylim_tb
-    #
+    @property
+    def ylim_tb(self):
+        """Real-valued Timebase vertical limits"""
+        return self.__ylim_tb
+
+    @ylim_tb.setter
+    def ylim_tb(self, ylim_tb):
+        """Vertical limits for timebase (tb) plots"""
+        self.set_ylim_tb(ylim_tb)
+
     def set_ylim_tb(self, ylim_tb):
-        """Setter for the complex-valued y limits"""
+        """Setter for the real-valued y limits"""
         # Only use limits if they are valid
         if len(ylim_tb) == 2:
             self.__ylim_tb = ylim_tb
         else:
-            np_sig_abs = np.abs(ClSig.np_sig)
             self.__ylim_tb = np.array(
-                [np.max(np_sig_abs), np.min(np_sig_abs)])
+                [np.max(self.__np_sig ), np.min(self.__np_sig )])
 
 
 class ClSigFeatures(ClSigReal, ClSigComp):
@@ -248,7 +239,7 @@ class ClSigFeatures(ClSigReal, ClSigComp):
 
     @property
     def d_fs(self):
-        """Sampling frequeny in hertz"""
+        """Sampling frequency in hertz"""
         self.__d_fs = 1.0/(self.__d_time[1]-self.__d_time[0])
         return self.__d_fs
 
@@ -277,16 +268,6 @@ class ClSigFeatures(ClSigReal, ClSigComp):
         return self.__np_d_ch1_filt
 
     @property
-    def str_filt_desc(self):
-        "Complete Filt description of the Savitsky-Golay filter design"
-        return self.__str_filt_desc
-
-    @property
-    def str_filt_desc_short(self):
-        """Short Filt description, useful for plot legend labels"""
-        return self.__str_filt_desc_short
-
-    @property
     def np_d_ch1_filt1(self):
         """ Return the signal, filtered with butter FIR filter"""
         self.__i_poles = 1
@@ -306,6 +287,16 @@ class ClSigFeatures(ClSigReal, ClSigComp):
         return self.__np_d_ch1_filt1
 
     @property
+    def str_filt_desc(self):
+        "Complete Filt description of the Savitsky-Golay filter design"
+        return self.__str_filt_desc
+
+    @property
+    def str_filt_desc_short(self):
+        """Short Filt description, useful for plot legend labels"""
+        return self.__str_filt_desc_short
+
+    @property
     def str_filt1_desc(self):
         "Complete Filt1 description of the Butterworth filter design"
         return self.__str_filt1_desc
@@ -322,17 +313,17 @@ class ClSigFeatures(ClSigReal, ClSigComp):
 
     @property
     def np_d_ch2(self):
-        """Nump array of values for channel 2"""
+        """Numpy array of values for channel 2"""
         return self.__np_d_ch2
 
     @property
     def np_d_ch3(self):
-        """Nump array of values for channel 3"""
+        """Numpy array of values for channel 3"""
         return self.__np_d_ch3
 
     @property
     def np_d_ch4(self):
-        """Nump array of values for channel 4"""
+        """Numpy array of values for channel 4"""
         return self.__np_d_ch4
 
     @property
@@ -365,9 +356,13 @@ class ClSigFeatures(ClSigReal, ClSigComp):
         """Output (.csv) file name"""
         return self.__str_file
 
-    @property
-    def ylim_tb(self):
-        return self.__ClSig1.ylim_tb
+    # @property
+    # def ylim_tb(self):
+    #     return self.__ClSig1.ylim_tb
+
+    # @ylim_tb.setter
+    # def ylim_tb(self, ylim_tb):
+    #     self.__ClSig1.set_ylim_tb(ylim_tb)
 
     @b_spec_peak.setter
     def b_spec_peak(self, b_spec_peak):
@@ -403,10 +398,6 @@ class ClSigFeatures(ClSigReal, ClSigComp):
     @str_plot_desc.setter
     def str_plot_desc(self, str_plot_desc):
         self.__str_plot_desc = str_plot_desc
-
-    @ylim_tb.setter
-    def ylim_tb(self, ylim_tb):
-        self.__ClSig1.set_ylim_tb(ylim_tb)
 
     # Method for calculating the spectrum for a real signal
     def d_fft_real(self):

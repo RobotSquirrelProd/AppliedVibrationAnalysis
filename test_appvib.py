@@ -84,6 +84,17 @@ class TestClSig(TestCase):
         class_test_comp.ylim_tb = self.ylim_tb_test_alt
         self.assertAlmostEqual(self.ylim_tb_test_alt[1], class_test_comp.ylim_tb[1], 12)
 
+        # Signal feature class check on y-limits test
+        class_test_sig_features = appvib.ClSigFeatures(self.np_test, self.timebase_scale_test)
+        class_test_sig_features.ylim_tb = self.ylim_tb_test
+        self.assertAlmostEqual(self.ylim_tb_test[0], class_test_sig_features.ylim_tb[0], 12)
+
+    def test_plt_sigs(self):
+
+        # Signal feature class check on y-limits test
+        class_test_sig_features = appvib.ClSigFeatures(self.np_test, self.timebase_scale_test)
+        class_test_sig_features.plt_sigs()
+
 
 if __name__ == '__main__':
     unittest.main()
