@@ -131,11 +131,8 @@ class ClSigComp(ClSig):
 
     @property
     def i_ns(self):
-        return self.__i_ns
-
-    @i_ns.setter
-    def i_ns(self):
         self.__i_ns = self.__get_num_samples()
+        return self.__i_ns
 
     @property
     def ylim_tb(self):
@@ -154,15 +151,15 @@ class ClSigComp(ClSig):
             self.__ylim_tb = ylim_tb
         else:
             self.__ylim_tb = np.array(
-                [np.max(self.__np_sig ), np.min(self.__np_sig )])
+                [np.max(self.__np_sig), np.min(self.__np_sig)])
 
 
-class ClSigFeatures(ClSigReal, ClSigComp):
+class ClSigFeatures:
 
     """Class to manage signal features on scope data and other signals
 
     Example usage:
-        cl_test = cl_sig_features(np.array([1.,2., 3.]),1.1)
+        cl_test = ClSigFeatures(np.array([1.,2., 3.]),1.1)
 
     Should produce:
 
@@ -180,7 +177,7 @@ class ClSigFeatures(ClSigReal, ClSigComp):
 
     """
 
-    def __init__(self, np_d_ch1, timebase_scale):
+    def __init__(self, np_d_ch1, d_fs):
 
         # Begin inheritance test, overriding MRO to call directly
         self.__ClSig1 = ClSigReal(np_d_ch1)
@@ -193,7 +190,7 @@ class ClSigFeatures(ClSigReal, ClSigComp):
         self.__b_ch3 = False
         self.__np_d_ch4 = []
         self.__b_ch4 = False
-        self.__timebase_scale = float(timebase_scale)
+        self.__d_fs = d_fs
         self.__np_d_rpm = np.zeros_like(self.__ClSig1.np_sig)
         self.__d_thresh = np.NaN
         self.__d_events_per_rev = np.NaN
@@ -221,15 +218,9 @@ class ClSigFeatures(ClSigReal, ClSigComp):
         return self.__ClSig1.i_ns
 
     @property
-    def timebase_scale(self):
-        """Scope time scale"""
-        return self.__timebase_scale
-
-    @property
     def d_t_del(self):
         """Delta time between each sample"""
-        self.__d_t_del = (12.*float(self.timebase_scale))/float(self.i_ns)
-        return self.__d_t_del
+        return 1.0/self.__d_fs
 
     @property
     def d_time(self):
@@ -386,10 +377,6 @@ class ClSigFeatures(ClSigReal, ClSigComp):
     def np_d_ch4(self, np_d_ch4):
         self.__np_d_ch4 = np_d_ch4
         self.__b_ch4 = True
-
-    @timebase_scale.setter
-    def timebase_scale(self, timebase_scale):
-        self.__timebase_scale = timebase_scale
 
     @str_eu.setter
     def str_eu(self, str_eu):

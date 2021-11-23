@@ -2,7 +2,13 @@ from ds1054z import DS1054Z
 import time
 import numpy as np
 
-def b_set_trigger(scope_con, d_trigger_level = 1e-01):
+
+def d_get_delta_time(timebase_scale=1.0, i_ns=120):
+    """Given the DS1054Z timebase scale, calculate the delta time between samples"""
+    return (12. * float(timebase_scale)) / float(i_ns)
+
+
+def b_set_trigger(scope_con, d_trigger_level=1e-01):
     """Set the trigger configuration
     
     Keyword arguments:
@@ -17,6 +23,7 @@ def b_set_trigger(scope_con, d_trigger_level = 1e-01):
     scope_con.write(':trigger:edge:source CHAN1')
     scope_con.write(':trigger:edge:level ' + format(d_trigger_level))
     scope_con.single()
+
 
 def b_setup_scope(scope_con, lst_ch_active = [True, False, False, False],
                   lst_ac_coupled = [True, True, True, True],
