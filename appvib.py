@@ -5,54 +5,41 @@ from scipy.fft import rfft, rfftfreq
 import abc as abc
 
 
-class ClSig:
+class ClSig(abc.ABC):
+
     """Class to manage signals. Abstract base class"""
 
-    def __init__(self, np_sig):
-        self.__ylim_tb = None
-        self.__b_complex = False
-        self.__np_sig = np_sig
-        self.ylim_tb = [0]
-        self.__get_num_samples()
-
-    # Calculate the number of samples in the signal
-    def __get_num_samples(self):
-        """Calculate number of samples in the signal"""
-        self.__i_ns = len(self.__np_sig)
-
     @property
-    def b_complex(self):
-        """Boolean set to true if signal is complex valued"""
-        return self.__b_complex
-
-    @property
+    @abc.abstractmethod
     def np_sig(self):
         """Numpy array containing the signal"""
-        return self.__np_sig
+        pass
 
     @property
+    @abc.abstractmethod
+    def b_complex(self):
+        """Boolean, set to true to treat signal as complex"""
+        pass
+
+    @property
+    @abc.abstractmethod
     def i_ns(self):
         """Number of samples in the scope data"""
-        self.__get_num_samples()
-        return self.__i_ns
+        pass
 
-    @b_complex.setter
-    def b_complex(self, b_complex):
-        self.__b_complex = b_complex
+    # @property
+    # def ylim_tb(self):
+    #     """Real-valued Timebase vertical limits"""
+    #     return self.__ylim_tb
 
-    @property
-    def ylim_tb(self):
-        """Real-valued Timebase vertical limits"""
-        return self.__ylim_tb
-
-    @np_sig.setter
-    def np_sig(self, np_sig):
-        self.__np_sig = np_sig
-
-    @ylim_tb.setter
-    def ylim_tb(self, ylim_tb):
-        self.set_ylim_tb(ylim_tb)
-
+    # @np_sig.setter
+    # def np_sig(self, np_sig):
+    #     self.__np_sig = np_sig
+    #
+    # @ylim_tb.setter
+    # def ylim_tb(self, ylim_tb):
+    #     self.set_ylim_tb(ylim_tb)
+    #
     @abc.abstractmethod
     def set_ylim_tb(self, ylim_tb):
         pass
@@ -63,26 +50,54 @@ class ClSigReal(ClSig):
        signals"""
 
     def __init__(self, np_sig):
-        super().__init__(np_sig)
-        ClSig.b_complex = False
-        ClSig.np_sig = np_sig
-        self.set_ylim_tb([0])
+        super(ClSigReal, self).__init__()
+        self.__b_complex = False
+        self.__np_sig = np_sig
+        self.__i_ns = self.__get_num_samples()
+        # self.set_ylim_tb([0])
 
     @property
     def np_sig(self):
         """Numpy array containing the signal"""
-        return ClSig.np_sig
+        return self.__np_sig
+
+    @np_sig.setter
+    def np_sig(self, np_sig):
+        self.__np_sig = np_sig
+        self.__i_ns = self.__get_num_samples()
 
     @property
-    def ylim_tb(self):
-        """Real-valued Timebase vertical limits"""
-        return ClSig.ylim_tb
+    def b_complex(self):
+        return self.__b_complex
 
-    @ylim_tb.setter
-    def ylim_tb(self, ylim_tb):
-        """Vertical limits for timebase (tb) plots"""
-        self.set_ylim_tb(ylim_tb)
+    @b_complex.setter
+    def b_complex(self, b_complex):
+        self.__b_complex = b_complex
 
+    # Calculate the number of samples in the signal
+    def __get_num_samples(self):
+        """Calculate number of samples in the signal"""
+        return len(self.__np_sig)
+
+    @property
+    def i_ns(self):
+        return self.__i_ns
+
+    @i_ns.setter
+    def i_ns(self):
+        self.__i_ns = self.__get_num_samples()
+
+    #
+    # @property
+    # def ylim_tb(self):
+    #     """Real-valued Timebase vertical limits"""
+    #     return super(ClSigReal, self).ylim_tb
+    #
+    # @ylim_tb.setter
+    # def ylim_tb(self, ylim_tb):
+    #     """Vertical limits for timebase (tb) plots"""
+    #     self.set_ylim_tb(ylim_tb)
+    #
     def set_ylim_tb(self, ylim_tb):
         """Setter for the real-valued y limits"""
         # Only use limits if they are valid
@@ -98,20 +113,48 @@ class ClSigComp(ClSig):
        signals"""
 
     def __init__(self, np_sig):
-        ClSig.b_complex = True
-        ClSig.np_sig = np_sig
-        self.set_ylim_tb([0])
+        super(ClSigComp, self).__init__()
+        self.__b_complex = True
+        self.__np_sig = np_sig
+        self.__i_ns = self.__get_num_samples()
+        # self.set_ylim_tb([0])
 
     @property
     def np_sig(self):
         """Numpy array containing the signal"""
-        return ClSig.np_sig
+        return self.__np_sig
+
+    @np_sig.setter
+    def np_sig(self, np_sig):
+        self.__np_sig = np_sig
+        self.__i_ns = ClSig.get_num_samples(self.__np_sig)
 
     @property
-    def ylim_tb(self):
-        """Magnitude Timebase vertical limits"""
-        return ClSig.ylim_tb
+    def b_complex(self):
+        return self.__b_complex
 
+    @b_complex.setter
+    def b_complex(self, b_complex):
+        self.__b_complex = b_complex
+
+    # Calculate the number of samples in the signal
+    def __get_num_samples(self):
+        """Calculate number of samples in the signal"""
+        return len(self.__np_sig)
+
+    @property
+    def i_ns(self):
+        return self.__i_ns
+
+    @i_ns.setter
+    def i_ns(self):
+        self.__i_ns = self.__get_num_samples()
+
+    # @property
+    # def ylim_tb(self):
+    #     """Magnitude Timebase vertical limits"""
+    #     return ClSig.ylim_tb
+    #
     def set_ylim_tb(self, ylim_tb):
         """Setter for the complex-valued y limits"""
         # Only use limits if they are valid
@@ -148,7 +191,7 @@ class ClSigFeatures(ClSigReal, ClSigComp):
 
     def __init__(self, np_d_ch1, timebase_scale):
 
-        # Begin inheritance test, overiding MRO to call directly
+        # Begin inheritance test, overriding MRO to call directly
         self.__ClSig1 = ClSigReal(np_d_ch1)
         if np.iscomplexobj(np_d_ch1):
             self.__ClSig1 = ClSigComp(np_d_ch1)
@@ -168,6 +211,10 @@ class ClSigFeatures(ClSigReal, ClSigComp):
         self.b_spec_peak = False
 
     @property
+    def b_complex(self):
+        return self.__ClSig1.b_complex
+
+    @property
     def b_spec_peak(self):
         """Boolean set to true to label peak in spectrum"""
         return self.__b_spec_peak
@@ -176,6 +223,11 @@ class ClSigFeatures(ClSigReal, ClSigComp):
     def np_d_ch1(self):
         """Numpy array containing the scope data"""
         return self.__ClSig1.np_sig
+
+    @property
+    def i_ns(self):
+        """Number of samples, assumed to the be same for all samples"""
+        return self.__ClSig1.i_ns
 
     @property
     def timebase_scale(self):
