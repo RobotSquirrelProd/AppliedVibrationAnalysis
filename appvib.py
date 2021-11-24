@@ -66,6 +66,10 @@ class ClSigReal(ClSig):
         self.__d_wn = 0.
         self.__str_filt_butter_desc = 'No Butterworth filtering'
         self.__str_filt_butter_desc_short = 'No Butter'
+        self.__b_update_filt_butter = True
+
+        # Attributes related to the half-spectrum calculation
+        self.__i_ns_rfft = 0
 
         # Final step: since this is instantiation, flag new signal in class
         self.__set_new_sig(True)
@@ -128,6 +132,7 @@ class ClSigReal(ClSig):
         """
         if b_state:
             self.__b_update_filt_sg = True
+            self.__b_update_filt_butter = True
 
     @property
     def b_complex(self):
@@ -146,17 +151,24 @@ class ClSigReal(ClSig):
     @property
     def ylim_tb(self):
         """Real-valued Timebase vertical limits
-        @return: plot y-limits
+        Return
+        ------
+
+        list (double) :  plot y-limits
+
         """
         return self.__ylim_tb
 
-    @ylim_tb.setter
-    def ylim_tb(self, ylim_tb):
-        """Vertical limits for timebase (tb) plots"""
-        self.set_ylim_tb(ylim_tb)
-
     def set_ylim_tb(self, ylim_tb):
-        """Setter for the real-valued y limits"""
+        """
+        Set the real-valued y limits
+
+        Parameters
+        ----------
+        ylim_tb : list
+            List of [min max] values for y-axis
+
+        """
         # Only use limits if they are valid
         if len(ylim_tb) == 2:
             self.__ylim_tb = ylim_tb
@@ -221,31 +233,60 @@ class ClSigReal(ClSig):
 
     @property
     def np_sig_filt_butter(self):
-        """ Return the signal, filtered with butterworth FIR filter"""
+        """
+        Return the signal, filtered with butterworth FIR filter
 
-        # This is a guess of the filter corner, useful for general vibration
-        # analysis of physical displacements.
-        # TO DO: This needs to be own method, should not be setting this here
-        if self.d_fs < 300:
-            self.__d_wn = self.d_fs / 8.
-        else:
-            self.__d_wn = 100.
+        """
 
-        # Store the filter parameters in second-order sections to avoid
-        # numerical errors
-        sos = sig.butter(self.__i_poles, self.__d_wn, btype='low',
-                         fs=self.d_fs, output='sos')
+        # Does the filter need to applied?
+        if self.__b_update_filt_sg:
 
-        # Perform the filtering
-        self.__np_sig_filt_butter = sig.sosfilt(sos, self.np_sig)
+            # This is a guess of the filter corner, useful for general vibration
+            # analysis of physical displacements.
+            # TO DO: This needs to be own method, should not be setting this here
+            if self.d_fs < 300:
+                self.__d_wn = self.d_fs / 8.
+            else:
+                self.__d_wn = 100.
 
-        # Generate the plain text descriptions for the plots
-        self.__str_filt_butter_desc = ('Butterworth | Poles: ' +
-                                       '%2.f' % self.__i_poles +
-                                       ' | Lowpass corner (Hz): ' +
-                                       '%0.2f' % self.__d_wn)
-        self.__str_filt_butter_desc_short = 'Butter'
+            # Store the filter parameters in second-order sections to avoid
+            # numerical errors
+            sos = sig.butter(self.__i_poles, self.__d_wn, btype='low',
+                             fs=self.d_fs, output='sos')
+
+            # Perform the filtering
+            self.__np_sig_filt_butter = sig.sosfilt(sos, self.np_sig)
+
+            # Generate the plain text descriptions for the plots
+            self.__str_filt_butter_desc = ('Butterworth | Poles: ' +
+                                           '%2.f' % self.__i_poles +
+                                           ' | Lowpass corner (Hz): ' +
+                                           '%0.2f' % self.__d_wn)
+            self.__str_filt_butter_desc_short = 'Butter'
+            self.__b_update_filt_butter = False
+
+        # Return the filtered signal
         return self.__np_sig_filt_butter
+
+    @property
+    def i_ns_rfft(self):
+        return self.__i_ns_rfft
+
+    # Method for calculating the spectrum for a real signal
+    def d_fft_real(self):
+        """Calculate the half spectrum since this is a real-valued signal"""
+        d_y = rfft(self.np_sig)
+        self.__i_ns_rfft = len(d_y)
+
+        # Scale the fft. I'm using the actual number
+        # of points to scale.
+        d_y = d_y / (self.__i_ns_rfft - 1)
+
+        # Calculate the frequency scale
+        d_ws = rfftfreq(self.i_ns, 1. / self.d_fs)
+
+        # Return the values
+        return [d_ws, d_y]
 
 
 class ClSigComp(ClSig):
@@ -456,7 +497,7 @@ class ClSigFeatures:
 
         Parameters
         ---------
-        d_fs : double
+        d_fs_in : double
             Describes the sampling frequency in samples/second (hertz).
 
         idx : integer
@@ -544,24 +585,7 @@ class ClSigFeatures:
     def str_plot_desc(self, str_plot_desc):
         self.__str_plot_desc = str_plot_desc
 
-    # Method for calculating the spectrum for a real signal
-    def d_fft_real(self):
-        """Calculate the half spectrum since this is a real-valued signal"""
-        d_y = rfft(self.np_d_sig)
-        self.__i_ns_rfft = len(d_y)
-
-        # Scale the fft. I'm using the actual number
-        # of points to scale.
-        d_y = d_y / (self.__i_ns_rfft - 1)
-
-        # Calculate the frequency scale
-        d_ws = rfftfreq(self.i_ns, 1. / self.d_fs())
-
-        # Return the values
-        return [d_ws, d_y]
-
     # Plotting method, time domain signals.
-
     def plt_sigs(self):
         """Plot out the data in this signal feature class in the time domain
 
@@ -634,10 +658,10 @@ class ClSigFeatures:
         Return values:
         handle to the plot
         """
-        self.__spec = self.d_fft_real()
-        d_mag = np.abs(self.__spec[1])
+        spec = self.__lst_cl_sgs[0].d_fft_real()
+        d_mag = np.abs(spec[1])
         plt.figure()
-        plt.plot(self.__spec[0], d_mag)
+        plt.plot(spec[0], d_mag)
         plt.grid()
         plt.xlabel("Frequency, hertz")
         plt.ylabel("Channel amplitude, " + self.__str_eu)
@@ -646,8 +670,8 @@ class ClSigFeatures:
         # Annotate the peak
         if self.__b_spec_peak:
             idx_max = np.argmax(d_mag)
-            d_ws_peak = self.__spec[0][idx_max]
-            d_ws_span = (self.__spec[0][-1] - self.__spec[0][0])
+            d_ws_peak = spec[0][idx_max]
+            d_ws_span = (spec[0][-1] - spec[0][0])
             d_mag_peak = d_mag[idx_max]
             plt.plot(d_ws_peak, d_mag_peak, 'ok')
             str_label = ('%0.3f' % d_mag_peak + ' ' +
@@ -656,12 +680,12 @@ class ClSigFeatures:
                 d_ws_peak + (0.02 * d_ws_span), d_mag_peak * 0.95])
 
         # Save off the handle to the plot
-        self.__plot_handle = plt.gcf()
+        plot_handle = plt.gcf()
 
         # Show the plot, creating a new figure.
         plt.show()
 
-        return [self.__plot_handle, self.__spec[0], self.__spec[1]]
+        return [plot_handle, spec[0], spec[1]]
 
     # Plotting method for the eventtimes
     def plt_eventtimes(self):

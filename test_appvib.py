@@ -100,7 +100,7 @@ class TestClSig(TestCase):
 
         # Real-valued child y-limits test
         class_test_real = appvib.ClSigReal(self.np_test, self.d_fs)
-        class_test_real.ylim_tb = self.ylim_tb_test
+        class_test_real.set_ylim_tb(self.ylim_tb_test)
         self.assertAlmostEqual(self.ylim_tb_test[0], class_test_real.ylim_tb[0], 12)
 
         # Complex-valued child y-limits test
@@ -135,6 +135,12 @@ class TestClSig(TestCase):
         # Signal feature class, second signal
         idx_new = class_test_sig_features.idx_add_sig(self.np_test_ch2, self.d_fs)
         class_test_sig_features.plt_sigs()
+
+    def test_plt_spec(self):
+
+        # Signal feature class check of plotting on instantiation
+        class_test_sig_features = appvib.ClSigFeatures(self.np_test, self.d_fs)
+        class_test_sig_features.plt_spec()
 
 
 if __name__ == '__main__':
