@@ -58,6 +58,7 @@ class ClSigReal(ClSig):
         self.__i_ns = self.__get_num_samples()
         self.__ylim_tb = [0]
         self.set_ylim_tb(self.__ylim_tb)
+        self.__d_time = self.__get_d_time
 
         # Setup the s-g array and filtering parameters
         self.__np_sig_filt_sg = np_sig_in
@@ -77,6 +78,11 @@ class ClSigReal(ClSig):
 
         # Attributes related to the half-spectrum calculation
         self.__i_ns_rfft = 0
+
+        # Attributes for the zero-crossing instantaneous frequency estimation
+        self.__d_threshold = 0.
+        self.__d_hysteresis = 0.1
+        self.__np_d_eventtimes = np.zeros_like(np_sig_in)
 
         # Final step: since this is instantiation, flag new signal in class
         self.__set_new_sig(True)
@@ -192,6 +198,22 @@ class ClSigReal(ClSig):
                 [np.max(self.__np_sig), np.min(self.__np_sig)])
 
     @property
+    def __get_d_time(self):
+        return np.linspace(0, (self.i_ns - 1), self.i_ns) * self.d_t_del()
+
+    def d_t_del(self):
+        """
+        Delta time between each sample.
+        """
+        return 1.0 / self.d_fs
+
+    @property
+    def d_time(self):
+        """Numpy array with time values, in seconds"""
+        self.__d_time = self.__get_d_time
+        return self.__d_time
+
+    @property
     def str_filt_sg_desc(self):
         """Long Savitsky-Golay description"""
         return self.__str_filt_sg_desc
@@ -303,6 +325,197 @@ class ClSigReal(ClSig):
         # Return the values
         return [d_ws, d_y]
 
+    # The value of this attribute can be read, but it should
+    # not be set, outside of the estimate crossings methods, since
+    # any change requires a re-calculation of the eventtimes
+    @property
+    def d_threshold(self):
+        return self.__d_threshold
+
+    # The value of this attribute can be read, but it should
+    # not be set, outside of the estimate crossings methods, since
+    # any change requires a re-calculation of the eventtimes
+    @property
+    def d_hysteresis(self):
+        return self.__d_hysteresis
+
+    # This is effectively set with the estimate crossings methods
+    @property
+    def np_d_eventtimes(self):
+        return self.__np_d_eventtimes
+
+    # Interpolation of points for instantaneous frequency estimation
+    def calc_interpolate_crossing(self, np_sig_in, idx, b_verbose=False):
+
+        """
+        This method estimates time of crossing using linear interpolation
+
+        Parameters
+        ----------
+        idx  : integer
+            This is the sample index immediately after the trigger changed to active. The
+            function assumes the prior sample was taken before the trigger state changed.
+        np_sig_in : numpy array
+            Signal to be evaluated for crossings
+        b_verbose : boolean
+            Print the intermediate steps (default: False). Useful for stepping through the
+            method to troubleshoot or understand it better.
+
+        Returns
+        -------
+        double : estimated trigger activation time
+
+        """
+
+        # Interpolate to estimate the actual crossing from
+        # the 2 nearest points
+        xp = np.array([np_sig_in[idx - 1], np_sig_in[idx]])
+        fp = np.array([self.__d_time[idx - 1], self.__d_time[idx]])
+        d_time_estimated = np.interp(self.d_threshold, xp, fp)
+
+        # More intermediate results
+        if b_verbose:
+            print('xp: ' + np.array2string(xp) + ' | fp: ' +
+                  np.array2string(fp) + ' | d_thresh: ' +
+                  '%0.4f' % self.d_threshold + ' | eventtimes: ' +
+                  '%0.4f' % d_time_estimated)
+
+        # Return the estimated crossing time
+        return d_time_estimated
+
+    # Estimate triggers for speed
+    def np_d_est_triggers(self, np_sig_in, i_direction=0, d_threshold=0,
+                          d_hysteresis=0.1, b_verbose=False):
+        """
+        This method estimates speed by identifying trigger points in time,
+        a given threshold and hysteresis. When the signal level crosses
+        the threshold, the trigger holds off. The trigger holds off
+        until the signal crosses the hysteresis level. Hysteresis is
+        defined relative to the threshold voltage.
+
+        The trigger times are a first-order approximation of the instantaneous
+        frequency. Most commonly used to estimate the rotating speed from
+        magnetic pick-ups or eddy-current probes.
+
+        Parameters
+        ----------
+        np_sig_in : numpy array
+            Signal to be evaluated for crossings
+        i_direction : integer
+            0 to search for threshold on rising signal, 1 to search on a falling signal.
+        d_threshold : double
+            Threshold value (default: 0.0 volts for zero crossings)
+        d_hysteresis : double
+            Hysteresis value (default: 0.1 volts)
+        b_verbose : boolean
+            Print the intermediate steps (default: False). Useful for stepping through the
+            method to troubleshoot or understand it better.
+
+        Returns
+        -------
+        numpy array : list of trigger event times
+
+        """
+
+        # Store to local private member, it gets used in other places
+        # in the class, primarily as a reference for plot features
+        self.__d_threshold = d_threshold
+
+        # Initialize trigger state to hold off: the trigger will be active
+        # once the signal crosses the hysteresis
+        b_trigger_hold = True
+
+        # Initiate state machine: one state for rising signal,
+        # 'up', (i_direction = 0) and another for falling signal,
+        # 'down', (i_direction = 1)
+        idx_event = 0
+        self.__np_d_eventtimes = np.zeros_like(np_sig_in)
+        if i_direction == 0:
+
+            # Define the absolute hysteretic value, rising
+            d_hysteresis_abs = self.d_threshold - d_hysteresis
+            if b_verbose:
+                print('d_hysteresis_abs: ' + '%0.4f' % d_hysteresis_abs)
+
+            # Loop through the signal
+            for idx, x in enumerate(np_sig_in[0:-1]):
+
+                # Intermediate results
+                if b_verbose:
+                    print('idx: ' + '%2.f' % idx + ' | x: ' + '%0.5f' % x +
+                          ' | s-g: ' + '%0.4f' % np_sig_in[idx])
+
+                # Only the sign matters so subtract this point from next to
+                # get sign of slope
+                d_slope = np_sig_in[idx+1] - np_sig_in[idx]
+
+                # The trigger leaves 'hold-off' state if the slope is
+                # negative and we fall below the threshold
+                if x <= d_hysteresis_abs and d_slope < 0 and b_trigger_hold:
+                    # Next time the signal rises above the threshold, trigger
+                    # will be set to hold-off state
+                    b_trigger_hold = False
+                    if b_verbose:
+                        print('Trigger hold off (false), rising')
+
+                # If we are on the rising portion of the signal and there is
+                # no hold off state on the trigger then trigger, and change
+                # state
+                if x >= self.d_threshold and np_sig_in[idx] > 0 and not b_trigger_hold:
+                    # Change state to hold off
+                    b_trigger_hold = True
+                    if b_verbose:
+                        print('Triggered, rising')
+
+                    # Estimate time of crossing with interpolation
+                    self.__np_d_eventtimes[idx_event] = self.calc_interpolate_crossing(np_sig_in, idx)
+
+                    # Increment the eventtimes index
+                    idx_event += 1
+
+        else:
+
+            # Define the absolute hysteretic value, falling
+            d_hysteresis_abs = self.d_threshold + self.d_hysteresis
+
+            # Loop through the signal
+            for idx, x in enumerate(np_sig_in[0:-1]):
+
+                # Intermediate results
+                if b_verbose:
+                    print('idx: ' + '%2.f' % idx + ' | x: ' + '%0.5f' % x +
+                          ' | s-g: ' + '%0.4f' % np_sig_in[idx])
+
+                # Only the sign matters so subtract this point from next to
+                # get sign of slope
+                d_slope = np_sig_in[idx + 1] - np_sig_in[idx]
+
+                # The trigger leaves 'hold-off' state if the slope is
+                # positive and we rise above the threshold
+                if x >= d_hysteresis_abs and d_slope > 0 and b_trigger_hold:
+                    # Next time the signal rises above the threshold, trigger
+                    # will be set to hold-off state
+                    b_trigger_hold = False
+
+                # If we are on the falling portion of the signal and
+                # there is no hold off state on the trigger then trigger
+                # and change state
+                if x <= self.d_threshold and d_slope < 0 and not b_trigger_hold:
+                    # Change state to hold off
+                    b_trigger_hold = True
+
+                    # Estimate time of crossing with interpolation
+                    self.__np_d_eventtimes[idx_event] = self.calc_interpolate_crossing(np_sig_in, idx)
+
+                    # Increment the eventtimes index
+                    idx_event += 1
+
+        # Remove zero-valued element
+        self.__np_d_eventtimes = np.delete(
+            self.__np_d_eventtimes, np.where(self.__np_d_eventtimes == 0))
+
+        return self.__np_d_eventtimes
+
 
 class ClSigComp(ClSig):
     """Class for storing, plotting, and manipulating complex-valued
@@ -404,7 +617,6 @@ class ClSigFeatures:
 
         # Instantiate and save common signal features to this class
         self.idx_add_sig(np_sig, d_fs_in=d_fs)
-        self.__d_time = self.__get_d_time
         self.__np_d_rpm = np.zeros_like(self.__lst_cl_sgs[0].np_sig)
 
         # Attributes related to file save/read behavior
@@ -485,17 +697,7 @@ class ClSigFeatures:
             Index of signal to pull description. Defaults to 0 (first signal)
 
         """
-        return 1.0 / self.d_fs(idx)
-
-    @property
-    def __get_d_time(self):
-        return np.linspace(0, (self.i_ns - 1), self.i_ns) * self.d_t_del()
-
-    @property
-    def d_time(self):
-        """Numpy array with time values, in seconds"""
-        self.__d_time = self.__get_d_time
-        return self.__d_time
+        return 1.0 / self.__lst_cl_sgs[idx].d_del_t
 
     def d_fs(self, idx=0):
         """
@@ -556,30 +758,72 @@ class ClSigFeatures:
         """
         return self.__lst_cl_sgs[idx].str_filt_butter_desc_short
 
-    @property
-    def np_d_eventtimes(self):
-        """Numpy array of trigger event times"""
-        return self.__np_d_eventtimes
+    def np_d_eventtimes(self, idx=0):
+        """
+        Numpy array of trigger event times
 
-    @property
-    def d_thresh(self):
-        """Trigger threshold value"""
-        return self.__d_thresh
+        Parameter
+        ---------
+        idx : integer
+            Index of signal to pull description. Defaults to 0 (first signal)
+
+        """
+        return self.__lst_cl_sgs[idx].np_d_eventtimes
+
+    # Estimate triggers for speed
+    def np_d_est_triggers(self, np_sig_in, i_direction=0, d_threshold=0,
+                          d_hysteresis=0.1, b_verbose=False, idx=0):
+        """
+        This method estimates speed by identifying trigger points in time,
+        a given threshold and hysteresis. When the signal level crosses
+        the threshold, the trigger holds off. The trigger holds off
+        until the signal crosses the hysteresis level. Hysteresis is
+        defined relative to the threshold voltage.
+
+        The trigger times are a first-order approximation of the instantaneous
+        frequency. Most commonly used to estimate the rotating speed from
+        magnetic pick-ups or eddy-current probes.
+
+        Parameters
+        ----------
+        np_sig_in : numpy array
+            Signal to be evaluated for crossings
+        i_direction : integer
+            0 to search for threshold on rising signal, 1 to search on a falling signal.
+        d_threshold : double
+            Threshold value (default: 0.0 volts for zero crossings)
+        d_hysteresis : double
+            Hysteresis value (default: 0.1 volts)
+        b_verbose : boolean
+            Print the intermediate steps (default: False). Useful for stepping through the
+            method to troubleshoot or understand it better.
+        idx : integer
+            Index of signal to pull description. Defaults to 0 (first signal)
+
+        Returns
+        -------
+        numpy array : list of trigger event times
+
+        """
+        return self.__lst_cl_sgs[idx].np_d_est_triggers(np_sig_in, i_direction, d_threshold,
+                                                        d_hysteresis, b_verbose)
 
     @property
     def np_d_rpm(self):
         """Estimated RPM values"""
         return self.__np_d_rpm
 
-    @property
-    def d_events_per_rev(self):
-        """Events per revolution"""
-        return self.__d_events_per_rev
+    def str_eu(self, idx=0):
+        """
+        Engineering unit descriptor
 
-    @property
-    def str_eu(self):
-        """Engineering unit descriptor"""
-        return self.__str_eu
+        Parameter
+        ---------
+        idx : integer
+            Index of signal to pull description. Defaults to 0 (first signal)
+
+        """
+        return self.__lst_cl_sgs[idx].str_eu
 
     @property
     def str_plot_desc(self):
@@ -594,10 +838,6 @@ class ClSigFeatures:
     @b_spec_peak.setter
     def b_spec_peak(self, b_spec_peak):
         self.__b_spec_peak = b_spec_peak
-
-    @str_eu.setter
-    def str_eu(self, str_eu):
-        self.__str_eu = str_eu
 
     @str_plot_desc.setter
     def str_plot_desc(self, str_plot_desc):
@@ -631,9 +871,9 @@ class ClSigFeatures:
             ax1 = axs
 
         # Channel 1
-        ax1.plot(self.d_time, self.get_np_d_sig(idx=0))
-        ax1.plot(self.d_time, self.__lst_cl_sgs[0].np_sig_filt_sg)
-        ax1.plot(self.d_time, self.__lst_cl_sgs[0].np_sig_filt_butter)
+        ax1.plot(self.__lst_cl_sgs[0].d_time, self.get_np_d_sig(idx=0))
+        ax1.plot(self.__lst_cl_sgs[0].d_time, self.__lst_cl_sgs[0].np_sig_filt_sg)
+        ax1.plot(self.__lst_cl_sgs[0].d_time, self.__lst_cl_sgs[0].np_sig_filt_butter)
         ax1.grid()
         ax1.set_xlabel("Time, seconds")
         ax1.set_ylabel("Channel output, " + self.__lst_cl_sgs[0].str_eu)
@@ -646,9 +886,9 @@ class ClSigFeatures:
         if len(self.__lst_b_active) > 1:
             if self.__lst_b_active[1]:
                 i_ch = 1
-                axs[i_ch].plot(self.d_time, self.get_np_d_sig(idx=1))
-                ax1.plot(self.d_time, self.__lst_cl_sgs[i_ch].np_sig_filt_sg)
-                ax1.plot(self.d_time, self.__lst_cl_sgs[i_ch].np_sig_filt_butter)
+                axs[i_ch].plot(self.__lst_cl_sgs[0].d_time, self.get_np_d_sig(idx=1))
+                ax1.plot(self.__lst_cl_sgs[0].d_time, self.__lst_cl_sgs[i_ch].np_sig_filt_sg)
+                ax1.plot(self.__lst_cl_sgs[0].d_time, self.__lst_cl_sgs[i_ch].np_sig_filt_butter)
                 axs[i_ch].grid()
                 axs[i_ch].set_xlabel("Time, seconds")
                 axs[i_ch].set_ylabel("Channel output, " + self.__lst_cl_sgs[i_ch].str_eu)
@@ -714,19 +954,19 @@ class ClSigFeatures:
         """
 
         # The eventtimes all should have threshold value for voltage
-        self.__np_d_eventvalue = np.ones_like(
-            self.__np_d_eventtimes) * self.d_thresh
+        np_d_event_value = np.ones_like(
+            self.__lst_cl_sgs[0].np_d_eventtimes) * self.__lst_cl_sgs[0].d_threshold
 
         # Put up the the plot time
         plt.figure()
-        plt.plot(self.__d_time, self.np_d_sig)
-        plt.plot(self.np_d_eventtimes, self.__np_d_eventvalue, "ok")
+        plt.plot(self.__lst_cl_sgs[0].d_time, self.np_d_sig)
+        plt.plot(self.np_d_eventtimes, np_d_event_value, "ok")
         plt.xlabel('Time, seconds')
-        plt.ylabel('Amplitude, ' + self.__str_eu)
-        plt.legend(['as-aquired', 'eventtimes'])
+        plt.ylabel('Amplitude, ' + self.__lst_cl_sgs[0].str_eu)
+        plt.legend(['as-acquired', 'eventtimes'])
         plt.title(self.__str_plot_desc + ' Amplitude and eventtimes vs. time')
-        self.__plot_handle = plt.gcf()
-        return [self.__plot_handle, self.__np_d_eventtimes]
+        plot_handle = plt.gcf()
+        return [plot_handle, self.__lst_cl_sgs[0].np_d_eventtimes]
 
     # Plotting method for the eventtimes
     def plt_rpm(self):
@@ -741,176 +981,17 @@ class ClSigFeatures:
 
         ax2 = ax1.twinx()
 
-        ax1.plot(self.__d_time, self.np_d_sig)
+        ax1.plot(self.__lst_cl_sgs[0].d_time, self.np_d_sig)
         ax2.plot(self.np_d_eventtimes, self.__np_d_rpm, "ok")
         ax1.set_xlabel('Time, seconds')
-        ax1.set_ylabel('Amplitude, ' + self.__str_eu)
+        ax1.set_ylabel('Amplitude, ' + self.__lst_cl_sgs[0].str_eu)
         ax2.set_ylabel('Event speed, RPM')
-        plt.legend(['as-aquired', 'RPM'])
+        plt.legend(['as-acquired', 'RPM'])
         plt.title('Amplitude and eventtimes vs. time')
         plt.show()
 
-        self.__plot_handle = plt.gcf()
-        return [self.__plot_handle, self.__np_d_rpm]
-
-    # Estimate triggers for speed,  public method
-    def np_d_est_triggers(self, i_direction=0, d_thresh=0,
-                          d_hyst=0.1, i_kernel=5, b_verbose=False):
-        """
-        This method estimates speed by identifying trigger points in time,
-        a given threshold and hysteresis. When the signal level crosses
-        the threshold, the trigger holds off. The trigger holds off
-        until the signal crosses the hysteresis level. Hysteresis is
-        defined relative to the threshold voltage.
-
-        The trigger times can be used to estimate the rotating speed.
-
-        Keyword arguments:
-        i_direction -- 0 to search for threshold on rising signal, 1 to search
-                        on a falling signal.
-        d_thresh  -- Threshold value (default: 0.0 volts for zero crossings)
-        d_hyst -- Hysteresis value (default: 0.1 volts)
-        i_kernel -- Number of samples to consider in estimating slope,
-                        must be an odd number (default: 5)
-        b_verbose -- Print the intermediate steps (default: False). Useful
-                        for stepping through the method to troubleshoot or
-                        understand it better.
-
-        Return values:
-        np_d_eventtimes -- numpy array with list of trigger event times
-        """
-
-        # Store to local private member, it gets used in other places
-        # in the class
-        self.__d_thresh = d_thresh
-
-        # Initialize trigger state to hold off: the trigger will be active
-        # once the signal crosses the hysteresis
-        b_trigger_hold = True
-
-        # half kernel get used a lot
-        self.__i_half_kernel = int((i_kernel - 1) / 2.)
-
-        # Use smoothing and derivative functions of S-G filter for
-        # estimating rise/fall
-        self.__np_d_ch1_dir = sig.savgol_filter(self.np_d_sig,
-                                                i_kernel, 1, deriv=1)
-
-        # Initiate state machine: one state for rising signal,
-        # 'up', (i_direction = 0) and another for falling signal,
-        # 'down', (i_direction = 1)
-        self.__d_hyst_abs = 0.
-        idx_event = 0
-        self.__np_d_eventtimes = np.zeros_like(self.np_d_sig)
-        if i_direction == 0:
-
-            # Define the absolute hysteretic value, rising
-            self.__d_hyst_ab = self.__d_thresh - d_hyst
-
-            # Loop through the signal
-            for idx, x in enumerate(self.np_d_sig):
-
-                # Intermediate results
-                if b_verbose:
-                    print('idx: ' + '%2.f' % idx + ' | x: ' + '%0.5f' % x +
-                          ' | s-g: ' + '%0.4f' % self.__np_d_ch1_dir[idx])
-
-                # The trigger leaves 'hold-off' state if the slope is
-                # negative and we fall below the threshold
-                if (x <= self.__d_hyst_ab and self.__np_d_ch1_dir[idx] < 0 and
-                        b_trigger_hold):
-                    # Next time the signal rises above the threshold, trigger
-                    # will be set to hold-off state
-                    b_trigger_hold = False
-
-                # If we are on the rising portion of the signal and there is
-                # no hold off state on the trigge then trigger, and change
-                # state
-                if (x >= self.__d_thresh and self.__np_d_ch1_dir[idx] > 0 and
-                        not (b_trigger_hold)):
-
-                    # Change state to hold off
-                    b_trigger_hold = True
-
-                    # Estimate time of crossing with interpolation
-                    if idx > 0:
-
-                        # Interpolate to estimate the actual crossing from
-                        # the 2 nearest points
-                        xp = np.array(
-                            [self.np_d_sig[idx - 1], self.np_d_sig[idx]])
-                        fp = np.array(
-                            [self.__d_time[idx - 1], self.__d_time[idx]])
-                        self.__np_d_eventtimes[idx_event] = np.interp(
-                            d_thresh, xp, fp)
-
-                        # More intermediate results
-                        if b_verbose:
-                            print('xp: ' + np.array2string(xp) + ' | fp: ' +
-                                  np.array2string(fp) + ' | d_thresh: ' +
-                                  '%0.4f' % d_thresh + ' | eventtimes: ' +
-                                  '%0.4f' % self.__np_d_eventtimes[idx_event])
-
-                        # Increment the eventtimes index
-                        idx_event += 1
-
-        else:
-
-            # Define the absolute hysteretic value, falling
-            self.__d_hyst_ab = self.__d_thresh + d_hyst
-
-            # Loop through the signal
-            for idx, x in enumerate(self.np_d_sig):
-
-                # Intermediate results
-                if b_verbose:
-                    print('idx: ' + '%2.f' % idx + ' | x: ' + '%0.5f' % x +
-                          ' | s-g: ' + '%0.4f' % self.__np_d_ch1_dir[idx])
-
-                # The trigger leaves 'hold-off' state if the slope is
-                # positive and we rise above the threshold
-                if (x >= self.__d_hyst_ab and self.__np_d_ch1_dir[idx] > 0 and
-                        b_trigger_hold):
-                    # Next time the signal rises above the threshold, trigger
-                    # will be set to hold-off state
-                    b_trigger_hold = False
-
-                # If we are on the falling portion of the signal and
-                # there is no hold off state on the trigger then trigger
-                # and change state
-                if (x <= self.__d_thresh and self.__np_d_ch1_dir[idx] < 0 and
-                        not (b_trigger_hold)):
-
-                    # Change state to hold off
-                    b_trigger_hold = True
-
-                    # Estimate time of crossing with interpolation
-                    if idx > 0:
-
-                        # Interpolate to estimate the actual crossing from
-                        # the 2 nearest points
-                        xp = np.array(
-                            [self.np_d_sig[idx - 1], self.np_d_sig[idx]])
-                        fp = np.array(
-                            [self.__d_time[idx - 1], self.__d_time[idx]])
-                        self.__np_d_eventtimes[idx_event] = np.interp(
-                            d_thresh, xp, fp)
-
-                        # More intermediate results
-                        if b_verbose:
-                            print('xp: ' + np.array2string(xp) + ' | fp: ' +
-                                  np.array2string(fp) + ' | d_thresh: ' +
-                                  '%0.4f' % d_thresh + ' | eventtimes: ' +
-                                  '%0.4f' % self.__np_d_eventtimes[idx_event])
-
-                        # Increment the eventtimes index
-                        idx_event += 1
-
-        # Remove zero-valued element
-        self.__np_d_eventtimes = np.delete(
-            self.__np_d_eventtimes, np.where(self.__np_d_eventtimes == 0))
-
-        return self.__np_d_eventtimes
+        plot_handle = plt.gcf()
+        return [plot_handle, self.__np_d_rpm]
 
     # Method to estimate the RPM values
     def d_est_rpm(self, d_events_per_rev=1):
@@ -923,8 +1004,7 @@ class ClSigFeatures:
         self.__d_events_per_rev = d_events_per_rev
 
         # Calculate the RPM using the difference in event times
-        self.__np_d_rpm = 60. / \
-                          (np.diff(self.np_d_eventtimes) * float(d_events_per_rev))
+        self.__np_d_rpm = 60. / (np.diff(self.__lst_cl_sgs[0].np_d_eventtimes) * float(d_events_per_rev))
 
         # To keep the lengths the same, append the last sample
         self.__np_d_rpm = np.append(
@@ -933,12 +1013,12 @@ class ClSigFeatures:
         return self.__np_d_rpm
 
     # Save the data
-    def b_save_data(self, str_data_prefix='testclass', idx_data=1):
+    def b_save_data(self, str_data_prefix='test_class', idx_data=1):
         """
         Save the data in the object to a .csv file
 
         Keyword arguments:
-        str_data_prefix -- String with file prefix (defaults to 'testclass')
+        str_data_prefix -- String with file prefix (defaults to 'test_class')
         idx_data -- File index (defaults to 1)
 
         Return values:
@@ -950,7 +1030,7 @@ class ClSigFeatures:
         str_header = 'X,'
         str_units = 'Sequence,'
         idx_ch = 1
-        for b_obj in self.__lst_b_active:
+        for _ in self.__lst_b_active:
             str_header = str_header + 'CH' + '%0.0f' % idx_ch + ','
             str_units = str_units + 'Volt,'
             idx_ch = idx_ch + 1

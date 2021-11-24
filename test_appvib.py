@@ -12,7 +12,14 @@ class TestClSig(TestCase):
         self.np_test = np.array([0.1, 1.0, 10.0])
         self.np_test_ch2 = np.array([2.1, 3.0, 12.0])
         self.np_test_ch3 = np.array([3.1, 4.0, 13.0])
-        self.np_test_real = np.array([1.0, 2.0, 3.0])
+
+        # Data set for the real-valued class
+        self.np_test_real = np.array([1.0, 2.0, 3.0, 4.0, 3.0, 2.0, 1.0, 2.0, 3.0, 4.0])
+        self.d_fs_real = 1.0
+        self.d_threshold_real = 2.5
+        self.d_hysteresis_real = 0.1
+        self.i_direction = 0
+
         self.np_test_comp = np.array([0.1-0.2j, 1.0-2.0j, 10.0-20j])
         self.np_test_comp_long = np.array([0.1-0.2j, 1.0-2.0j, 10.0-20j, 100.0-200j, 1000.0-2000j])
         self.ylim_tb_test = [-1.1, 1.1]
@@ -20,6 +27,8 @@ class TestClSig(TestCase):
         self.d_fs = 1.024e3
         self.d_fs_ch2 = 2.048e3
         self.d_fs_ch3 = 4.096e3
+        self.str_eu_default = "volts"
+        self.str_eu_acc = "g's"
 
     def test_b_complex(self):
 
@@ -126,6 +135,14 @@ class TestClSig(TestCase):
         self.assertEqual(idx_new, 1, msg='Failed to return correct index')
         class_test_sig_features.d_fs_update(self.d_fs_ch2, idx=1)
 
+    def test_str_eu(self):
+
+        # Signal feature base class unit check
+        class_test_sig_features = appvib.ClSigFeatures(self.np_test, self.d_fs)
+        self.assertEqual(self.str_eu_default, class_test_sig_features.str_eu())
+        class_test_sig_features.str_eu = self.str_eu_acc
+        self.assertEqual(self.str_eu_acc, class_test_sig_features.str_eu)
+
     def test_plt_sigs(self):
 
         # Signal feature class check of plotting on instantiation
@@ -146,6 +163,15 @@ class TestClSig(TestCase):
         # Add peak label
         class_test_sig_features.b_spec_peak = True
         class_test_sig_features.plt_spec()
+
+    def test_np_d_est_triggers(self):
+
+        # Real-valued check
+        class_test_real = appvib.ClSigReal(self.np_test_real, self.d_fs_real)
+        class_test_real.np_d_est_triggers(np_sig_in=self.np_test_real, i_direction=self.i_direction,
+                                          d_threshold=self.d_threshold_real, d_hysteresis=self.d_hysteresis_real,
+                                          b_verbose=True)
+        self.assertAlmostEqual(class_test_real.np_d_eventtimes[0], 7.5, 12)
 
 
 if __name__ == '__main__':
