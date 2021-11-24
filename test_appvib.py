@@ -134,12 +134,17 @@ class TestClSig(TestCase):
 
         # Signal feature class, second signal
         idx_new = class_test_sig_features.idx_add_sig(self.np_test_ch2, self.d_fs)
+        self.assertEqual(idx_new, 1, msg='Failed to return correct index')
         class_test_sig_features.plt_sigs()
 
     def test_plt_spec(self):
 
         # Signal feature class check of plotting on instantiation
         class_test_sig_features = appvib.ClSigFeatures(self.np_test, self.d_fs)
+        class_test_sig_features.plt_spec()
+
+        # Add peak label
+        class_test_sig_features.b_spec_peak = True
         class_test_sig_features.plt_spec()
 
 

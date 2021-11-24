@@ -6,7 +6,7 @@ import abc as abc
 
 
 class ClSig(abc.ABC):
-    """Class to manage signals. Abstract base class"""
+    """Abstract class to manage signals. Abstract base class"""
 
     @property
     @abc.abstractmethod
@@ -43,11 +43,18 @@ class ClSigReal(ClSig):
 
     """
 
-    def __init__(self, np_sig_in, d_fs):
+    def __init__(self, np_sig_in, d_fs, str_eu_in='volts'):
+
+        # Parent class
         super(ClSigReal, self).__init__()
+
+        # Signal meta data
         self.__b_complex = False
         self.np_sig = np_sig_in
         self.__d_fs = d_fs
+        self.__str_eu = str_eu_in
+
+        # Derived features for the signal
         self.__i_ns = self.__get_num_samples()
         self.__ylim_tb = [0]
         self.set_ylim_tb(self.__ylim_tb)
@@ -133,6 +140,14 @@ class ClSigReal(ClSig):
         if b_state:
             self.__b_update_filt_sg = True
             self.__b_update_filt_butter = True
+
+    @property
+    def str_eu(self):
+        return self.__str_eu
+
+    @str_eu.setter
+    def str_eu(self, str_eu_in):
+        self.__str_eu = str_eu_in
 
     @property
     def b_complex(self):
@@ -392,9 +407,11 @@ class ClSigFeatures:
         self.__d_time = self.__get_d_time
         self.__np_d_rpm = np.zeros_like(self.__lst_cl_sgs[0].np_sig)
 
+        # Attributes related to file save/read behavior
+        self.__str_file = ''
+
         self.__d_thresh = np.NaN
         self.__d_events_per_rev = np.NaN
-        self.__str_eu = 'volts'
         self.str_plot_desc = 'Test Data'
         self.b_spec_peak = False
 
@@ -619,7 +636,7 @@ class ClSigFeatures:
         ax1.plot(self.d_time, self.__lst_cl_sgs[0].np_sig_filt_butter)
         ax1.grid()
         ax1.set_xlabel("Time, seconds")
-        ax1.set_ylabel("Channel output, " + self.__str_eu)
+        ax1.set_ylabel("Channel output, " + self.__lst_cl_sgs[0].str_eu)
         ax1.set_ylim(self.__lst_cl_sgs[0].ylim_tb)
         ax1.set_title(self.__str_plot_desc + " Timebase")
         ax1.legend(['as-acquired', self.str_filt_sg_desc_short(),
@@ -634,7 +651,7 @@ class ClSigFeatures:
                 ax1.plot(self.d_time, self.__lst_cl_sgs[i_ch].np_sig_filt_butter)
                 axs[i_ch].grid()
                 axs[i_ch].set_xlabel("Time, seconds")
-                axs[i_ch].set_ylabel("Channel output, " + self.__str_eu)
+                axs[i_ch].set_ylabel("Channel output, " + self.__lst_cl_sgs[i_ch].str_eu)
                 axs[i_ch].set_ylim(self.__lst_cl_sgs[0].ylim_tb)
                 axs[i_ch].set_title(self.__str_plot_desc + " Timebase")
                 ax1.legend(['as-acquired', self.str_filt_sg_desc_short(idx=i_ch),
@@ -665,7 +682,7 @@ class ClSigFeatures:
         plt.plot(spec[0], d_mag)
         plt.grid()
         plt.xlabel("Frequency, hertz")
-        plt.ylabel("Channel amplitude, " + self.__str_eu)
+        plt.ylabel("Channel amplitude, " + self.__lst_cl_sgs[0].str_eu)
         plt.title(self.__str_plot_desc + " Spectrum")
 
         # Annotate the peak
@@ -676,7 +693,7 @@ class ClSigFeatures:
             d_mag_peak = d_mag[idx_max]
             plt.plot(d_ws_peak, d_mag_peak, 'ok')
             str_label = ('%0.3f' % d_mag_peak + ' ' +
-                         self.__str_eu + ' @ ' + '%0.2f' % d_ws_peak + ' Hz')
+                         self.__lst_cl_sgs[0].str_eu + ' @ ' + '%0.2f' % d_ws_peak + ' Hz')
             plt.annotate(str_label, [
                 d_ws_peak + (0.02 * d_ws_span), d_mag_peak * 0.95])
 
