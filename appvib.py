@@ -6,7 +6,6 @@ import abc as abc
 
 
 class ClSig(abc.ABC):
-
     """Class to manage signals. Abstract base class"""
 
     @property
@@ -50,6 +49,17 @@ class ClSigReal(ClSig):
         self.__ylim_tb = [0]
         self.set_ylim_tb(self.__ylim_tb)
 
+        # Setup the s-g array and filtering parameters
+        self.__np_sig_filt_sg = np_sig
+        self.__i_win_len = 31
+        self.__i_poly_order = 1
+        self.__str_filt_sg_desc = 'No Savitsky-Golay filtering'
+        self.__str_filt_sg_desc_short = 'No S-G Filter'
+        self.__b_update_filt_sg = True
+
+        # Final step: since this is instantiation, flag new signal in class
+        self.__set_new_sig(True)
+
     @property
     def np_sig(self):
         """Numpy array containing the signal"""
@@ -57,8 +67,17 @@ class ClSigReal(ClSig):
 
     @np_sig.setter
     def np_sig(self, np_sig):
+
+        # With a new signal, all the filtering will have to be done
+        self.__set_new_sig(True)
+
         self.__np_sig = np_sig
         self.__i_ns = self.__get_num_samples()
+
+    def __set_new_sig(self, b_state):
+        """Internal function that sets flags based on state of signal"""
+        if b_state:
+            self.__b_update_filt_sg = True
 
     @property
     def b_complex(self):
@@ -98,6 +117,47 @@ class ClSigReal(ClSig):
         else:
             self.__ylim_tb = np.array(
                 [np.max(self.__np_sig), np.min(self.__np_sig)])
+
+    @property
+    def str_filt_sg_desc(self):
+        """Long Savitsky-Golay description"""
+        return self.__str_filt_sg_desc
+
+    @property
+    def str_filt_sg_desc_short(self):
+        """Short Savitsky-Golay description"""
+        return self.__str_filt_sg_desc_short
+
+    @property
+    def np_sig_filt_sg(self):
+        """ Return the signal, filtered with Savitsky-Golay"""
+
+        # Does the filter need to be applied (signal updated) or can
+        # we return the prior instance?
+        if self.__b_update_filt_sg:
+
+            # If there are enough samples, filter
+            if self.i_ns > self.__i_win_len:
+                self.__np_sig_filt_sg = sig.savgol_filter(self.np_sig,
+                                                          self.__i_win_len,
+                                                          self.__i_poly_order)
+                self.__str_filt_sg_desc = ('Savitsky-Golay | Window Length: ' +
+                                           '%3.f' % self.__i_win_len +
+                                           ' | Polynomial Order: ' +
+                                           '%2.f' % self.__i_poly_order)
+                self.__str_filt_sg_desc_short = 'SGolay'
+
+            else:
+                # Since we cannot perform the filtering, copy the original
+                # signal into the vector and modify the descriptions
+                self.__np_sig_filt_sg = self.np_sig
+                self.__str_filt_sg_desc = 'No Savitsky-Golay filtering'
+                self.__str_filt_sg_desc_short = 'No S-G Filter'
+
+            # Flag that the filtering is done
+            self.__b_update_filt_sg = False
+
+        return self.__np_sig_filt_sg
 
 
 class ClSigComp(ClSig):
@@ -157,7 +217,6 @@ class ClSigComp(ClSig):
 
 
 class ClSigFeatures:
-
     """Class to manage signal features on scope data and other signals
 
     Example usage:
@@ -244,7 +303,7 @@ class ClSigFeatures:
         self.__lst_b_active.append(True)
 
         # Success, return True
-        return len(self.__lst_cl_sgs)-1
+        return len(self.__lst_cl_sgs) - 1
 
     @property
     def i_ns(self):
@@ -255,11 +314,11 @@ class ClSigFeatures:
     @property
     def d_t_del(self):
         """Delta time between each sample"""
-        return 1.0/self.__d_fs
+        return 1.0 / self.__d_fs
 
     @property
     def __get_d_time(self):
-        return np.linspace(0, (self.i_ns-1), self.i_ns)*self.d_t_del
+        return np.linspace(0, (self.i_ns - 1), self.i_ns) * self.d_t_del
 
     @property
     def d_time(self):
@@ -270,39 +329,15 @@ class ClSigFeatures:
     @property
     def d_fs(self):
         """Sampling frequency in hertz"""
-        self.__d_fs = 1.0/(self.__d_time[1]-self.__d_time[0])
+        self.__d_fs = 1.0 / (self.__d_time[1] - self.__d_time[0])
         return self.__d_fs
-
-    @property
-    def np_d_ch1_filt(self):
-        """ Return the signal, filtered with Savitsky-Golay"""
-        self.__i_win_len = 31
-        self.__i_poly_order = 1
-
-        # If there are enough samples, filter
-        if (self.i_ns > self.__i_win_len):
-            self.__np_d_ch1_filt = sig.savgol_filter(self.np_d_sig,
-                                                     self.__i_win_len,
-                                                     self.__i_poly_order)
-            self.__str_filt_desc = ('Savitsky-Golay | Window Length: ' +
-                                    '%3.f' % self.__i_win_len +
-                                    ' | Polynomial Order: ' +
-                                    '%2.f' % self.__i_poly_order)
-            self.__str_filt_desc_short = 'SGolay'
-
-        else:
-            self.__np_d_ch1_filt = self.np_d_sig
-            self.__str_filt_desc = 'No Savitsky-Golay filtering'
-            self.__str_filt_desc_short = 'No S-G Filter'
-
-        return self.__np_d_ch1_filt
 
     @property
     def np_d_ch1_filt1(self):
         """ Return the signal, filtered with butter FIR filter"""
         self.__i_poles = 1
         if self.d_fs < 300:
-            self.__d_wn = self.d_fs/8.
+            self.__d_wn = self.d_fs / 8.
         else:
             self.__d_wn = 100.
 
@@ -316,19 +351,17 @@ class ClSigFeatures:
         self.__str_filt1_desc_short = 'Butter'
         return self.__np_d_ch1_filt1
 
-    @property
-    def str_filt_desc(self):
-        "Complete Filt description of the Savitsky-Golay filter design"
-        return self.__str_filt_desc
+    def str_filt_sg_desc(self, idx=0):
+        """Complete Filt description of the Savitsky-Golay filter design"""
+        return self.__lst_cl_sgs[idx].str_filt_sg_desc
 
-    @property
-    def str_filt_desc_short(self):
+    def str_filt_desc_short(self, idx=0):
         """Short Filt description, useful for plot legend labels"""
-        return self.__str_filt_desc_short
+        return self.__lst_cl_sgs[idx].str_filt_sg_desc_short
 
     @property
     def str_filt1_desc(self):
-        "Complete Filt1 description of the Butterworth filter design"
+        """Complete Filt1 description of the Butterworth filter design"""
         return self.__str_filt1_desc
 
     @property
@@ -391,10 +424,10 @@ class ClSigFeatures:
 
         # Scale the fft. I'm using the actual number
         # of points to scale.
-        d_y = d_y/(self.__i_ns_rfft-1)
+        d_y = d_y / (self.__i_ns_rfft - 1)
 
         # Calculate the frequency scale
-        d_ws = rfftfreq(self.i_ns, 1./self.d_fs)
+        d_ws = rfftfreq(self.i_ns, 1. / self.d_fs)
 
         # Return the values
         return [d_ws, d_y]
@@ -427,7 +460,7 @@ class ClSigFeatures:
         else:
             ax1 = axs
         ax1.plot(self.d_time, self.np_d_sig)
-        ax1.plot(self.d_time, self.np_d_ch1_filt)
+        ax1.plot(self.d_time, self.__lst_cl_sgs[0].np_sig_filt_sg)
         ax1.plot(self.d_time, self.np_d_ch1_filt1)
         ax1.grid()
         ax1.set_xlabel("Time, seconds")
@@ -480,13 +513,13 @@ class ClSigFeatures:
         if self.__b_spec_peak:
             idx_max = np.argmax(d_mag)
             d_ws_peak = self.__spec[0][idx_max]
-            d_ws_span = (self.__spec[0][-1]-self.__spec[0][0])
+            d_ws_span = (self.__spec[0][-1] - self.__spec[0][0])
             d_mag_peak = d_mag[idx_max]
             plt.plot(d_ws_peak, d_mag_peak, 'ok')
             str_label = ('%0.3f' % d_mag_peak + ' ' +
                          self.__str_eu + ' @ ' + '%0.2f' % d_ws_peak + ' Hz')
             plt.annotate(str_label, [
-                         d_ws_peak + (0.02 * d_ws_span), d_mag_peak*0.95])
+                d_ws_peak + (0.02 * d_ws_span), d_mag_peak * 0.95])
 
         # Save off the handle to the plot
         self.__plot_handle = plt.gcf()
@@ -506,7 +539,7 @@ class ClSigFeatures:
 
         # The eventtimes all should have threshold value for voltage
         self.__np_d_eventvalue = np.ones_like(
-            self.__np_d_eventtimes)*self.d_thresh
+            self.__np_d_eventtimes) * self.d_thresh
 
         # Put up the the plot time
         plt.figure()
@@ -580,7 +613,7 @@ class ClSigFeatures:
         b_trigger_hold = True
 
         # half kernel get used a lot
-        self.__i_half_kernel = int((i_kernel - 1)/2.)
+        self.__i_half_kernel = int((i_kernel - 1) / 2.)
 
         # Use smoothing and derivative functions of S-G filter for
         # estimating rise/fall
@@ -609,8 +642,7 @@ class ClSigFeatures:
                 # The trigger leaves 'hold-off' state if the slope is
                 # negative and we fall below the threshold
                 if (x <= self.__d_hyst_ab and self.__np_d_ch1_dir[idx] < 0 and
-                   b_trigger_hold):
-
+                        b_trigger_hold):
                     # Next time the signal rises above the threshold, trigger
                     # will be set to hold-off state
                     b_trigger_hold = False
@@ -619,7 +651,7 @@ class ClSigFeatures:
                 # no hold off state on the trigge then trigger, and change
                 # state
                 if (x >= self.__d_thresh and self.__np_d_ch1_dir[idx] > 0 and
-                   not(b_trigger_hold)):
+                        not (b_trigger_hold)):
 
                     # Change state to hold off
                     b_trigger_hold = True
@@ -632,7 +664,7 @@ class ClSigFeatures:
                         xp = np.array(
                             [self.np_d_sig[idx - 1], self.np_d_sig[idx]])
                         fp = np.array(
-                            [self.__d_time[idx-1], self.__d_time[idx]])
+                            [self.__d_time[idx - 1], self.__d_time[idx]])
                         self.__np_d_eventtimes[idx_event] = np.interp(
                             d_thresh, xp, fp)
 
@@ -662,8 +694,7 @@ class ClSigFeatures:
                 # The trigger leaves 'hold-off' state if the slope is
                 # positive and we rise above the threshold
                 if (x >= self.__d_hyst_ab and self.__np_d_ch1_dir[idx] > 0 and
-                   b_trigger_hold):
-
+                        b_trigger_hold):
                     # Next time the signal rises above the threshold, trigger
                     # will be set to hold-off state
                     b_trigger_hold = False
@@ -672,7 +703,7 @@ class ClSigFeatures:
                 # there is no hold off state on the trigger then trigger
                 # and change state
                 if (x <= self.__d_thresh and self.__np_d_ch1_dir[idx] < 0 and
-                   not(b_trigger_hold)):
+                        not (b_trigger_hold)):
 
                     # Change state to hold off
                     b_trigger_hold = True
@@ -685,7 +716,7 @@ class ClSigFeatures:
                         xp = np.array(
                             [self.np_d_sig[idx - 1], self.np_d_sig[idx]])
                         fp = np.array(
-                            [self.__d_time[idx-1], self.__d_time[idx]])
+                            [self.__d_time[idx - 1], self.__d_time[idx]])
                         self.__np_d_eventtimes[idx_event] = np.interp(
                             d_thresh, xp, fp)
 
@@ -717,11 +748,11 @@ class ClSigFeatures:
 
         # Calculate the RPM using the difference in event times
         self.__np_d_rpm = 60. / \
-            (np.diff(self.np_d_eventtimes)*float(d_events_per_rev))
+                          (np.diff(self.np_d_eventtimes) * float(d_events_per_rev))
 
         # To keep the lengths the same, append the last sample
         self.__np_d_rpm = np.append(
-            self.__np_d_rpm, self.__np_d_rpm[len(self.__np_d_rpm)-1])
+            self.__np_d_rpm, self.__np_d_rpm[len(self.__np_d_rpm) - 1])
 
         return self.__np_d_rpm
 
@@ -744,7 +775,7 @@ class ClSigFeatures:
         str_units = 'Sequence,'
         idx_ch = 1
         for b_obj in self.__lst_b_active:
-            str_header = str_header + 'CH' + '%0.0f' % idx_ch +  ','
+            str_header = str_header + 'CH' + '%0.0f' % idx_ch + ','
             str_units = str_units + 'Volt,'
             idx_ch = idx_ch + 1
 
@@ -760,7 +791,7 @@ class ClSigFeatures:
             for cl_obj in self.__lst_cl_sgs:
                 str_line = str_line + ',' + '%0.5f' % cl_obj.np_sig[idx_line]
 
-            file_data.write(str_line+'\n')
+            file_data.write(str_line + '\n')
 
         file_data.close()
 
