@@ -43,17 +43,17 @@ class ClSigReal(ClSig):
 
     """
 
-    def __init__(self, np_sig, d_fs):
+    def __init__(self, np_sig_in, d_fs):
         super(ClSigReal, self).__init__()
         self.__b_complex = False
-        self.__np_sig = np_sig
+        self.np_sig = np_sig_in
         self.__d_fs = d_fs
         self.__i_ns = self.__get_num_samples()
         self.__ylim_tb = [0]
         self.set_ylim_tb(self.__ylim_tb)
 
         # Setup the s-g array and filtering parameters
-        self.__np_sig_filt_sg = np_sig
+        self.__np_sig_filt_sg = np_sig_in
         self.__i_win_len = 31
         self.__i_poly_order = 1
         self.__str_filt_sg_desc = 'No Savitsky-Golay filtering'
@@ -61,7 +61,7 @@ class ClSigReal(ClSig):
         self.__b_update_filt_sg = True
 
         # Setup the butterworth FIR filtered signal vector and parameters
-        self.__np_sig_filt_butter = np_sig
+        self.__np_sig_filt_butter = np_sig_in
         self.__i_poles = 1
         self.__d_wn = 0.
         self.__str_filt_butter_desc = 'No Butterworth filtering'
@@ -437,9 +437,10 @@ class ClSigFeatures:
                 raise Exception('Cannot add signal with different number of samples')
 
         # Add the signals, looking for complex and real
-        self.__lst_cl_sgs.append(ClSigReal(np_sig_in, d_fs_in))
         if np.iscomplexobj(np_sig_in):
-            self.__lst_cl_sgs[0] = ClSigComp(np_sig_in, d_fs_in)
+            self.__lst_cl_sgs.append(ClSigComp(np_sig_in, d_fs_in))
+        else:
+            self.__lst_cl_sgs.append(ClSigReal(np_sig_in, d_fs_in))
 
         # Mark this one as active
         self.__lst_b_active.append(True)

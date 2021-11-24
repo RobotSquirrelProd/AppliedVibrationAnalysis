@@ -15,8 +15,8 @@ class TestClSig(TestCase):
         self.np_test_real = np.array([1.0, 2.0, 3.0])
         self.np_test_comp = np.array([0.1-0.2j, 1.0-2.0j, 10.0-20j])
         self.np_test_comp_long = np.array([0.1-0.2j, 1.0-2.0j, 10.0-20j, 100.0-200j, 1000.0-2000j])
-        self.ylim_tb_test = np.array([-1.1, 1.1])
-        self.ylim_tb_test_alt = np.array([-3.3, 3.3])
+        self.ylim_tb_test = [-1.1, 1.1]
+        self.ylim_tb_test_alt = [-3.3, 3.3]
         self.d_fs = 1.024e3
         self.d_fs_ch2 = 2.048e3
         self.d_fs_ch3 = 4.096e3
@@ -46,7 +46,7 @@ class TestClSig(TestCase):
 
         # Attempt to send a complex-valued signal to the real-valued class
         with self.assertRaises(Exception):
-            class_test_real = appvib.ClSigReal(self.np_test_comp)
+            class_test_real = appvib.ClSigReal(self.np_test_comp, self.d_fs)
 
         # Complex-valued child and verify inheritance is working
         class_test_comp = appvib.ClSigComp(self.np_test_comp, self.d_fs)
@@ -92,7 +92,7 @@ class TestClSig(TestCase):
         # Signal feature class check on sample count for the second signal
         class_test_sig_features = appvib.ClSigFeatures(self.np_test_comp_long, self.d_fs)
         with self.assertRaises(Exception):
-            class_test_sig_features.idx_add_sig(self.np_test_ch2)
+            class_test_sig_features.idx_add_sig(self.np_test_ch2, d_fs_in=self.d_fs_ch2)
         class_test_sig_features = appvib.ClSigFeatures(self.np_test, self.d_fs)
         self.assertEqual(class_test_sig_features.i_ns, 3)
 
