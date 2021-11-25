@@ -923,7 +923,8 @@ class ClSigFeatures:
         """Plot data in frequency domain. This method assumes a real signal
 
         Return values:
-        handle to the plot
+        list : [handle to the plot, frequency labels, complex-spectral values]
+
         """
         spec = self.__lst_cl_sgs[0].d_fft_real()
         d_mag = np.abs(spec[1])
@@ -969,15 +970,21 @@ class ClSigFeatures:
         # Put up the the plot time
         plt.figure()
         plt.plot(self.__lst_cl_sgs[0].d_time, self.np_d_sig)
-        plt.plot(self.np_d_eventtimes, np_d_event_value, "ok")
+        plt.plot(self.np_d_eventtimes(idx=0), np_d_event_value, "ok")
         plt.xlabel('Time, seconds')
         plt.ylabel('Amplitude, ' + self.__lst_cl_sgs[0].str_eu)
         plt.legend(['as-acquired', 'eventtimes'])
         plt.title(self.__str_plot_desc + ' Amplitude and eventtimes vs. time')
-        plot_handle = plt.gcf()
-        return [plot_handle, self.__lst_cl_sgs[0].np_d_eventtimes]
 
-    # Plotting method for the eventtimes
+        # Save the handle prior to showing
+        plot_handle = plt.gcf()
+
+        # Show the plot
+        plt.show()
+
+        return [plot_handle, self.np_d_eventtimes(idx=0)]
+
+    # Plotting method for the eventtimes, interpreted as RPM
     def plt_rpm(self):
         """Plot rpm data in time.
 
