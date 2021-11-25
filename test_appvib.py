@@ -13,12 +13,16 @@ class TestClSig(TestCase):
         self.np_test_ch2 = np.array([2.1, 3.0, 12.0])
         self.np_test_ch3 = np.array([3.1, 4.0, 13.0])
 
-        # Data set for the real-valued class
-        self.np_test_real = np.array([1.0, 2.0, 3.0, 4.0, 3.0, 2.0, 1.0, 2.0, 3.0, 4.0])
+        # Data set for the real-valued class. This is a sawtooth waveform. For
+        # triggering on rising values it should trigger at 7.5 seconds (between
+        # sample 8 and 9). For falling it should trigger at 4.5 seconds (between
+        # sample 5 and 6).
+        self.np_test_real = np.array([1.0, 2.0, 3.0, 4.0, 3.0, 2.0, 1.0, 2.0, 3.0, 4.0, 3.0])
         self.d_fs_real = 1.0
         self.d_threshold_real = 2.5
         self.d_hysteresis_real = 0.1
-        self.i_direction = 0
+        self.i_direction_real_rising = 0
+        self.i_direction_real_falling = 1
 
         self.np_test_comp = np.array([0.1-0.2j, 1.0-2.0j, 10.0-20j])
         self.np_test_comp_long = np.array([0.1-0.2j, 1.0-2.0j, 10.0-20j, 100.0-200j, 1000.0-2000j])
@@ -166,12 +170,21 @@ class TestClSig(TestCase):
 
     def test_np_d_est_triggers(self):
 
-        # Real-valued check
+        # Real-valued check, rising signal
         class_test_real = appvib.ClSigReal(self.np_test_real, self.d_fs_real)
-        class_test_real.np_d_est_triggers(np_sig_in=self.np_test_real, i_direction=self.i_direction,
+        class_test_real.np_d_est_triggers(np_sig_in=self.np_test_real, i_direction=self.i_direction_real_rising,
                                           d_threshold=self.d_threshold_real, d_hysteresis=self.d_hysteresis_real,
                                           b_verbose=True)
         self.assertAlmostEqual(class_test_real.np_d_eventtimes[0], 7.5, 12)
+
+        print('--------------------')
+
+        # Real-valued check, rising signal
+        class_test_real = appvib.ClSigReal(self.np_test_real, self.d_fs_real)
+        class_test_real.np_d_est_triggers(np_sig_in=self.np_test_real, i_direction=self.i_direction_real_falling,
+                                          d_threshold=self.d_threshold_real, d_hysteresis=self.d_hysteresis_real,
+                                          b_verbose=True)
+        self.assertAlmostEqual(class_test_real.np_d_eventtimes[0], 4.5, 12)
 
 
 if __name__ == '__main__':

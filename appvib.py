@@ -2,6 +2,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import scipy.signal as sig
 from scipy.fft import rfft, rfftfreq
+from scipy.interpolate import interp1d
+
 import abc as abc
 
 
@@ -369,9 +371,10 @@ class ClSigReal(ClSig):
 
         # Interpolate to estimate the actual crossing from
         # the 2 nearest points
-        xp = np.array([np_sig_in[idx - 1], np_sig_in[idx]])
-        fp = np.array([self.__d_time[idx - 1], self.__d_time[idx]])
-        d_time_estimated = np.interp(self.d_threshold, xp, fp)
+        xp = np.array([np_sig_in[idx], np_sig_in[idx+1]])
+        fp = np.array([self.__d_time[idx], self.__d_time[idx+1]])
+        f_interp = interp1d(xp, fp, assume_sorted=False)
+        d_time_estimated = f_interp(self.d_threshold)
 
         # More intermediate results
         if b_verbose:
@@ -420,6 +423,8 @@ class ClSigReal(ClSig):
         # Store to local private member, it gets used in other places
         # in the class, primarily as a reference for plot features
         self.__d_threshold = d_threshold
+        if b_verbose:
+            print('d_threshold: ' + '%0.4f' % self.__d_threshold)
 
         # Initialize trigger state to hold off: the trigger will be active
         # once the signal crosses the hysteresis
@@ -461,7 +466,7 @@ class ClSigReal(ClSig):
                 # If we are on the rising portion of the signal and there is
                 # no hold off state on the trigger then trigger, and change
                 # state
-                if x >= self.d_threshold and np_sig_in[idx] > 0 and not b_trigger_hold:
+                if (x < self.d_threshold <= np_sig_in[idx + 1]) and d_slope > 0 and not b_trigger_hold:
                     # Change state to hold off
                     b_trigger_hold = True
                     if b_verbose:
@@ -496,13 +501,17 @@ class ClSigReal(ClSig):
                     # Next time the signal rises above the threshold, trigger
                     # will be set to hold-off state
                     b_trigger_hold = False
+                    if b_verbose:
+                        print('Trigger hold off (false), falling')
 
                 # If we are on the falling portion of the signal and
                 # there is no hold off state on the trigger then trigger
                 # and change state
-                if x <= self.d_threshold and d_slope < 0 and not b_trigger_hold:
+                if (x > self.d_threshold >= np_sig_in[idx + 1]) and d_slope < 0 and not b_trigger_hold:
                     # Change state to hold off
                     b_trigger_hold = True
+                    if b_verbose:
+                        print('Triggered, falling')
 
                     # Estimate time of crossing with interpolation
                     self.__np_d_eventtimes[idx_event] = self.calc_interpolate_crossing(np_sig_in, idx)
