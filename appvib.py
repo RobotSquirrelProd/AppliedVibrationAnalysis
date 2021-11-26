@@ -68,7 +68,7 @@ class ClSigReal(ClSig):
         self.__i_poly_order = 1
         self.__str_filt_sg_desc = 'No Savitsky-Golay filtering'
         self.__str_filt_sg_desc_short = 'No S-G Filter'
-        self.__b_update_filt_sg = True
+        self.__b_is_stale_filt_sg = True
 
         # Setup the butterworth FIR filtered signal vector and parameters
         self.__np_sig_filt_butter = np_sig_in
@@ -76,7 +76,7 @@ class ClSigReal(ClSig):
         self.__d_wn = 0.
         self.__str_filt_butter_desc = 'No Butterworth filtering'
         self.__str_filt_butter_desc_short = 'No Butter'
-        self.__b_update_filt_butter = True
+        self.__b_is_stale_filt_butter = True
 
         # Attributes related to the half-spectrum calculation
         self.__i_ns_rfft = 0
@@ -84,7 +84,13 @@ class ClSigReal(ClSig):
         # Attributes for the zero-crossing instantaneous frequency estimation
         self.__d_threshold = 0.
         self.__d_hysteresis = 0.1
+        self.__i_direction = 0
         self.__np_d_eventtimes = np.zeros_like(np_sig_in)
+        self.__b_is_stale_eventtimes = True
+
+        # Attributes for the nX vector estimation and plotting
+        self.class_sig_comp = ClSigComp([0+1j, 0-1j], 1.)
+        self.__b_is_stale_nx = True
 
         # Final step: since this is instantiation, flag new signal in class
         self.__set_new_sig(True)
@@ -146,8 +152,9 @@ class ClSigReal(ClSig):
 
         """
         if b_state:
-            self.__b_update_filt_sg = True
-            self.__b_update_filt_butter = True
+            self.__b_is_stale_filt_sg = True
+            self.__b_is_stale_filt_butter = True
+            self.__b_is_stale_eventtimes = True
 
     @property
     def str_eu(self):
@@ -231,7 +238,7 @@ class ClSigReal(ClSig):
 
         # Does the filter need to be applied (signal updated) or can
         # we return the prior instance?
-        if self.__b_update_filt_sg:
+        if self.__b_is_stale_filt_sg:
 
             # If there are enough samples, filter
             if self.i_ns > self.__i_win_len:
@@ -252,7 +259,7 @@ class ClSigReal(ClSig):
                 self.__str_filt_sg_desc_short = 'No S-G Filter'
 
             # Flag that the filtering is done
-            self.__b_update_filt_sg = False
+            self.__b_is_stale_filt_sg = False
 
         return self.__np_sig_filt_sg
 
@@ -278,7 +285,7 @@ class ClSigReal(ClSig):
         """
 
         # Does the filter need to applied?
-        if self.__b_update_filt_sg:
+        if self.__b_is_stale_filt_sg:
 
             # This is a guess of the filter corner, useful for general vibration
             # analysis of physical displacements.
@@ -302,7 +309,7 @@ class ClSigReal(ClSig):
                                            ' | Lowpass corner (Hz): ' +
                                            '%0.2f' % self.__d_wn)
             self.__str_filt_butter_desc_short = 'Butter'
-            self.__b_update_filt_butter = False
+            self.__b_is_stale_filt_butter = False
 
         # Return the filtered signal
         return self.__np_sig_filt_butter
@@ -319,7 +326,7 @@ class ClSigReal(ClSig):
 
         # Scale the fft. I'm using the actual number
         # of points to scale.
-        d_y = d_y / (self.__i_ns_rfft - 1)
+        d_y = d_y / float(self.__i_ns_rfft)
 
         # Calculate the frequency scale
         d_ws = rfftfreq(self.i_ns, 1. / self.d_fs)
@@ -340,6 +347,10 @@ class ClSigReal(ClSig):
     @property
     def d_hysteresis(self):
         return self.__d_hysteresis
+
+    @property
+    def i_direction(self):
+        return self.__i_direction
 
     # This is effectively set with the estimate crossings methods
     @property
@@ -387,7 +398,7 @@ class ClSigReal(ClSig):
         return d_time_estimated
 
     # Estimate triggers for speed
-    def np_d_est_triggers(self, np_sig_in, i_direction=0, d_threshold=0,
+    def np_d_est_triggers(self, np_sig_in=None, i_direction=None, d_threshold=None,
                           d_hysteresis=0.1, b_verbose=False):
         """
         This method estimates speed by identifying trigger points in time,
@@ -403,9 +414,13 @@ class ClSigReal(ClSig):
         Parameters
         ----------
         np_sig_in : numpy array
-            Signal to be evaluated for crossings
+            Signal to be evaluated for crossings. It can be any signal, but the class is designed
+            for the input to be one of the signals already defined in the class so that an example
+            looks like: np_sig_in=class_test_real.np_sig. This defaults to 'None' and assigns the
+            class attribute 'np_sig' to 'np_sig_in'
         i_direction : integer
-            0 to search for threshold on rising signal, 1 to search on a falling signal.
+            0 to search for threshold on rising signal, 1 to search on a falling signal. Set to
+            'None' to use prior value stored in the class
         d_threshold : double
             Threshold value (default: 0.0 volts for zero crossings)
         d_hysteresis : double
@@ -420,109 +435,149 @@ class ClSigReal(ClSig):
 
         """
 
-        # Store to local private member, it gets used in other places
-        # in the class, primarily as a reference for plot features
-        self.__d_threshold = d_threshold
-        if b_verbose:
-            print('d_threshold: ' + '%0.4f' % self.__d_threshold)
+        # Parse the inputs, flagging stale data if any of these have been changed. Changes
+        # in any of these attributes forces new eventtimes and nX calculations
+        if np_sig_in is None:
 
-        # Initialize trigger state to hold off: the trigger will be active
-        # once the signal crosses the hysteresis
-        b_trigger_hold = True
-
-        # Initiate state machine: one state for rising signal,
-        # 'up', (i_direction = 0) and another for falling signal,
-        # 'down', (i_direction = 1)
-        idx_event = 0
-        self.__np_d_eventtimes = np.zeros_like(np_sig_in)
-        if i_direction == 0:
-
-            # Define the absolute hysteretic value, rising
-            d_hysteresis_abs = self.d_threshold - d_hysteresis
-            if b_verbose:
-                print('d_hysteresis_abs: ' + '%0.4f' % d_hysteresis_abs)
-
-            # Loop through the signal
-            for idx, x in enumerate(np_sig_in[0:-1]):
-
-                # Intermediate results
-                if b_verbose:
-                    print('idx: ' + '%2.f' % idx + ' | x: ' + '%0.5f' % x +
-                          ' | s-g: ' + '%0.4f' % np_sig_in[idx])
-
-                # Only the sign matters so subtract this point from next to
-                # get sign of slope
-                d_slope = np_sig_in[idx+1] - np_sig_in[idx]
-
-                # The trigger leaves 'hold-off' state if the slope is
-                # negative and we fall below the threshold
-                if x <= d_hysteresis_abs and d_slope < 0 and b_trigger_hold:
-                    # Next time the signal rises above the threshold, trigger
-                    # will be set to hold-off state
-                    b_trigger_hold = False
-                    if b_verbose:
-                        print('Trigger hold off (false), rising')
-
-                # If we are on the rising portion of the signal and there is
-                # no hold off state on the trigger then trigger, and change
-                # state
-                if (x < self.d_threshold <= np_sig_in[idx + 1]) and d_slope > 0 and not b_trigger_hold:
-                    # Change state to hold off
-                    b_trigger_hold = True
-                    if b_verbose:
-                        print('Triggered, rising')
-
-                    # Estimate time of crossing with interpolation
-                    self.__np_d_eventtimes[idx_event] = self.calc_interpolate_crossing(np_sig_in, idx)
-
-                    # Increment the eventtimes index
-                    idx_event += 1
-
+            # Copy the class vector into this method
+            np_sig_in = self.np_sig
         else:
+            # User is possibly adding a new signal, force recalculation
+            self.__b_is_stale_eventtimes = True
+            self.__b_is_stale_nx = True
 
-            # Define the absolute hysteretic value, falling
-            d_hysteresis_abs = self.d_threshold + self.d_hysteresis
+        if i_direction is not None:
+            # User is possibly adding a new direction, force recalculation
+            self.__i_direction = i_direction
+            self.__b_is_stale_eventtimes = True
+            self.__b_is_stale_nx = True
+            if b_verbose:
+                print('i_direction: ' + '%1.0f' % self.__i_direction)
 
-            # Loop through the signal
-            for idx, x in enumerate(np_sig_in[0:-1]):
+        if d_threshold is not None:
+            # User is possibly adding a new threshold, force recalculation
+            self.__d_threshold = d_threshold
+            self.__b_is_stale_eventtimes = True
+            self.__b_is_stale_nx = True
+            if b_verbose:
+                print('d_threshold: ' + '%0.4f' % self.__d_threshold)
 
-                # Intermediate results
+        if d_hysteresis is not None:
+            # User is possibly adding a new hysteresis, force recalculation
+            self.__d_hysteresis = d_hysteresis
+            self.__b_is_stale_eventtimes = True
+            self.__b_is_stale_nx = True
+            if b_verbose:
+                print('d_threshold: ' + '%0.4f' % self.__d_threshold)
+
+        # Run the calculation if stale data is present
+        if self.__b_is_stale_eventtimes:
+
+            # Initialize trigger state to hold off: the trigger will be active
+            # once the signal crosses the hysteresis
+            b_trigger_hold = True
+
+            # Initiate state machine: one state for rising signal,
+            # 'up', (i_direction = 0) and another for falling signal,
+            # 'down', (i_direction = 1)
+            idx_event = 0
+            self.__np_d_eventtimes = np.zeros_like(np_sig_in)
+            if self.__i_direction == 0:
+
+                # Define the absolute hysteretic value, rising
+                d_hysteresis_abs = self.d_threshold - d_hysteresis
                 if b_verbose:
-                    print('idx: ' + '%2.f' % idx + ' | x: ' + '%0.5f' % x +
-                          ' | s-g: ' + '%0.4f' % np_sig_in[idx])
+                    print('d_hysteresis_abs: ' + '%0.4f' % d_hysteresis_abs)
 
-                # Only the sign matters so subtract this point from next to
-                # get sign of slope
-                d_slope = np_sig_in[idx + 1] - np_sig_in[idx]
+                # Loop through the signal
+                for idx, x in enumerate(np_sig_in[0:-1]):
 
-                # The trigger leaves 'hold-off' state if the slope is
-                # positive and we rise above the threshold
-                if x >= d_hysteresis_abs and d_slope > 0 and b_trigger_hold:
-                    # Next time the signal rises above the threshold, trigger
-                    # will be set to hold-off state
-                    b_trigger_hold = False
+                    # Intermediate results
                     if b_verbose:
-                        print('Trigger hold off (false), falling')
+                        print('idx: ' + '%2.f' % idx + ' | x: ' + '%0.5f' % x +
+                              ' | s-g: ' + '%0.4f' % np_sig_in[idx])
 
-                # If we are on the falling portion of the signal and
-                # there is no hold off state on the trigger then trigger
-                # and change state
-                if (x > self.d_threshold >= np_sig_in[idx + 1]) and d_slope < 0 and not b_trigger_hold:
-                    # Change state to hold off
-                    b_trigger_hold = True
+                    # Only the sign matters so subtract this point from next to
+                    # get sign of slope
+                    d_slope = np_sig_in[idx+1] - np_sig_in[idx]
+
+                    # The trigger leaves 'hold-off' state if the slope is
+                    # negative and we fall below the threshold
+                    if x <= d_hysteresis_abs and d_slope < 0 and b_trigger_hold:
+                        # Next time the signal rises above the threshold, trigger
+                        # will be set to hold-off state
+                        b_trigger_hold = False
+                        if b_verbose:
+                            print('Trigger hold off (false), rising')
+
+                    # If we are on the rising portion of the signal and there is
+                    # no hold off state on the trigger then trigger, and change
+                    # state
+                    if (x < self.d_threshold <= np_sig_in[idx + 1]) and d_slope > 0 and not b_trigger_hold:
+                        # Change state to hold off
+                        b_trigger_hold = True
+                        if b_verbose:
+                            print('Triggered, rising')
+
+                        # Estimate time of crossing with interpolation
+                        self.__np_d_eventtimes[idx_event] = self.calc_interpolate_crossing(np_sig_in, idx)
+
+                        # Increment the eventtimes index
+                        idx_event += 1
+
+            else:
+
+                # Define the absolute hysteretic value, falling
+                d_hysteresis_abs = self.d_threshold + self.d_hysteresis
+
+                # Loop through the signal
+                for idx, x in enumerate(np_sig_in[0:-1]):
+
+                    # Intermediate results
                     if b_verbose:
-                        print('Triggered, falling')
+                        print('idx: ' + '%2.f' % idx + ' | x: ' + '%0.5f' % x +
+                              ' | s-g: ' + '%0.4f' % np_sig_in[idx])
 
-                    # Estimate time of crossing with interpolation
-                    self.__np_d_eventtimes[idx_event] = self.calc_interpolate_crossing(np_sig_in, idx)
+                    # Only the sign matters so subtract this point from next to
+                    # get sign of slope
+                    d_slope = np_sig_in[idx + 1] - np_sig_in[idx]
 
-                    # Increment the eventtimes index
-                    idx_event += 1
+                    # The trigger leaves 'hold-off' state if the slope is
+                    # positive and we rise above the threshold
+                    if x >= d_hysteresis_abs and d_slope > 0 and b_trigger_hold:
+                        # Next time the signal rises above the threshold, trigger
+                        # will be set to hold-off state
+                        b_trigger_hold = False
+                        if b_verbose:
+                            print('Trigger hold off (false), falling')
 
-        # Remove zero-valued element
-        self.__np_d_eventtimes = np.delete(
-            self.__np_d_eventtimes, np.where(self.__np_d_eventtimes == 0))
+                    # If we are on the falling portion of the signal and
+                    # there is no hold off state on the trigger then trigger
+                    # and change state
+                    if (x > self.d_threshold >= np_sig_in[idx + 1]) and d_slope < 0 and not b_trigger_hold:
+                        # Change state to hold off
+                        b_trigger_hold = True
+                        if b_verbose:
+                            print('Triggered, falling')
 
+                        # Estimate time of crossing with interpolation
+                        self.__np_d_eventtimes[idx_event] = self.calc_interpolate_crossing(np_sig_in, idx)
+
+                        # Increment the eventtimes index
+                        idx_event += 1
+
+            # Remove zero-valued element
+            self.__np_d_eventtimes = np.delete(
+                self.__np_d_eventtimes, np.where(self.__np_d_eventtimes == 0))
+
+            # Freshly updated eventtimes
+            self.__b_is_stale_eventtimes = False
+
+            # Since the eventtimes were calculated the nX vectors have to marked
+            # as stale
+            self.__b_is_stale_nx = True
+
+        # Return the list of eventtimes.
         return self.__np_d_eventtimes
 
     # Estimate nX vectors, given trigger events and a signal
@@ -560,18 +615,18 @@ class ClSigReal(ClSig):
             idx_start = int(idx_active)
             idx_end = int(idx_events[idx+1]) - 1
 
-            # Calculate the single-sided FFT, grab the first element since
-            # it is the best estimate of the sinusoid with the same
-            # frequency as the spacing of eventtimes
-            d_np_y = rfft(np_sig_in[idx_start:idx_end])
+            # Calculate the single-sided FFT, multiplying the result by -1 change
+            # from spectral phase to balance phase.
+            d_np_y = rfft(np_sig_in[idx_start:idx_end]) * (-1.0+0.0j)
             i_ns_rfft = len(d_np_y)
 
-            # Scale the fft. I'm using the actual number
+            # Scale the fft using the actual number
             # of points to scale.
-            d_np_y = d_np_y / (i_ns_rfft - 1)
+            d_np_y = d_np_y / float(i_ns_rfft)
 
-            plt.plot(np_sig_in[idx_start:idx_end])
-            plt.show()
+            # Grab the first element since it is the best estimate
+            # of the sinusoid with the same frequency as the
+            # spacing of eventtimes
             d_nx[idx] = d_np_y[1]
 
             # Print summary
@@ -579,6 +634,12 @@ class ClSigReal(ClSig):
                 print('idx_start: ' + '%5.0f' % idx_start + ' | idx_end: ' +
                       '%5.0f' % idx_end + ' | nX mag: ' + '%2.6f' % abs(d_nx[idx]) +
                       ' | %2.6f' % np.rad2deg(np.angle(d_nx[idx])) + ' deg.')
+
+        # Pad the end
+        d_nx[-1] = d_nx[-2]
+
+        # Return the values
+        return d_nx
 
 
 class ClSigComp(ClSig):
@@ -871,6 +932,30 @@ class ClSigFeatures:
         """
         return self.__lst_cl_sgs[idx].np_d_est_triggers(np_sig_in, i_direction, d_threshold,
                                                         d_hysteresis, b_verbose)
+
+    # Estimate the filtered nX response
+    def calc_nx(self, np_sig_in, d_eventtimes, b_verbose=True, idx=0):
+        """
+        This method calls the estimation method for each signal
+
+        Parameters
+        ----------
+        np_sig_in : numpy array
+            Signal to be evaluated for crossings
+        d_eventtimes : numpy array
+            Vector of trigger event times
+        b_verbose : boolean
+            Print the intermediate steps (default: False). Useful for stepping through the
+            method to troubleshoot or understand it better.
+        idx : integer
+            Index of signal to pull description. Defaults to 0 (first signal)
+
+        Returns
+        -------
+        numpy array : list of trigger event times
+
+        """
+        return self.__lst_cl_sgs[idx].calc_nx(np_sig_in, d_eventtimes, b_verbose)
 
     @property
     def np_d_rpm(self):

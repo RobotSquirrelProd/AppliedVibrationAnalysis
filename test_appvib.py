@@ -28,8 +28,9 @@ class TestClSig(TestCase):
         self.d_fs_test_trigger = 2047
         i_ns = (self.d_fs_test_trigger * 3)
         self.d_freq_law = 10.
+        self.d_test_trigger_amp = 1.0
         d_time_ext = np.linspace(0, (i_ns - 1), i_ns) / float(self.d_fs_test_trigger)
-        self.np_test_trigger = np.sin(2 * math.pi * self.d_freq_law * d_time_ext)
+        self.np_test_trigger = self.d_test_trigger_amp * np.sin(2 * math.pi * self.d_freq_law * d_time_ext)
         self.d_threshold_test_trigger = 0.0
         self.d_hysteresis_test_trigger = 0.1
         self.i_direction_test_trigger_rising = 0
@@ -172,11 +173,18 @@ class TestClSig(TestCase):
         class_test_sig_features.plt_spec()
 
     def test_np_d_est_triggers(self):
-        # Real-valued check, rising signal
+
+        # Real-valued check, rising signal, explicitly defining the arguments
         class_test_real = appvib.ClSigReal(self.np_test_real, self.d_fs_real)
         class_test_real.np_d_est_triggers(np_sig_in=self.np_test_real, i_direction=self.i_direction_real_rising,
                                           d_threshold=self.d_threshold_real, d_hysteresis=self.d_hysteresis_real,
                                           b_verbose=True)
+        self.assertAlmostEqual(class_test_real.np_d_eventtimes[0], 7.5, 12)
+
+        print('--------------------')
+
+        # Real-valued check, rising signal, inferred arguments
+        class_test_real.np_d_est_triggers(b_verbose=True)
         self.assertAlmostEqual(class_test_real.np_d_eventtimes[0], 7.5, 12)
 
         print('--------------------')
@@ -221,7 +229,30 @@ class TestClSig(TestCase):
                                                               d_threshold=self.d_threshold_test_trigger,
                                                               d_hysteresis=self.d_hysteresis_test_trigger,
                                                               b_verbose=False)
-        class_test_real.calc_nx(np_sig_in=class_test_real.np_sig, d_eventtimes=d_eventtimes_real, b_verbose=True)
+        self.assertAlmostEqual(d_eventtimes_real[0], 1. / self.d_freq_law, 7)
+        self.assertAlmostEqual(d_eventtimes_real[-1] - d_eventtimes_real[-2], 1. / self.d_freq_law, 7)
+        np_d_nx = class_test_real.calc_nx(np_sig_in=class_test_real.np_sig, d_eventtimes=d_eventtimes_real,
+                                          b_verbose=True)
+        self.assertAlmostEqual(np.abs(np_d_nx[0]), self.d_test_trigger_amp, 2)
+        self.assertLess(np.rad2deg(np.angle(np_d_nx[0])) - 90.0, 1.0)
+        self.assertAlmostEqual(np.abs(np_d_nx[-1]), self.d_test_trigger_amp, 2)
+        self.assertLess(np.rad2deg(np.angle(np_d_nx[-1])) - 90.0, 1.0)
+
+        # Signal feature class test using same input as the real signal class above
+        class_test_sig_features = appvib.ClSigFeatures(self.np_test_trigger, self.d_fs_test_trigger)
+        d_eventtimes_sig = class_test_sig_features.np_d_est_triggers(np_sig_in=class_test_real.np_sig,
+                                                                     i_direction=self.i_direction_test_trigger_rising,
+                                                                     d_threshold=self.d_threshold_test_trigger,
+                                                                     d_hysteresis=self.d_hysteresis_test_trigger,
+                                                                     b_verbose=False, idx=0)
+        self.assertAlmostEqual(d_eventtimes_sig[0], 1. / self.d_freq_law, 7)
+        self.assertAlmostEqual(d_eventtimes_sig[-1] - d_eventtimes_sig[-2], 1. / self.d_freq_law, 7)
+        np_d_nx_sig = class_test_sig_features.calc_nx(np_sig_in=class_test_real.np_sig, d_eventtimes=d_eventtimes_real,
+                                                      b_verbose=True, idx=0)
+        self.assertAlmostEqual(np.abs(np_d_nx_sig[0]), self.d_test_trigger_amp, 2)
+        self.assertLess(np.rad2deg(np.angle(np_d_nx_sig[0])) - 90.0, 1.0)
+        self.assertAlmostEqual(np.abs(np_d_nx_sig[-1]), self.d_test_trigger_amp, 2)
+        self.assertLess(np.rad2deg(np.angle(np_d_nx_sig[-1])) - 90.0, 1.0)
 
 
 if __name__ == '__main__':
