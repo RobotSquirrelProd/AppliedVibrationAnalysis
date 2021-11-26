@@ -525,6 +525,61 @@ class ClSigReal(ClSig):
 
         return self.__np_d_eventtimes
 
+    # Estimate nX vectors, given trigger events and a signal
+    def calc_nx(self, np_sig_in, d_eventtimes, b_verbose=False):
+        """
+        This method estimates the 1X vectors, given trigger event times. The
+        phase reported in this estimation is intended to be used for balancing
+        so phase lag is positive (spectral phase lag is negative). Since this is 
+        implemented in the real signal class, the method assumes the signal in
+        is also real. 
+
+        Parameters
+        ----------
+        np_sig_in : numpy array
+            Signal to be evaluated for crossings. Should reference a signal already loaded
+            into the object (i.e. np_sig_in = {ClSigReal}.np_sig)
+        d_eventtimes : numpy array
+            Vector of trigger event times
+        b_verbose : boolean
+            Print the intermediate steps (default: False). Useful for stepping through the
+            method to troubleshoot or understand it better.
+
+        Returns
+        -------
+        ClSigComp : complex signal class with the nX vectors
+
+        """
+
+        # Begin by identifying the closest index to the eventtimes
+        idx_events = np.round(d_eventtimes * self.d_fs, decimals=0)
+        d_nx = np.zeros_like(d_eventtimes, dtype=complex)
+        for idx, idx_active in enumerate(idx_events[0:-1]):
+
+            # Define starting and ending index
+            idx_start = int(idx_active)
+            idx_end = int(idx_events[idx+1]) - 1
+
+            # Calculate the single-sided FFT, grab the first element since
+            # it is the best estimate of the sinusoid with the same
+            # frequency as the spacing of eventtimes
+            d_np_y = rfft(np_sig_in[idx_start:idx_end])
+            i_ns_rfft = len(d_np_y)
+
+            # Scale the fft. I'm using the actual number
+            # of points to scale.
+            d_np_y = d_np_y / (i_ns_rfft - 1)
+
+            plt.plot(np_sig_in[idx_start:idx_end])
+            plt.show()
+            d_nx[idx] = d_np_y[1]
+
+            # Print summary
+            if b_verbose:
+                print('idx_start: ' + '%5.0f' % idx_start + ' | idx_end: ' +
+                      '%5.0f' % idx_end + ' | nX mag: ' + '%2.6f' % abs(d_nx[idx]) +
+                      ' | %2.6f' % np.rad2deg(np.angle(d_nx[idx])) + ' deg.')
+
 
 class ClSigComp(ClSig):
     """Class for storing, plotting, and manipulating complex-valued

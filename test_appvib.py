@@ -197,7 +197,7 @@ class TestClSig(TestCase):
                                                   d_threshold=self.d_threshold_test_trigger,
                                                   d_hysteresis=self.d_hysteresis_test_trigger,
                                                   b_verbose=False)
-        d_est_freq = 1./(np.mean(np.diff(class_test_sig_features.np_d_eventtimes())))
+        d_est_freq = 1. / (np.mean(np.diff(class_test_sig_features.np_d_eventtimes())))
         self.assertAlmostEqual(d_est_freq, self.d_freq_law, 7)
 
         # check the plot
@@ -209,8 +209,19 @@ class TestClSig(TestCase):
                                                   d_threshold=self.d_threshold_test_trigger,
                                                   d_hysteresis=self.d_hysteresis_test_trigger,
                                                   b_verbose=False)
-        d_est_freq = 1./(np.mean(np.diff(class_test_sig_features.np_d_eventtimes())))
+        d_est_freq = 1. / (np.mean(np.diff(class_test_sig_features.np_d_eventtimes())))
         self.assertAlmostEqual(d_est_freq, self.d_freq_law, 7)
+
+    def test_nX_est(self):
+
+        # Test real signal, rising signal
+        class_test_real = appvib.ClSigReal(self.np_test_trigger, self.d_fs_test_trigger)
+        d_eventtimes_real = class_test_real.np_d_est_triggers(np_sig_in=class_test_real.np_sig,
+                                                              i_direction=self.i_direction_test_trigger_rising,
+                                                              d_threshold=self.d_threshold_test_trigger,
+                                                              d_hysteresis=self.d_hysteresis_test_trigger,
+                                                              b_verbose=False)
+        class_test_real.calc_nx(np_sig_in=class_test_real.np_sig, d_eventtimes=d_eventtimes_real, b_verbose=True)
 
 
 if __name__ == '__main__':
