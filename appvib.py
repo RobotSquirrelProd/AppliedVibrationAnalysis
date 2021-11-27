@@ -1511,19 +1511,22 @@ class ClSigFeatures:
         return self.__np_d_rpm
 
     # Save the data
-    def b_save_data(self, str_data_prefix='test_class', idx_data=1):
+    def b_save_data(self, str_data_prefix='test_class', idx_file=1):
         """
         Save the data in the object to a .csv file
 
-        Keyword arguments:
-        str_data_prefix -- String with file prefix (defaults to 'test_class')
-        idx_data -- File index (defaults to 1)
+        Parameters
+        ----------
+        str_data_prefix : string
+            String with file prefix (defaults to 'test_class')
+        idx_file : integer
+            File index (defaults to 0)
 
         Return values:
         True if write succeeds
 
         """
-        self.__str_file = str_data_prefix + '_' '%03.0f' % idx_data + '.csv'
+        self.__str_file = str_data_prefix + '_' '%03.0f' % idx_file + '.csv'
         file_data = open(self.__str_file, 'w+')
         str_header = 'X,'
         str_units = 'Sequence,'
@@ -1543,7 +1546,7 @@ class ClSigFeatures:
 
             # add samples from each signal to the file
             for cl_obj in self.__lst_cl_sgs:
-                str_line = str_line + ',' + '%0.5f' % cl_obj.np_sig[idx_line]
+                str_line = str_line + ',' + '%0.8f' % cl_obj.np_sig[idx_line]
 
             file_data.write(str_line + '\n')
 

@@ -3,6 +3,8 @@ from unittest import TestCase
 import appvib
 import math
 import numpy as np
+import csv
+import pandas as pd
 
 
 class TestClSig(TestCase):
@@ -31,6 +33,8 @@ class TestClSig(TestCase):
         self.d_test_trigger_amp = 1.0
         d_time_ext = np.linspace(0, (i_ns - 1), i_ns) / float(self.d_fs_test_trigger)
         self.np_test_trigger = self.d_test_trigger_amp * np.sin(2 * math.pi * self.d_freq_law * d_time_ext)
+        self.d_test_trigger_amp_ch2 = 2.1
+        self.np_test_trigger_ch2 = self.d_test_trigger_amp_ch2 * np.sin(2 * math.pi * self.d_freq_law * d_time_ext)
         self.d_threshold_test_trigger = 0.0
         self.d_hysteresis_test_trigger = 0.1
         self.i_direction_test_trigger_rising = 0
@@ -313,6 +317,42 @@ class TestClSig(TestCase):
                                                       b_verbose=False, idx=0)
         self.assertAlmostEqual(np.abs(np_d_nx_sig[0]), self.d_test_trigger_amp, 1)
         class_test_sig_features.plt_polar(str_plot_polar_desc='Signal feature class data ')
+
+    def test_save_data(self):
+
+        # Signal feature class test for a single data set
+        class_test_sig_features = appvib.ClSigFeatures(self.np_test_trigger, self.d_fs_test_trigger)
+        class_test_sig_features.b_save_data(str_data_prefix='SignalFeatureTest')
+
+        str_filename = class_test_sig_features.str_file
+        print(str_filename)
+        file_handle = open(str_filename)
+        csv_reader = csv.reader(file_handle)
+        csv_header = next(csv_reader)
+        print(csv_header)
+        file_handle.close()
+
+        df_test = pd.read_csv(str_filename, header=None, skiprows=2, names=csv_header[0:5])
+        for idx in range(class_test_sig_features.i_ns-1):
+            self.assertAlmostEqual(df_test.CH1[idx], self.np_test_trigger[idx], 8)
+
+        # Add a signal
+        class_test_sig_features.idx_add_sig(self.np_test_trigger_ch2,
+                                            d_fs_in=class_test_sig_features.d_fs(idx=0))
+        class_test_sig_features.b_save_data(str_data_prefix='SignalFeatureTestCh2')
+
+        # Read the CSV headers
+        str_filename = class_test_sig_features.str_file
+        print(str_filename)
+        file_handle = open(str_filename)
+        csv_reader = csv.reader(file_handle)
+        csv_header = next(csv_reader)
+        print(csv_header)
+        file_handle.close()
+
+        df_test_ch2 = pd.read_csv(str_filename, header=None, skiprows=2, names=csv_header[0:5])
+        for idx in range(class_test_sig_features.i_ns-1):
+            self.assertAlmostEqual(df_test_ch2.CH2[idx], self.np_test_trigger_ch2[idx], 8)
 
 
 if __name__ == '__main__':

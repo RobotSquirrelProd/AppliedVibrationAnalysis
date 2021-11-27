@@ -3,43 +3,61 @@
   <ID>Python</ID>
   <OriginalElement>#H:/Documents/Hobby/IssaquahDynamical/RobotSquirrelRepo/AppliedVibrationAnalysis/appvib.py</OriginalElement>
   <nodes>
-    <node x="210.0" y="0.0">appvib.ClSig</node>
-    <node x="126.0" y="282.0">appvib.ClSigComp</node>
-    <node x="311.0" y="282.0">appvib.ClSigReal</node>
-    <node x="0.0" y="454.0">appvib.ClSigFeatures</node>
+    <node x="305.75" y="348.5">abc.ABCMeta</node>
+    <node x="218.50000000000003" y="778.0">appvib.ClSig</node>
+    <node x="255.50000000000003" y="697.0">abc.ABC</node>
+    <node x="121.48959425063634" y="1044.900134750711">appvib.ClSigComp</node>
+    <node x="98.75" y="0.0">typing.Hashable</node>
+    <node x="-652.4014073963166" y="1044.900134750711">appvib.ClSigReal</node>
+    <node x="54.75" y="106.0">object</node>
+    <node x="322.3805958975893" y="1044.900134750711">appvib.ClSigFeatures</node>
   </nodes>
   <notes />
   <edges>
-    <edge source="appvib.ClSigFeatures" target="appvib.ClSigReal" relationship="REALIZATION">
-      <point x="0.0" y="-446.0" />
-      <point x="301.0" y="429.0" />
-      <point x="393.5" y="429.0" />
-      <point x="0.0" y="61.0" />
+    <edge source="appvib.ClSigFeatures" target="object" relationship="REALIZATION">
+      <point x="0.0" y="-15.5" />
+      <point x="661.8805958975893" y="137.0" />
+      <point x="170.25" y="137.0" />
+      <point x="0.0" y="15.5" />
     </edge>
-    <edge source="appvib.ClSigFeatures" target="appvib.ClSigComp" relationship="REALIZATION">
-      <point x="0.0" y="-446.0" />
-      <point x="301.0" y="429.0" />
-      <point x="208.5" y="429.0" />
-      <point x="0.0" y="61.0" />
+    <edge source="appvib.ClSig" target="abc.ABC" relationship="REALIZATION">
+      <point x="0.0" y="-72.0" />
+      <point x="0.0" y="15.5" />
+    </edge>
+    <edge source="abc.ABC" target="abc.ABCMeta" relationship="INSTANCEOF">
+      <point x="22.75" y="-15.5" />
+      <point x="323.75" y="672.0" />
+      <point x="431.75" y="672.0" />
+      <point x="0.0" y="28.0" />
+    </edge>
+    <edge source="abc.ABC" target="object" relationship="REALIZATION">
+      <point x="-22.75" y="-15.5" />
+      <point x="278.25" y="672.0" />
+      <point x="170.25" y="672.0" />
+      <point x="0.0" y="270.5" />
+    </edge>
+    <edge source="object" target="typing.Hashable" relationship="INTERFACE">
+      <point x="0.0" y="-270.5" />
+      <point x="0.0" y="28.0" />
     </edge>
     <edge source="appvib.ClSigReal" target="appvib.ClSig" relationship="REALIZATION">
-      <point x="0.0" y="-61.0" />
-      <point x="393.5" y="257.0" />
-      <point x="301.0" y="257.0" />
-      <point x="0.0" y="116.0" />
+      <point x="0.0" y="-182.5" />
+      <point x="-282.4014073963166" y="947.0" />
+      <point x="301.0" y="947.0" />
+      <point x="0.0" y="72.0" />
     </edge>
     <edge source="appvib.ClSigComp" target="appvib.ClSig" relationship="REALIZATION">
-      <point x="0.0" y="-61.0" />
-      <point x="208.5" y="257.0" />
-      <point x="301.0" y="257.0" />
-      <point x="0.0" y="116.0" />
+      <point x="0.0" y="-182.5" />
+      <point x="204.98959425063634" y="947.0" />
+      <point x="301.0" y="947.0" />
+      <point x="0.0" y="72.0" />
     </edge>
   </edges>
-  <settings layout="Hierarchic" zoom="0.6486090775988287" showDependencies="false" x="301.0" y="673.0" />
-  <SelectedNodes>
-    <node>appvib.ClSig</node>
-  </SelectedNodes>
+  <settings layout="Hierarchic" zoom="0.61728280961183" showDependencies="false" x="70.95957478664491" y="378.83081299595744" />
+  <SelectedNodes />
   <Categories>
+    <Category>Fields</Category>
+    <Category>Inner Classes</Category>
     <Category>Methods</Category>
   </Categories>
 </Diagram>
