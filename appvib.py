@@ -707,6 +707,21 @@ class ClSigReal(ClSig):
     def plt_bode(self, str_plot_bode_desc_in=None):
         return self.__class_sig_comp.plt_bode(str_plot_bode_desc=str_plot_bode_desc_in)
 
+    # Call polar plotting method.
+    def plt_polar(self, str_plot_polar_desc=None):
+        """Plot out amplitude in phase in polar format
+
+        Parameters
+        ----------
+        str_plot_polar_desc : string
+            Additional title text for the plot. If 'None' then method uses class attribute.
+
+        Return values:
+        handle to the plot
+        """
+
+        return self.__class_sig_comp.plt_polar(str_plot_polar_desc)
+
 
 class ClSigComp(ClSig):
     """Class for storing, plotting, and manipulating complex-valued
@@ -808,6 +823,7 @@ class ClSigCompUneven(ClSig):
         self.set_ylim_tb(self.__ylim_tb)
         self.__str_eu = str_eu_in
         self.__str_plot_bode_desc = '-'
+        self.__str_plot_polar_desc = '-'
 
     @property
     def np_sig(self):
@@ -888,7 +904,7 @@ class ClSigCompUneven(ClSig):
     def str_plot_bode_desc(self, str_plot_bode_desc_in):
         self.__str_plot_bode_desc = str_plot_bode_desc_in
 
-    # Plotting method, time domain signals.
+    # Plotting method, bode plots.
     def plt_bode(self, str_plot_bode_desc=None):
         """Plot out amplitude in phase in bode format
 
@@ -908,7 +924,7 @@ class ClSigCompUneven(ClSig):
 
         # Plot the phase
         axs[0].plot(self.__np_d_time, np.rad2deg(np.angle(self.__np_sig)))
-        axs[1].grid()
+        axs[0].grid()
         axs[0].set_xlabel("Time, seconds")
         axs[0].set_ylabel("Phase, degrees")
         axs[0].set_ylim([-360.0, 360.0])
@@ -921,6 +937,58 @@ class ClSigCompUneven(ClSig):
         axs[1].set_ylabel("Magnitude, " + self.str_eu)
         axs[1].set_ylim(self.ylim_mag)
         axs[1].set_title(self.__str_plot_bode_desc + " magnitude")
+
+        # Set the layout
+        plt.tight_layout()
+
+        # Save off the handle to the plot
+        plot_handle = plt.gcf()
+
+        # Show the plot, creating a new figure. This command resets the graphics context
+        # so the plot handle has to be saved first.
+        plt.show()
+
+        return plot_handle
+
+    @property
+    def str_plot_polar_desc(self):
+        return self.__str_plot_polar_desc
+
+    @str_plot_polar_desc.setter
+    def str_plot_polar_desc(self, str_plot_polar_desc_in):
+        self.__str_plot_polar_desc = str_plot_polar_desc_in
+
+    # Plotting method, polar plots.
+    def plt_polar(self, str_plot_polar_desc=None):
+        """Plot out amplitude in phase in polar format
+
+        Parameters
+        ----------
+        str_plot_polar_desc : string
+            Additional title text for the plot. If 'None' then method uses class attribute.
+
+        Return values:
+        handle to the plot
+        """
+
+        # Parse inputs
+        if str_plot_polar_desc is not None:
+
+            # Update class attribute
+            self.__str_plot_polar_desc = str_plot_polar_desc
+
+        # Figure with subplots
+        fig, ax = plt.subplots(subplot_kw={'projection': 'polar'})
+        # fig.suptitle('Bode plot')
+
+        # Polar plot
+        ax.plot(np.angle(self.__np_sig), np.abs(self.__np_sig))
+        ax.set_rmax(np.max(self.ylim_mag))
+        d_tick_radial = np.round(np.max(self.ylim_mag)/4.0, decimals=1)
+        ax.set_rticks([d_tick_radial, d_tick_radial*2.0, d_tick_radial*3.0, d_tick_radial*4.0])
+        ax.set_rlabel_position(-22.5)
+        ax.grid(True)
+        ax.set_title(self.__str_plot_polar_desc + " polar plot")
 
         # Set the layout
         plt.tight_layout()
@@ -1405,6 +1473,23 @@ class ClSigFeatures:
             self.__lst_cl_sgs[idx].str_plot_bode_desc = str_plot_bode_desc
 
         return self.__lst_cl_sgs[idx].plt_bode(str_plot_bode_desc)
+
+    # Call polar plotting method.
+    def plt_polar(self, str_plot_polar_desc=None, idx=0):
+        """Plot out amplitude in phase in polar format
+
+        Parameters
+        ----------
+        str_plot_polar_desc : string
+            Additional title text for the plot. If 'None' then method uses class attribute.
+        idx : integer
+            Index of signal to pull description. Defaults to 0 (first signal)
+
+        Return values:
+        handle to the plot
+        """
+
+        return self.__lst_cl_sgs[idx].plt_polar(str_plot_polar_desc)
 
     # Method to estimate the RPM values
     def d_est_rpm(self, d_events_per_rev=1):

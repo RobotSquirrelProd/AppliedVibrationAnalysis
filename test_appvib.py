@@ -284,6 +284,36 @@ class TestClSig(TestCase):
         self.assertAlmostEqual(np.abs(np_d_nx_sig[0]), self.d_test_trigger_amp, 2)
         class_test_sig_features.plt_bode(str_plot_bode_desc='Signal feature class data ')
 
+    def test_plt_polar(self):
+
+        # Test real signal, falling signal
+        class_test_real = appvib.ClSigReal(self.np_test_trigger, self.d_fs_test_trigger)
+        d_eventtimes_real = class_test_real.np_d_est_triggers(np_sig_in=class_test_real.np_sig,
+                                                              i_direction=self.i_direction_test_trigger_falling,
+                                                              d_threshold=self.d_threshold_test_trigger,
+                                                              d_hysteresis=self.d_hysteresis_test_trigger,
+                                                              b_verbose=False)
+        np_d_nx = class_test_real.calc_nx(np_sig_in=class_test_real.np_sig, np_d_eventtimes=d_eventtimes_real,
+                                          b_verbose=False)
+        self.assertAlmostEqual(np.abs(np_d_nx[0]), self.d_test_trigger_amp, 1)
+        class_test_real.plt_polar()
+        class_test_real.str_plot_polar_desc = 'Polar test data'
+        class_test_real.ylim_bode_mag = [-0.1, 2.1]
+        class_test_real.plt_polar()
+
+        # Signal feature class test for bode plots. Also on the falling part of the signal
+        class_test_sig_features = appvib.ClSigFeatures(self.np_test_trigger, self.d_fs_test_trigger)
+        d_eventtimes_sig = class_test_sig_features.np_d_est_triggers(np_sig_in=class_test_real.np_sig,
+                                                                     i_direction=self.i_direction_test_trigger_falling,
+                                                                     d_threshold=self.d_threshold_test_trigger,
+                                                                     d_hysteresis=self.d_hysteresis_test_trigger,
+                                                                     b_verbose=False, idx=0)
+        self.assertAlmostEqual(d_eventtimes_sig[1]-d_eventtimes_sig[0], 1. / self.d_freq_law, 7)
+        np_d_nx_sig = class_test_sig_features.calc_nx(np_sig_in=class_test_real.np_sig, d_eventtimes=d_eventtimes_real,
+                                                      b_verbose=False, idx=0)
+        self.assertAlmostEqual(np.abs(np_d_nx_sig[0]), self.d_test_trigger_amp, 1)
+        class_test_sig_features.plt_polar(str_plot_polar_desc='Signal feature class data ')
+
 
 if __name__ == '__main__':
     unittest.main()
