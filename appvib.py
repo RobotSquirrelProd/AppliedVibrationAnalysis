@@ -704,8 +704,8 @@ class ClSigReal(ClSig):
         return self.__class_sig_comp.np_sig
 
     # Call the method to plot the bode plot
-    def plt_bode(self):
-        return self.__class_sig_comp.plt_bode()
+    def plt_bode(self, str_plot_bode_desc_in=None):
+        return self.__class_sig_comp.plt_bode(str_plot_bode_desc=str_plot_bode_desc_in)
 
 
 class ClSigComp(ClSig):
@@ -912,7 +912,7 @@ class ClSigCompUneven(ClSig):
         axs[0].set_xlabel("Time, seconds")
         axs[0].set_ylabel("Phase, degrees")
         axs[0].set_ylim([-360.0, 360.0])
-        axs[0].set_title(self.__str_plot_bode_desc + " Phase")
+        axs[0].set_title(self.__str_plot_bode_desc + " phase")
 
         # Plot the magnitude
         axs[1].plot(self.__np_d_time, np.abs(self.__np_sig))
@@ -920,7 +920,7 @@ class ClSigCompUneven(ClSig):
         axs[1].set_xlabel("Time, seconds")
         axs[1].set_ylabel("Magnitude, " + self.str_eu)
         axs[1].set_ylim(self.ylim_mag)
-        axs[1].set_title(self.__str_plot_bode_desc + " Magnitude")
+        axs[1].set_title(self.__str_plot_bode_desc + " magnitude")
 
         # Set the layout
         plt.tight_layout()
@@ -1383,6 +1383,28 @@ class ClSigFeatures:
 
         plot_handle = plt.gcf()
         return [plot_handle, self.__np_d_rpm]
+
+    # Plotting method, time domain signals.
+    def plt_bode(self, str_plot_bode_desc=None, idx=0):
+        """Plot out amplitude in phase in bode format
+
+        Parameters
+        ----------
+        str_plot_bode_desc : string
+            Description of data to be included in bode plot title
+        idx : integer
+            Index of signal to pull description. Defaults to 0 (first signal)
+
+        Return values:
+        handle to the plot
+        """
+
+        # Parse inputs
+        if str_plot_bode_desc is not None:
+            # Update class attribute
+            self.__lst_cl_sgs[idx].str_plot_bode_desc = str_plot_bode_desc
+
+        return self.__lst_cl_sgs[idx].plt_bode(str_plot_bode_desc)
 
     # Method to estimate the RPM values
     def d_est_rpm(self, d_events_per_rev=1):
