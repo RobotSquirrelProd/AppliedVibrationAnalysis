@@ -43,10 +43,27 @@ class ClSigReal(ClSig):
     """
     Class for storing, plotting, and manipulating real-valued signals
 
+    ...
+
+    Attributes
+    ----------
+
+    Methods
+    ----------
+
     """
 
     def __init__(self, np_sig_in, d_fs, str_eu_in='volts'):
-
+        """
+        Parameters
+        ----------
+        np_sig_in : numpy array
+            Vector with real-valued signal of interest
+        d_fs : double
+            Sampling frequency, hertz
+        str_eu_in : string
+            Engineering units. Defaults to 'volts'
+        """
         # Parent class
         super(ClSigReal, self).__init__()
 
@@ -89,7 +106,7 @@ class ClSigReal(ClSig):
         self.__b_is_stale_eventtimes = True
 
         # Attributes for the nX vector estimation and plotting
-        self.class_sig_comp = ClSigComp([0+1j, 0-1j], 1.)
+        self.__class_sig_comp = ClSigCompUneven([0 + 1j, 0 - 1j], 1.)
         self.__b_is_stale_nx = True
 
         # Final step: since this is instantiation, flag new signal in class
@@ -205,6 +222,22 @@ class ClSigReal(ClSig):
         else:
             self.__ylim_tb = np.array(
                 [np.max(self.__np_sig), np.min(self.__np_sig)])
+
+    @property
+    def ylim_bode_mag(self):
+        return self.__class_sig_comp.ylim_mag
+
+    @ylim_bode_mag.setter
+    def ylim_bode_mag(self, ylim_bode_mag):
+        self.__class_sig_comp.ylim_mag = ylim_bode_mag
+
+    @property
+    def str_plot_bode_desc(self):
+        return self.__class_sig_comp.str_plot_bode_desc
+
+    @str_plot_bode_desc.setter
+    def str_plot_bode_desc(self, str_plot_bode_desc_in):
+        self.__class_sig_comp.str_plot_bode_desc = str_plot_bode_desc_in
 
     @property
     def __get_d_time(self):
@@ -355,6 +388,8 @@ class ClSigReal(ClSig):
     # This is effectively set with the estimate crossings methods
     @property
     def np_d_eventtimes(self):
+        self.np_d_est_triggers(np_sig_in=None, i_direction=None, d_threshold=None,
+                               d_hysteresis=None, b_verbose=False)
         return self.__np_d_eventtimes
 
     # Interpolation of points for instantaneous frequency estimation
@@ -382,8 +417,8 @@ class ClSigReal(ClSig):
 
         # Interpolate to estimate the actual crossing from
         # the 2 nearest points
-        xp = np.array([np_sig_in[idx], np_sig_in[idx+1]])
-        fp = np.array([self.__d_time[idx], self.__d_time[idx+1]])
+        xp = np.array([np_sig_in[idx], np_sig_in[idx + 1]])
+        fp = np.array([self.__d_time[idx], self.__d_time[idx + 1]])
         f_interp = interp1d(xp, fp, assume_sorted=False)
         d_time_estimated = f_interp(self.d_threshold)
 
@@ -399,7 +434,7 @@ class ClSigReal(ClSig):
 
     # Estimate triggers for speed
     def np_d_est_triggers(self, np_sig_in=None, i_direction=None, d_threshold=None,
-                          d_hysteresis=0.1, b_verbose=False):
+                          d_hysteresis=None, b_verbose=False):
         """
         This method estimates speed by identifying trigger points in time,
         a given threshold and hysteresis. When the signal level crosses
@@ -413,17 +448,17 @@ class ClSigReal(ClSig):
 
         Parameters
         ----------
-        np_sig_in : numpy array
+        np_sig_in : numpy array, None
             Signal to be evaluated for crossings. It can be any signal, but the class is designed
             for the input to be one of the signals already defined in the class so that an example
             looks like: np_sig_in=class_test_real.np_sig. This defaults to 'None' and assigns the
             class attribute 'np_sig' to 'np_sig_in'
-        i_direction : integer
+        i_direction : integer, None
             0 to search for threshold on rising signal, 1 to search on a falling signal. Set to
             'None' to use prior value stored in the class
-        d_threshold : double
+        d_threshold : double, None
             Threshold value (default: 0.0 volts for zero crossings)
-        d_hysteresis : double
+        d_hysteresis : double, None
             Hysteresis value (default: 0.1 volts)
         b_verbose : boolean
             Print the intermediate steps (default: False). Useful for stepping through the
@@ -499,7 +534,7 @@ class ClSigReal(ClSig):
 
                     # Only the sign matters so subtract this point from next to
                     # get sign of slope
-                    d_slope = np_sig_in[idx+1] - np_sig_in[idx]
+                    d_slope = np_sig_in[idx + 1] - np_sig_in[idx]
 
                     # The trigger leaves 'hold-off' state if the slope is
                     # negative and we fall below the threshold
@@ -581,7 +616,7 @@ class ClSigReal(ClSig):
         return self.__np_d_eventtimes
 
     # Estimate nX vectors, given trigger events and a signal
-    def calc_nx(self, np_sig_in, d_eventtimes, b_verbose=False):
+    def calc_nx(self, np_sig_in=None, np_d_eventtimes=None, b_verbose=False):
         """
         This method estimates the 1X vectors, given trigger event times. The
         phase reported in this estimation is intended to be used for balancing
@@ -593,53 +628,84 @@ class ClSigReal(ClSig):
         ----------
         np_sig_in : numpy array
             Signal to be evaluated for crossings. Should reference a signal already loaded
-            into the object (i.e. np_sig_in = {ClSigReal}.np_sig)
-        d_eventtimes : numpy array
-            Vector of trigger event times
+            into the object (i.e. np_sig_in = {ClSigReal}.np_sig). Setting 'np_sig_in' to None
+            forces the function to use .np sig.
+        np_d_eventtimes : numpy array
+            Vector of trigger event times. Setting to None forces use of eventtimes defined
+            in the class
         b_verbose : boolean
             Print the intermediate steps (default: False). Useful for stepping through the
             method to troubleshoot or understand it better.
 
         Returns
         -------
-        ClSigComp : complex signal class with the nX vectors
+        numpy array : complex signal vector with the nX vectors
 
         """
 
-        # Begin by identifying the closest index to the eventtimes
-        idx_events = np.round(d_eventtimes * self.d_fs, decimals=0)
-        d_nx = np.zeros_like(d_eventtimes, dtype=complex)
-        for idx, idx_active in enumerate(idx_events[0:-1]):
+        # Parse the inputs, flagging stale data if any of these have been changed. Changes
+        # in any of these attributes forces new eventtimes and nX calculations
+        if np_sig_in is None:
 
-            # Define starting and ending index
-            idx_start = int(idx_active)
-            idx_end = int(idx_events[idx+1]) - 1
+            # Copy the class vector into this method
+            np_sig_in = self.np_sig
 
-            # Calculate the single-sided FFT, multiplying the result by -1 change
-            # from spectral phase to balance phase.
-            d_np_y = rfft(np_sig_in[idx_start:idx_end]) * (-1.0+0.0j)
-            i_ns_rfft = len(d_np_y)
+        else:
+            # User is possibly adding a new signal, force recalculation
+            self.__b_is_stale_nx = True
 
-            # Scale the fft using the actual number
-            # of points to scale.
-            d_np_y = d_np_y / float(i_ns_rfft)
+        if np_d_eventtimes is not None:
+            # User is possibly adding a new set of eventtimes, force recalculation
+            self.__np_d_eventtimes = np_d_eventtimes
+            self.__b_is_stale_nx = True
 
-            # Grab the first element since it is the best estimate
-            # of the sinusoid with the same frequency as the
-            # spacing of eventtimes
-            d_nx[idx] = d_np_y[1]
+        # Does this calculation need to be refreshed?
+        if self.__b_is_stale_nx:
 
-            # Print summary
-            if b_verbose:
-                print('idx_start: ' + '%5.0f' % idx_start + ' | idx_end: ' +
-                      '%5.0f' % idx_end + ' | nX mag: ' + '%2.6f' % abs(d_nx[idx]) +
-                      ' | %2.6f' % np.rad2deg(np.angle(d_nx[idx])) + ' deg.')
+            # Begin by identifying the closest index to the eventtimes
+            idx_events = np.round(self.__np_d_eventtimes * self.d_fs, decimals=0)
+            d_nx = np.zeros_like(self.__np_d_eventtimes, dtype=complex)
+            for idx, idx_active in enumerate(idx_events[0:-1]):
 
-        # Pad the end
-        d_nx[-1] = d_nx[-2]
+                # Define starting and ending index
+                idx_start = int(idx_active)
+                idx_end = int(idx_events[idx + 1]) - 1
+
+                # Calculate the single-sided FFT, multiplying the result by -1 change
+                # from spectral phase to balance phase.
+                d_np_y = rfft(np_sig_in[idx_start:idx_end]) * (-1.0 + 0.0j)
+                i_ns_rfft = len(d_np_y)
+
+                # Scale the fft using the actual number
+                # of points to scale.
+                d_np_y = d_np_y / float(i_ns_rfft)
+
+                # Grab the first element since it is the best estimate
+                # of the sinusoid with the same frequency as the
+                # spacing of eventtimes
+                d_nx[idx] = d_np_y[1]
+
+                # Print summary
+                if b_verbose:
+                    print('idx_start: ' + '%5.0f' % idx_start + ' | idx_end: ' +
+                          '%5.0f' % idx_end + ' | nX mag: ' + '%2.6f' % abs(d_nx[idx]) +
+                          ' | %2.6f' % np.rad2deg(np.angle(d_nx[idx])) + ' deg.')
+
+            # Pad the end
+            d_nx[-1] = d_nx[-2]
+
+            # Update calculation status
+            self.__b_is_stale_nx = False
+
+            # Update the complex class
+            self.__class_sig_comp = ClSigCompUneven(d_nx, self.__np_d_eventtimes)
 
         # Return the values
-        return d_nx
+        return self.__class_sig_comp.np_sig
+
+    # Call the method to plot the bode plot
+    def plt_bode(self):
+        return self.__class_sig_comp.plt_bode()
 
 
 class ClSigComp(ClSig):
@@ -698,6 +764,175 @@ class ClSigComp(ClSig):
         else:
             self.__ylim_tb = np.array(
                 [np.max(self.__np_sig), np.min(self.__np_sig)])
+
+
+class ClSigCompUneven(ClSig):
+
+    """
+
+    Class for storing, plotting, and manipulating complex-valued signals sampled
+    at uneven time intervals. Common source of data is nX vectors derived from
+    a machine with transient speed (i.e. start-up or shutdown).
+
+    ...
+
+    Attributes
+    ----------
+
+    Methods
+    ----------
+
+    """
+
+    def __init__(self, np_sig_in, np_d_time, str_eu_in='volts'):
+
+        """
+        Parameters
+        ----------
+        np_sig_in : numpy array, double
+            Vector with real-valued signal of interest
+        np_d_time : numpy array, double
+            Time stamp for each sample, assumed to be seconds
+        str_eu_in : string
+            Engineering units. Defaults to 'volts'
+        """
+
+        super(ClSigCompUneven, self).__init__()
+        self.__b_complex = True
+        self.__np_sig = np_sig_in
+        self.__np_d_time = np_d_time
+        self.__i_ns = self.__get_num_samples()
+        self.__ylim_mag = [0]
+        self.set_ylim_mag(self.__ylim_mag)
+        self.__ylim_tb = [0]
+        self.set_ylim_tb(self.__ylim_tb)
+        self.__str_eu = str_eu_in
+        self.__str_plot_bode_desc = '-'
+
+    @property
+    def np_sig(self):
+        """Numpy array containing the signal"""
+        self.__i_ns = self.__get_num_samples()
+        return self.__np_sig
+
+    @property
+    def np_d_time(self):
+        """Sample timestamps"""
+        return self.__np_d_time
+
+    @property
+    def b_complex(self):
+        return self.__b_complex
+
+    # Calculate the number of samples in the signal
+    def __get_num_samples(self):
+        """Calculate number of samples in the signal"""
+        return len(self.__np_sig)
+
+    @property
+    def i_ns(self):
+        self.__i_ns = self.__get_num_samples()
+        return self.__i_ns
+
+    @property
+    def ylim_mag(self):
+        """Bode magnitude vertical limits"""
+        return self.__ylim_mag
+
+    @ylim_mag.setter
+    def ylim_mag(self, ylim_mag):
+        """Vertical limits for bode magnitude (tb) plots"""
+        self.set_ylim_mag(ylim_mag)
+
+    @property
+    def ylim_tb(self):
+        """Magnitude timebase vertical limits"""
+        return self.__ylim_tb
+
+    @ylim_tb.setter
+    def ylim_tb(self, ylim_tb):
+        """Magnitude timebase vertical limits"""
+        self.set_ylim_tb(ylim_tb)
+
+    def set_ylim_mag(self, ylim_mag):
+        """Setter for the magnitude y limits"""
+        # Only use limits if they are valid
+        if len(ylim_mag) == 2:
+            self.__ylim_mag = ylim_mag
+        else:
+            self.__ylim_mag = np.array(
+                [1.05*np.max(np.abs(self.__np_sig)), 0.95*np.min(np.abs(self.__np_sig))])
+
+    def set_ylim_tb(self, ylim_tb):
+        """Y limits for magnitude timebase plot"""
+        # Only use limits if they are valid
+        if len(ylim_tb) == 2:
+            self.__ylim_tb = ylim_tb
+        else:
+            self.__ylim_tb = np.array(
+                [np.max(np.abs(self.__np_sig)), np.abs(np.min(self.__np_sig))])
+
+    @property
+    def str_eu(self):
+        return self.__str_eu
+
+    @str_eu.setter
+    def str_eu(self, str_eu_in):
+        self.__str_eu = str_eu_in
+
+    @property
+    def str_plot_bode_desc(self):
+        return self.__str_plot_bode_desc
+
+    @str_plot_bode_desc.setter
+    def str_plot_bode_desc(self, str_plot_bode_desc_in):
+        self.__str_plot_bode_desc = str_plot_bode_desc_in
+
+    # Plotting method, time domain signals.
+    def plt_bode(self, str_plot_bode_desc=None):
+        """Plot out amplitude in phase in bode format
+
+        Return values:
+        handle to the plot
+        """
+
+        # Parse inputs
+        if str_plot_bode_desc is not None:
+
+            # Update class attribute
+            self.__str_plot_bode_desc = str_plot_bode_desc
+
+        # Figure with subplots
+        fig, axs = plt.subplots(2)
+        fig.suptitle('Bode plot')
+
+        # Plot the phase
+        axs[0].plot(self.__np_d_time, np.rad2deg(np.angle(self.__np_sig)))
+        axs[1].grid()
+        axs[0].set_xlabel("Time, seconds")
+        axs[0].set_ylabel("Phase, degrees")
+        axs[0].set_ylim([-360.0, 360.0])
+        axs[0].set_title(self.__str_plot_bode_desc + " Phase")
+
+        # Plot the magnitude
+        axs[1].plot(self.__np_d_time, np.abs(self.__np_sig))
+        axs[1].grid()
+        axs[1].set_xlabel("Time, seconds")
+        axs[1].set_ylabel("Magnitude, " + self.str_eu)
+        axs[1].set_ylim(self.ylim_mag)
+        axs[1].set_title(self.__str_plot_bode_desc + " Magnitude")
+
+        # Set the layout
+        plt.tight_layout()
+
+        # Save off the handle to the plot
+        plot_handle = plt.gcf()
+
+        # Show the plot, creating a new figure. This command resets the graphics context
+        # so the plot handle has to be saved first.
+        plt.show()
+
+        return plot_handle
 
 
 class ClSigFeatures:

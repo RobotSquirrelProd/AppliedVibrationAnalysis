@@ -231,8 +231,8 @@ class TestClSig(TestCase):
                                                               b_verbose=False)
         self.assertAlmostEqual(d_eventtimes_real[0], 1. / self.d_freq_law, 7)
         self.assertAlmostEqual(d_eventtimes_real[-1] - d_eventtimes_real[-2], 1. / self.d_freq_law, 7)
-        np_d_nx = class_test_real.calc_nx(np_sig_in=class_test_real.np_sig, d_eventtimes=d_eventtimes_real,
-                                          b_verbose=True)
+        np_d_nx = class_test_real.calc_nx(np_sig_in=class_test_real.np_sig, np_d_eventtimes=d_eventtimes_real,
+                                          b_verbose=False)
         self.assertAlmostEqual(np.abs(np_d_nx[0]), self.d_test_trigger_amp, 2)
         self.assertLess(np.rad2deg(np.angle(np_d_nx[0])) - 90.0, 1.0)
         self.assertAlmostEqual(np.abs(np_d_nx[-1]), self.d_test_trigger_amp, 2)
@@ -248,11 +248,27 @@ class TestClSig(TestCase):
         self.assertAlmostEqual(d_eventtimes_sig[0], 1. / self.d_freq_law, 7)
         self.assertAlmostEqual(d_eventtimes_sig[-1] - d_eventtimes_sig[-2], 1. / self.d_freq_law, 7)
         np_d_nx_sig = class_test_sig_features.calc_nx(np_sig_in=class_test_real.np_sig, d_eventtimes=d_eventtimes_real,
-                                                      b_verbose=True, idx=0)
+                                                      b_verbose=False, idx=0)
         self.assertAlmostEqual(np.abs(np_d_nx_sig[0]), self.d_test_trigger_amp, 2)
         self.assertLess(np.rad2deg(np.angle(np_d_nx_sig[0])) - 90.0, 1.0)
         self.assertAlmostEqual(np.abs(np_d_nx_sig[-1]), self.d_test_trigger_amp, 2)
         self.assertLess(np.rad2deg(np.angle(np_d_nx_sig[-1])) - 90.0, 1.0)
+
+    def test_plt_bode(self):
+        # Test real signal, rising signal
+        class_test_real = appvib.ClSigReal(self.np_test_trigger, self.d_fs_test_trigger)
+        d_eventtimes_real = class_test_real.np_d_est_triggers(np_sig_in=class_test_real.np_sig,
+                                                              i_direction=self.i_direction_test_trigger_rising,
+                                                              d_threshold=self.d_threshold_test_trigger,
+                                                              d_hysteresis=self.d_hysteresis_test_trigger,
+                                                              b_verbose=False)
+        np_d_nx = class_test_real.calc_nx(np_sig_in=class_test_real.np_sig, np_d_eventtimes=d_eventtimes_real,
+                                          b_verbose=False)
+        self.assertAlmostEqual(np.abs(np_d_nx[0]), self.d_test_trigger_amp, 2)
+        class_test_real.plt_bode()
+        class_test_real.str_plot_bode_desc = 'Test data'
+        class_test_real.ylim_bode_mag = [-0.1, 1.1]
+        class_test_real.plt_bode()
 
 
 if __name__ == '__main__':
