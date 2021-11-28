@@ -71,13 +71,26 @@ class ClSigReal(ClSig):
         self.__b_complex = False
         self.np_sig = np_sig_in
         self.__d_fs = d_fs
-        self.__str_eu = str_eu_in
+        self.__b_is_stale_fs = True
 
         # Derived features for the signal
         self.__i_ns = self.__get_num_samples()
+        self.__d_time = np.array([0, 1])
+        self.__d_time_max = 0.0
+        self.__d_time_min = 0.0
+
+        # Timebase plot attributes. Some/many are derived from the signal
+        # itself so they need to be in this object, even though other
+        # object could be generating the plot.
+        self.__d_time_plot = self.__d_time
         self.__ylim_tb = [0]
         self.set_ylim_tb(self.__ylim_tb)
-        self.__d_time = self.__get_d_time
+        self.__i_x_divisions_tb = 12
+        self.__i_y_divisions_tb = 8
+        self.__str_eu_x = 'seconds'
+        self.str_eu = str_eu_in
+        self.__d_x_step = 0.0
+        self.__d_y_step = 0.0
 
         # Setup the s-g array and filtering parameters
         self.__np_sig_filt_sg = np_sig_in
@@ -169,6 +182,7 @@ class ClSigReal(ClSig):
 
         """
         if b_state:
+            self.__b_is_stale_fs = True
             self.__b_is_stale_filt_sg = True
             self.__b_is_stale_filt_butter = True
             self.__b_is_stale_eventtimes = True
@@ -228,6 +242,48 @@ class ClSigReal(ClSig):
                 [np.max(self.__np_sig), np.min(self.__np_sig)])
 
     @property
+    def d_y_step(self):
+        return self.__d_y_step
+
+    @property
+    def i_y_divisions_tb(self):
+        return self.__i_y_divisions_tb
+
+    @i_y_divisions_tb.setter
+    def i_y_divisions_tb(self, i_y_divisions_tb_in):
+        self.__i_y_divisions_tb = i_y_divisions_tb_in
+
+    @property
+    def str_eu_x(self):
+        return self.__str_eu_x
+
+    @str_eu_x.setter
+    def str_eu_x(self, str_eu_x_in):
+        self.__str_eu_x = str_eu_x_in
+
+    @property
+    def d_time_plot(self):
+        """
+
+        This method returns the time series values scaled for plotting
+
+        """
+        if self.__b_is_stale_fs:
+            self.__get_d_time()
+        return self.__d_time_plot
+
+    @property
+    def xlim_tb(self):
+        """
+        This method returns the x-axis limits, accounting for scaling
+        for good plot presentation
+
+        """
+        if self.__b_is_stale_fs:
+            self.__get_d_time()
+        return [self.__d_time_min, self.__d_time_max]
+
+    @property
     def ylim_bode_mag(self):
         return self.__class_sig_comp.ylim_mag
 
@@ -243,9 +299,46 @@ class ClSigReal(ClSig):
     def str_plot_bode_desc(self, str_plot_bode_desc_in):
         self.__class_sig_comp.str_plot_bode_desc = str_plot_bode_desc_in
 
-    @property
     def __get_d_time(self):
-        return np.linspace(0, (self.i_ns - 1), self.i_ns) * self.d_t_del()
+        """
+        Calculate signal features that depend on the sampling frequency including:
+        - Time series (d_time)
+        - Plotting features
+
+        Returns
+        -------
+
+        numpy array, double : Updated time series
+
+        """
+        # Re-calculate the time series
+        self.__d_time = np.linspace(0, (self.i_ns - 1), self.i_ns) * self.d_t_del()
+
+        # These are plot attributes that need to be updated when the time time series
+        # changes
+        self.__d_time_max = 0.0
+        self.__d_time_min = 0.0
+
+        # Remove leading zeros if time scale is small
+        self.__d_time_plot = self.__d_time
+        self.__d_time_max = np.max(self.__d_time_plot)
+        if self.__d_time_max < 1e-1:
+            self.__d_time_plot = self.__d_time_plot * 1e3
+            self.__str_eu_x = 'milliseconds'
+
+        # Update signal maximum and minimum
+        self.__d_time_max = np.max(self.__d_time_plot)
+        self.__d_time_min = np.min(self.__d_time_plot)
+
+        # Setup plot divisions
+        self.__d_x_step = (self.__d_time_max - self.__d_time_min) / float(self.__i_x_divisions_tb)
+        self.__d_y_step = ((self.__ylim_tb[1] - self.__ylim_tb[0]) /
+                           float(self.__i_y_divisions_tb))
+
+        # With everything updated set the stale data flag to false
+        self.__b_is_stale_fs = False
+
+        return self.__d_time
 
     def d_t_del(self):
         """
@@ -256,8 +349,31 @@ class ClSigReal(ClSig):
     @property
     def d_time(self):
         """Numpy array with time values, in seconds"""
-        self.__d_time = self.__get_d_time
+        if self.__b_is_stale_fs:
+            self.__d_time = self.__get_d_time()
         return self.__d_time
+
+    @property
+    def d_time_max(self):
+        """Maximum value in the time series"""
+        return self.__d_time_max
+
+    @property
+    def d_time_min(self):
+        """Minimum value in the time series"""
+        return self.__d_time_min
+
+    @property
+    def i_x_divisions_tb(self):
+        return self.__i_x_divisions_tb
+
+    @i_x_divisions_tb.setter
+    def i_x_divisions_tb(self, i_x_divisions_tb_in):
+        self.__i_x_divisions_tb = i_x_divisions_tb_in
+
+    @property
+    def d_x_step(self):
+        return self.__d_x_step
 
     @property
     def str_filt_sg_desc(self):
@@ -422,7 +538,7 @@ class ClSigReal(ClSig):
         # Interpolate to estimate the actual crossing from
         # the 2 nearest points
         xp = np.array([np_sig_in[idx], np_sig_in[idx + 1]])
-        fp = np.array([self.__d_time[idx], self.__d_time[idx + 1]])
+        fp = np.array([self.d_time[idx], self.d_time[idx + 1]])
         f_interp = interp1d(xp, fp, assume_sorted=False)
         d_time_estimated = f_interp(self.d_threshold)
 
@@ -786,7 +902,6 @@ class ClSigComp(ClSig):
 
 
 class ClSigCompUneven(ClSig):
-
     """
 
     Class for storing, plotting, and manipulating complex-valued signals sampled
@@ -881,7 +996,7 @@ class ClSigCompUneven(ClSig):
             self.__ylim_mag = ylim_mag
         else:
             self.__ylim_mag = np.array(
-                [1.05*np.max(np.abs(self.__np_sig)), 0.95*np.min(np.abs(self.__np_sig))])
+                [1.05 * np.max(np.abs(self.__np_sig)), 0.95 * np.min(np.abs(self.__np_sig))])
 
     def set_ylim_tb(self, ylim_tb):
         """Y limits for magnitude timebase plot"""
@@ -918,7 +1033,6 @@ class ClSigCompUneven(ClSig):
 
         # Parse inputs
         if str_plot_bode_desc is not None:
-
             # Update class attribute
             self.__str_plot_bode_desc = str_plot_bode_desc
 
@@ -977,7 +1091,6 @@ class ClSigCompUneven(ClSig):
 
         # Parse inputs
         if str_plot_polar_desc is not None:
-
             # Update class attribute
             self.__str_plot_polar_desc = str_plot_polar_desc
 
@@ -988,8 +1101,8 @@ class ClSigCompUneven(ClSig):
         # Polar plot
         ax.plot(np.angle(self.__np_sig), np.abs(self.__np_sig))
         ax.set_rmax(np.max(self.ylim_mag))
-        d_tick_radial = np.round(np.max(self.ylim_mag)/4.0, decimals=1)
-        ax.set_rticks([d_tick_radial, d_tick_radial*2.0, d_tick_radial*3.0, d_tick_radial*4.0])
+        d_tick_radial = np.round(np.max(self.ylim_mag) / 4.0, decimals=1)
+        ax.set_rticks([d_tick_radial, d_tick_radial * 2.0, d_tick_radial * 3.0, d_tick_radial * 4.0])
         ax.set_rlabel_position(-22.5)
         ax.grid(True)
         ax.set_title(self.__str_plot_polar_desc + " polar plot")
@@ -1349,13 +1462,20 @@ class ClSigFeatures:
             ax1 = axs
 
         # Channel 1
-        ax1.plot(self.__lst_cl_sgs[0].d_time, self.get_np_d_sig(idx=0))
-        ax1.plot(self.__lst_cl_sgs[0].d_time, self.__lst_cl_sgs[0].np_sig_filt_sg)
-        ax1.plot(self.__lst_cl_sgs[0].d_time, self.__lst_cl_sgs[0].np_sig_filt_butter)
+        ax1.plot(self.__lst_cl_sgs[0].d_time_plot, self.get_np_d_sig(idx=0))
+        ax1.plot(self.__lst_cl_sgs[0].d_time_plot, self.__lst_cl_sgs[0].np_sig_filt_sg)
+        ax1.plot(self.__lst_cl_sgs[0].d_time_plot, self.__lst_cl_sgs[0].np_sig_filt_butter)
         ax1.grid()
-        ax1.set_xlabel("Time, seconds")
+        ax1.set_xlabel("Time, " + self.__lst_cl_sgs[0].str_eu_x)
+        ax1.set_xlim(self.__lst_cl_sgs[0].xlim_tb)
+        ax1.set_xticks(np.arange(self.__lst_cl_sgs[0].xlim_tb[0],
+                                 self.__lst_cl_sgs[0].xlim_tb[1],
+                                 self.__lst_cl_sgs[0].d_x_step))
         ax1.set_ylabel("Channel output, " + self.__lst_cl_sgs[0].str_eu)
         ax1.set_ylim(self.__lst_cl_sgs[0].ylim_tb)
+        ax1.set_yticks(np.arange(self.__lst_cl_sgs[0].ylim_tb[0],
+                                 self.__lst_cl_sgs[0].ylim_tb[1],
+                                 self.__lst_cl_sgs[0].d_y_step))
         ax1.set_title(self.__str_plot_desc + " Timebase")
         ax1.legend(['as-acquired', self.str_filt_sg_desc_short(),
                     self.str_filt_butter_desc_short()])
@@ -1364,16 +1484,26 @@ class ClSigFeatures:
         if len(self.__lst_b_active) > 1:
             if self.__lst_b_active[1]:
                 i_ch = 1
-                axs[i_ch].plot(self.__lst_cl_sgs[0].d_time, self.get_np_d_sig(idx=1))
-                ax1.plot(self.__lst_cl_sgs[0].d_time, self.__lst_cl_sgs[i_ch].np_sig_filt_sg)
-                ax1.plot(self.__lst_cl_sgs[0].d_time, self.__lst_cl_sgs[i_ch].np_sig_filt_butter)
+                d_y_step = ((self.__lst_cl_sgs[i_ch].ylim_tb[1] - self.__lst_cl_sgs[i_ch].ylim_tb[0]) /
+                            float(self.__lst_cl_sgs[i_ch].i_y_divisions_tb))
+
+                axs[i_ch].plot(self.__lst_cl_sgs[i_ch].d_time_plot, self.get_np_d_sig(idx=i_ch))
+                axs[i_ch].plot(self.__lst_cl_sgs[i_ch].d_time_plot, self.__lst_cl_sgs[i_ch].np_sig_filt_sg)
+                axs[i_ch].plot(self.__lst_cl_sgs[i_ch].d_time_plot, self.__lst_cl_sgs[i_ch].np_sig_filt_butter)
                 axs[i_ch].grid()
-                axs[i_ch].set_xlabel("Time, seconds")
+                axs[i_ch].set_xlabel("Time, " + self.__lst_cl_sgs[i_ch].str_eu_x)
+                axs[i_ch].set_xlim(self.__lst_cl_sgs[i_ch].xlim_tb)
+                ax1.set_xticks(np.arange(self.__lst_cl_sgs[i_ch].xlim_tb[0],
+                                         self.__lst_cl_sgs[i_ch].xlim_tb[1],
+                                         self.__lst_cl_sgs[i_ch].d_x_step))
                 axs[i_ch].set_ylabel("Channel output, " + self.__lst_cl_sgs[i_ch].str_eu)
-                axs[i_ch].set_ylim(self.__lst_cl_sgs[0].ylim_tb)
+                axs[i_ch].set_ylim(self.__lst_cl_sgs[i_ch].ylim_tb)
+                ax1.set_yticks(np.arange(self.__lst_cl_sgs[i_ch].ylim_tb[0],
+                                         self.__lst_cl_sgs[i_ch].ylim_tb[1],
+                                         d_y_step))
                 axs[i_ch].set_title(self.__str_plot_desc + " Timebase")
-                ax1.legend(['as-acquired', self.str_filt_sg_desc_short(idx=i_ch),
-                            self.str_filt_butter_desc_short(idx=i_ch)])
+                axs[i_ch].legend(['as-acquired', self.str_filt_sg_desc_short(idx=i_ch),
+                                  self.str_filt_butter_desc_short(idx=i_ch)])
 
         # Set the layout
         plt.tight_layout()
@@ -1440,8 +1570,19 @@ class ClSigFeatures:
         plt.figure()
         plt.plot(self.__lst_cl_sgs[0].d_time, self.np_d_sig)
         plt.plot(self.np_d_eventtimes(idx=0), np_d_event_value, "ok")
-        plt.xlabel('Time, seconds')
-        plt.ylabel('Amplitude, ' + self.__lst_cl_sgs[0].str_eu)
+        plt.grid(True)
+
+        plt.xlabel("Time, " + self.__lst_cl_sgs[0].str_eu_x)
+        plt.xlim(self.__lst_cl_sgs[0].xlim_tb)
+        plt.xticks(np.arange(self.__lst_cl_sgs[0].xlim_tb[0],
+                             self.__lst_cl_sgs[0].xlim_tb[1],
+                             self.__lst_cl_sgs[0].d_x_step))
+        plt.ylabel("Amplitude, " + self.__lst_cl_sgs[0].str_eu)
+        plt.ylim(self.__lst_cl_sgs[0].ylim_tb)
+        plt.yticks(np.arange(self.__lst_cl_sgs[0].ylim_tb[0],
+                             self.__lst_cl_sgs[0].ylim_tb[1],
+                             self.__lst_cl_sgs[0].d_y_step))
+
         plt.legend(['as-acquired', 'eventtimes'])
         plt.title(self.__str_plot_desc + ' Amplitude and eventtimes vs. time')
 
@@ -1568,6 +1709,8 @@ class ClSigFeatures:
         file_data.write(str_units)
 
         for idx_line in range(0, self.i_ns):
+
+            # line number
             str_line = str(idx_line)
 
             # add samples from each signal to the file
@@ -1576,14 +1719,14 @@ class ClSigFeatures:
 
             # header items
             if idx_line == 0:
-
-                # add the time values
-                str_line = str_line + ',' + '%0.8f' % (cl_obj.d_time[1] - cl_obj.d_time[0])
+                # add the delta time values
+                str_line = str_line + ',' + '%0.8f' % (self.__lst_cl_sgs[0].d_time[1] -
+                                                       self.__lst_cl_sgs[0].d_time[0])
 
                 # add the sampling frequency to the header
-                str_line = str_line + ',' + '%0.8f' % cl_obj.d_fs
+                str_line = str_line + ',' + '%0.8f' % self.__lst_cl_sgs[0].d_fs
 
-            # terminal the line
+            # terminate the line
             file_data.write(str_line + '\n')
 
         file_data.close()
