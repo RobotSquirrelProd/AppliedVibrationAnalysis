@@ -335,6 +335,8 @@ class TestClSig(TestCase):
         df_test = pd.read_csv(str_filename, header=None, skiprows=2, names=csv_header[0:5])
         for idx in range(class_test_sig_features.i_ns-1):
             self.assertAlmostEqual(df_test.CH1[idx], self.np_test_trigger[idx], 8)
+        # Be sure delta time and sampling frequency are coherent
+        self.assertAlmostEqual(df_test['Delta Time'][0], 1.0 / df_test['Sampling Frequency'][0], 9)
 
         # Add a signal
         class_test_sig_features.idx_add_sig(self.np_test_trigger_ch2,
@@ -353,6 +355,8 @@ class TestClSig(TestCase):
         df_test_ch2 = pd.read_csv(str_filename, header=None, skiprows=2, names=csv_header[0:5])
         for idx in range(class_test_sig_features.i_ns-1):
             self.assertAlmostEqual(df_test_ch2.CH2[idx], self.np_test_trigger_ch2[idx], 8)
+        # Be sure delta time and sampling frequency are coherent
+        self.assertAlmostEqual(df_test_ch2['Delta Time'][0], 1.0 / df_test_ch2['Sampling Frequency'][0], 9)
 
 
 if __name__ == '__main__':

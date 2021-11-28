@@ -1,6 +1,6 @@
-X,CH1,CH2,Start,Increment,
-Sequence,Volt,Volt,Volt,0.000000e-03,<bound method ClSigFeatures.d_t_del of <appvib.ClSigFeatures object at 0x000001C9A06E8880>>
-0,0.00000000,0.00000000
+X,CH1,CH2,Delta Time,Sampling Frequency
+Sequence,Volt,Volt,seconds,hertz,
+0,0.00000000,0.00000000,0.00048852,2047.00000000
 1,0.03068978,0.06444855
 2,0.06135066,0.12883638
 3,0.09195373,0.19310283

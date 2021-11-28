@@ -1536,8 +1536,8 @@ class ClSigFeatures:
             str_units = str_units + 'Volt,'
             idx_ch = idx_ch + 1
 
-        str_header = str_header + 'Start,Increment,\n'
-        str_units = str_units + 'Volt,0.000000e-03,' + str(self.d_t_del) + '\n'
+        str_header = str_header + 'Delta Time,Sampling Frequency\n'
+        str_units = str_units + 'seconds,hertz,' + '\n'
         file_data.write(str_header)
         file_data.write(str_units)
 
@@ -1548,6 +1548,16 @@ class ClSigFeatures:
             for cl_obj in self.__lst_cl_sgs:
                 str_line = str_line + ',' + '%0.8f' % cl_obj.np_sig[idx_line]
 
+            # header items
+            if idx_line == 0:
+
+                # add the time values
+                str_line = str_line + ',' + '%0.8f' % (cl_obj.d_time[1] - cl_obj.d_time[0])
+
+                # add the sampling frequency to the header
+                str_line = str_line + ',' + '%0.8f' % cl_obj.d_fs
+
+            # terminal the line
             file_data.write(str_line + '\n')
 
         file_data.close()
