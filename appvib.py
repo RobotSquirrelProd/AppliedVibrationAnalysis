@@ -206,6 +206,10 @@ class ClSigReal(ClSig):
         """
         return self.__ylim_tb
 
+    @ylim_tb.setter
+    def ylim_tb(self, ylim_tb_in):
+        self.set_ylim_tb(ylim_tb_in)
+
     def set_ylim_tb(self, ylim_tb):
         """
         Set the real-valued y limits
@@ -1294,6 +1298,28 @@ class ClSigFeatures:
     @str_plot_desc.setter
     def str_plot_desc(self, str_plot_desc):
         self.__str_plot_desc = str_plot_desc
+
+    # Interface for the vertical plotting limits
+    def ylim_tb(self, ylim_tb_in=None, idx=0):
+        """
+        Parameter
+        ---------
+        ylim_tb_in : list of doubles, None
+            vertical plot limits. If set to None, returns the limits without change
+        idx : integer
+            Index of signal to pull description. Defaults to 0 (first signal)
+
+        Returns
+        -------
+        list of doubles : ylim_tb applied to signal with index=idx
+
+        """
+
+        # Is there anything to update?
+        if ylim_tb_in is not None:
+            self.__lst_cl_sgs[idx].ylim_tb = ylim_tb_in
+
+        return self.__lst_cl_sgs[idx].ylim_tb
 
     # Plotting method, time domain signals.
     def plt_sigs(self):

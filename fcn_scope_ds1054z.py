@@ -25,7 +25,7 @@ def b_set_trigger(scope_con, d_trigger_level=1e-01):
     scope_con.single()
 
 
-def b_setup_scope(scope_con, lst_ch_active = [True, False, False, False],
+def b_setup_scope(scope_con, lst_ch_active=[True, False, False, False],
                   lst_ac_coupled = [True, True, True, True],
                   lst_ch_scale=[5.e-1, 1., 1., 1.], timebase_scale=5e-2, 
                   d_trigger_level = 1e-01, b_single = True):

@@ -137,8 +137,9 @@ class TestClSig(TestCase):
 
         # Signal feature class check on y-limits test
         class_test_sig_features = appvib.ClSigFeatures(self.np_test, self.d_fs)
-        class_test_sig_features.ylim_tb = self.ylim_tb_test
-        self.assertAlmostEqual(self.ylim_tb_test[0], class_test_sig_features.ylim_tb[0], 12)
+        class_test_sig_features.ylim_tb(ylim_tb_in=self.ylim_tb_test, idx=0)
+        d_ylim_tb_check = class_test_sig_features.ylim_tb()
+        self.assertAlmostEqual(self.ylim_tb_test[0], d_ylim_tb_check[0], 12)
 
     def test_d_fs(self):
         # Signal feature class check signal sampling frequency on instantiation
