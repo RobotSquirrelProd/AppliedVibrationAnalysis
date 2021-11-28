@@ -1,7 +1,5 @@
-from ds1054z import DS1054Z
 import time
 import numpy as np
-
 
 def d_get_delta_time(timebase_scale=1.0, i_ns=120):
     """Given the DS1054Z timebase scale, calculate the delta time between samples"""
@@ -31,7 +29,7 @@ def b_setup_scope(scope_con, lst_ch_active=[True, False, False, False],
                   d_trigger_level = 1e-01, b_single = True):
     """Setup Rigol ds1054z to read data from one or more channels
     
-    Keyword arguments:
+    Parameters:
     scope_con -- Connection to scope. Usually
         the value returned from the 'DS1054Z('192.168.1.206')' call.
     lst_ch_active -- List of booleans describing active channels
@@ -47,7 +45,10 @@ def b_setup_scope(scope_con, lst_ch_active=[True, False, False, False],
         a single shot (default: True)
     
     Return values:
-    d_ch1_scale_actual -- The closest value chosen by the scope
+
+    list : list of reported scope settings including:
+        [0] -- The closest channel 1 scale chosen by the scope
+        [1] -- The actual timebase_scale setting
     """
 
     # Setup horizontal scale and place scope in run mode
@@ -55,9 +56,9 @@ def b_setup_scope(scope_con, lst_ch_active=[True, False, False, False],
     scope_con.run()
 
     # Setup channel 1
-    scope_con.display_channel(1,enable=lst_ch_active[0])
-    scope_con.set_probe_ratio(1,1)
-    scope_con.set_channel_scale(1,"{:e}".format(lst_ch_scale[0]) +'V')
+    scope_con.display_channel(1, enable=lst_ch_active[0])
+    scope_con.set_probe_ratio(1, 1)
+    scope_con.set_channel_scale(1, "{:e}".format(lst_ch_scale[0]) + 'V')
     if lst_ac_coupled[0]:
         scope_con.write(':CHANnel1:COUPling AC')
     else:
@@ -105,13 +106,16 @@ def b_setup_scope(scope_con, lst_ch_active=[True, False, False, False],
         # No trigger, useful for seeing the scope data when you aren't sure
         # what the signal looks like
         scope_con.write(":TRIGger:SWEep AUTO")
-        
-    return scope_con.get_channel_scale(1)
+
+    # Document as-left state of scope configuration
+    d_timebase_scale_actual = float(scope_con.query(':TIMebase:SCAle?'))
+
+    return [scope_con.get_channel_scale(1), d_timebase_scale_actual]
 
 # This one is a little tricky because it can take time to acquire the signal so there 
 # are pause statements to allow data to accumulate at the scope. If the acquisition 
 # terminates before the sampling is complete there will be NaN's in the list. In this 
-# case the NaN's are converte zeros to allow processing to continue. It can be helpful 
+# case the NaN's are converted to zeros to allow processing to continue. It can be helpful
 # to see a partial waveform to troubleshoot timing at the scope.
 def d_get_data(scope_con, lst_ch_active = [True, False, False, False], timebase_scale=5e-2):
     """Get data from the scope

@@ -27,11 +27,12 @@ class TestScopeDS1054Z(unittest.TestCase):
         self.assertAlmostEqual(d_t_del, d_check, 12)
 
     def test_b_setup_scope(self):
-        d_scale = scp.b_setup_scope(self.scope, lst_ch_scale=self.lst_ch_scale,
-                                    lst_ch_active=self.lst_ch_active,
-                                    timebase_scale=self.timebase_scale_test_slow,
-                                    d_trigger_level=1e-01, b_single=False)
-        self.assertGreater(d_scale, 0., 'Failed to retrieve scale from scope')
+        lst_as_left = scp.b_setup_scope(self.scope, lst_ch_scale=self.lst_ch_scale,
+                                        lst_ch_active=self.lst_ch_active,
+                                        timebase_scale=self.timebase_scale_test_slow,
+                                        d_trigger_level=1e-01, b_single=False)
+        self.assertGreater(lst_as_left[0], 0., 'Failed to retrieve scale from scope')
+        self.assertAlmostEqual(lst_as_left[0], self.lst_ch_scale[0], 'Failed to set vertical scale')
 
 
 if __name__ == '__main__':

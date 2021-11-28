@@ -239,7 +239,7 @@ class ClSigReal(ClSig):
             self.__ylim_tb = ylim_tb
         else:
             self.__ylim_tb = np.array(
-                [np.max(self.__np_sig), np.min(self.__np_sig)])
+                [np.min(self.__np_sig), np.max(self.__np_sig)])
 
     @property
     def d_y_step(self):
