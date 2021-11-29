@@ -86,11 +86,9 @@ class ClSigReal(ClSig):
         self.__ylim_tb = [0]
         self.set_ylim_tb(self.__ylim_tb)
         self.__i_x_divisions_tb = 12
-        self.__i_y_divisions_tb = 8
+        self.__i_y_divisions_tb = 9
         self.__str_eu_x = 'seconds'
         self.str_eu = str_eu_in
-        self.__d_x_step = 0.0
-        self.__d_y_step = 0.0
 
         # Setup the s-g array and filtering parameters
         self.__np_sig_filt_sg = np_sig_in
@@ -222,7 +220,10 @@ class ClSigReal(ClSig):
 
     @ylim_tb.setter
     def ylim_tb(self, ylim_tb_in):
+        # Update object attribute
         self.set_ylim_tb(ylim_tb_in)
+        # This impacts other plot attributes, update those
+        self.__get_d_time()
 
     def set_ylim_tb(self, ylim_tb):
         """
@@ -240,10 +241,6 @@ class ClSigReal(ClSig):
         else:
             self.__ylim_tb = np.array(
                 [np.min(self.__np_sig), np.max(self.__np_sig)])
-
-    @property
-    def d_y_step(self):
-        return self.__d_y_step
 
     @property
     def i_y_divisions_tb(self):
@@ -330,11 +327,6 @@ class ClSigReal(ClSig):
         self.__d_time_max = np.max(self.__d_time_plot)
         self.__d_time_min = np.min(self.__d_time_plot)
 
-        # Setup plot divisions
-        self.__d_x_step = (self.__d_time_max - self.__d_time_min) / float(self.__i_x_divisions_tb)
-        self.__d_y_step = ((self.__ylim_tb[1] - self.__ylim_tb[0]) /
-                           float(self.__i_y_divisions_tb))
-
         # With everything updated set the stale data flag to false
         self.__b_is_stale_fs = False
 
@@ -370,10 +362,6 @@ class ClSigReal(ClSig):
     @i_x_divisions_tb.setter
     def i_x_divisions_tb(self, i_x_divisions_tb_in):
         self.__i_x_divisions_tb = i_x_divisions_tb_in
-
-    @property
-    def d_x_step(self):
-        return self.__d_x_step
 
     @property
     def str_filt_sg_desc(self):
@@ -1096,7 +1084,6 @@ class ClSigCompUneven(ClSig):
 
         # Figure with subplots
         fig, ax = plt.subplots(subplot_kw={'projection': 'polar'})
-        # fig.suptitle('Bode plot')
 
         # Polar plot
         ax.plot(np.angle(self.__np_sig), np.abs(self.__np_sig))
@@ -1468,24 +1455,27 @@ class ClSigFeatures:
         ax1.grid()
         ax1.set_xlabel("Time, " + self.__lst_cl_sgs[0].str_eu_x)
         ax1.set_xlim(self.__lst_cl_sgs[0].xlim_tb)
-        ax1.set_xticks(np.arange(self.__lst_cl_sgs[0].xlim_tb[0],
-                                 self.__lst_cl_sgs[0].xlim_tb[1],
-                                 self.__lst_cl_sgs[0].d_x_step))
+        ax1.set_xticks(np.linspace(self.__lst_cl_sgs[0].xlim_tb[0],
+                                   self.__lst_cl_sgs[0].xlim_tb[1],
+                                   self.__lst_cl_sgs[0].i_x_divisions_tb))
         ax1.set_ylabel("Channel output, " + self.__lst_cl_sgs[0].str_eu)
         ax1.set_ylim(self.__lst_cl_sgs[0].ylim_tb)
-        ax1.set_yticks(np.arange(self.__lst_cl_sgs[0].ylim_tb[0],
-                                 self.__lst_cl_sgs[0].ylim_tb[1],
-                                 self.__lst_cl_sgs[0].d_y_step))
+        ax1.set_yticks(np.linspace(self.__lst_cl_sgs[0].ylim_tb[0],
+                                   self.__lst_cl_sgs[0].ylim_tb[1],
+                                   self.__lst_cl_sgs[0].i_y_divisions_tb))
         ax1.set_title(self.__str_plot_desc + " Timebase")
         ax1.legend(['as-acquired', self.str_filt_sg_desc_short(),
                     self.str_filt_butter_desc_short()])
+
+        # Debug - remove
+        print('ylim_tb[0] : ' + '%0.6f' % self.__lst_cl_sgs[0].ylim_tb[0] +
+              ' | ylim_tb[1] : ' + '%0.6f' % self.__lst_cl_sgs[0].ylim_tb[1] +
+              ' | i_y_divisions_tb : ' + '%0.6f' % self.__lst_cl_sgs[0].i_y_divisions_tb)
 
         # Channel 2
         if len(self.__lst_b_active) > 1:
             if self.__lst_b_active[1]:
                 i_ch = 1
-                d_y_step = ((self.__lst_cl_sgs[i_ch].ylim_tb[1] - self.__lst_cl_sgs[i_ch].ylim_tb[0]) /
-                            float(self.__lst_cl_sgs[i_ch].i_y_divisions_tb))
 
                 axs[i_ch].plot(self.__lst_cl_sgs[i_ch].d_time_plot, self.get_np_d_sig(idx=i_ch))
                 axs[i_ch].plot(self.__lst_cl_sgs[i_ch].d_time_plot, self.__lst_cl_sgs[i_ch].np_sig_filt_sg)
@@ -1493,14 +1483,14 @@ class ClSigFeatures:
                 axs[i_ch].grid()
                 axs[i_ch].set_xlabel("Time, " + self.__lst_cl_sgs[i_ch].str_eu_x)
                 axs[i_ch].set_xlim(self.__lst_cl_sgs[i_ch].xlim_tb)
-                ax1.set_xticks(np.arange(self.__lst_cl_sgs[i_ch].xlim_tb[0],
-                                         self.__lst_cl_sgs[i_ch].xlim_tb[1],
-                                         self.__lst_cl_sgs[i_ch].d_x_step))
+                axs[i_ch].set_xticks(np.linspace(self.__lst_cl_sgs[i_ch].xlim_tb[0],
+                                                 self.__lst_cl_sgs[i_ch].xlim_tb[1],
+                                                 self.__lst_cl_sgs[i_ch].i_x_divisions_tb))
                 axs[i_ch].set_ylabel("Channel output, " + self.__lst_cl_sgs[i_ch].str_eu)
                 axs[i_ch].set_ylim(self.__lst_cl_sgs[i_ch].ylim_tb)
-                ax1.set_yticks(np.arange(self.__lst_cl_sgs[i_ch].ylim_tb[0],
-                                         self.__lst_cl_sgs[i_ch].ylim_tb[1],
-                                         d_y_step))
+                axs[i_ch].set_yticks(np.linspace(self.__lst_cl_sgs[i_ch].ylim_tb[0],
+                                                 self.__lst_cl_sgs[i_ch].ylim_tb[1],
+                                                 self.__lst_cl_sgs[i_ch].i_y_divisions_tb))
                 axs[i_ch].set_title(self.__str_plot_desc + " Timebase")
                 axs[i_ch].legend(['as-acquired', self.str_filt_sg_desc_short(idx=i_ch),
                                   self.str_filt_butter_desc_short(idx=i_ch)])
@@ -1574,14 +1564,14 @@ class ClSigFeatures:
 
         plt.xlabel("Time, " + self.__lst_cl_sgs[0].str_eu_x)
         plt.xlim(self.__lst_cl_sgs[0].xlim_tb)
-        plt.xticks(np.arange(self.__lst_cl_sgs[0].xlim_tb[0],
-                             self.__lst_cl_sgs[0].xlim_tb[1],
-                             self.__lst_cl_sgs[0].d_x_step))
+        plt.xticks(np.linspace(self.__lst_cl_sgs[0].xlim_tb[0],
+                               self.__lst_cl_sgs[0].xlim_tb[1],
+                               self.__lst_cl_sgs[0].i_x_divisions_tb))
         plt.ylabel("Amplitude, " + self.__lst_cl_sgs[0].str_eu)
         plt.ylim(self.__lst_cl_sgs[0].ylim_tb)
-        plt.yticks(np.arange(self.__lst_cl_sgs[0].ylim_tb[0],
-                             self.__lst_cl_sgs[0].ylim_tb[1],
-                             self.__lst_cl_sgs[0].d_y_step))
+        plt.yticks(np.linspace(self.__lst_cl_sgs[0].ylim_tb[0],
+                               self.__lst_cl_sgs[0].ylim_tb[1],
+                               self.__lst_cl_sgs[0].i_y_divisions_tb))
 
         plt.legend(['as-acquired', 'eventtimes'])
         plt.title(self.__str_plot_desc + ' Amplitude and eventtimes vs. time')

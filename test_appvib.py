@@ -165,12 +165,11 @@ class TestClSig(TestCase):
 
         # Signal feature class, second signal auto y-limits
         idx_new = class_test_sig_features.idx_add_sig(self.np_test_ch2, self.d_fs)
-        class_test_sig_features.ylim_tb(ylim_tb_in=[0.0, 15.0], idx=0)
         self.assertEqual(idx_new, 1, msg='Failed to return correct index')
         class_test_sig_features.plt_sigs()
 
         # Signal feature class, second signal manual y-limits
-        class_test_sig_features.ylim_tb(ylim_tb_in=[0.0, 15.0], idx=0)
+        class_test_sig_features.ylim_tb(ylim_tb_in=[0.0, 16.0], idx=0)
         class_test_sig_features.plt_sigs()
 
     def test_plt_spec(self):
