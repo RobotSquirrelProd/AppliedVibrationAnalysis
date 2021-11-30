@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+from matplotlib.ticker import FormatStrFormatter
 import numpy as np
 import scipy.signal as sig
 from scipy.fft import rfft, rfftfreq
@@ -1122,10 +1123,7 @@ class ClSigFeatures:
         print('d_time' + np.array2string(cl_test.d_time))
 
         np_d_sig: [1. 2. 3.]
-        timebase_scale: 1.000
         i_ns:   3
-        d_t_del: 4.000
-        d_time[0. 4. 8.]
 
         Attributes
         ----------
@@ -1458,11 +1456,13 @@ class ClSigFeatures:
         ax1.set_xticks(np.linspace(self.__lst_cl_sgs[0].xlim_tb[0],
                                    self.__lst_cl_sgs[0].xlim_tb[1],
                                    self.__lst_cl_sgs[0].i_x_divisions_tb))
+        ax1.xaxis.set_major_formatter(FormatStrFormatter('%.2f'))
         ax1.set_ylabel("Channel output, " + self.__lst_cl_sgs[0].str_eu)
         ax1.set_ylim(self.__lst_cl_sgs[0].ylim_tb)
         ax1.set_yticks(np.linspace(self.__lst_cl_sgs[0].ylim_tb[0],
                                    self.__lst_cl_sgs[0].ylim_tb[1],
                                    self.__lst_cl_sgs[0].i_y_divisions_tb))
+        # ax1.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
         ax1.set_title(self.__str_plot_desc + " Timebase")
         ax1.legend(['as-acquired', self.str_filt_sg_desc_short(),
                     self.str_filt_butter_desc_short()])
@@ -1486,6 +1486,7 @@ class ClSigFeatures:
                 axs[i_ch].set_xticks(np.linspace(self.__lst_cl_sgs[i_ch].xlim_tb[0],
                                                  self.__lst_cl_sgs[i_ch].xlim_tb[1],
                                                  self.__lst_cl_sgs[i_ch].i_x_divisions_tb))
+                axs[i_ch].xaxis.set_major_formatter(FormatStrFormatter('%.2f'))
                 axs[i_ch].set_ylabel("Channel output, " + self.__lst_cl_sgs[i_ch].str_eu)
                 axs[i_ch].set_ylim(self.__lst_cl_sgs[i_ch].ylim_tb)
                 axs[i_ch].set_yticks(np.linspace(self.__lst_cl_sgs[i_ch].ylim_tb[0],
