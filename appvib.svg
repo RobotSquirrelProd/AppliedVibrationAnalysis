@@ -11424,7 +11424,7 @@ VK+d7EJenL9IJBKJRCKRSCQSiUQiUdL0H4oHxa3EYL65AAAAAElFTkSuQmCC"
          y="15"
          clip-path="url(#clipPath195)"
          stroke="none"
-         id="text2434">plt_bode(self, str_plot_bode_desc=None, idx=0)</text>
+         id="text2434">plt_apht(self, str_plot_apht_desc=None, idx=0)</text>
     </g>
     <g
        fill="rgb(60,63,65)"
@@ -17097,7 +17097,7 @@ x8LjhwoVKlSoUKFChQoVKlSoUKFCqab/A7mTS3V79LCjAAAAAElFTkSuQmCC"
          y="15"
          clip-path="url(#clipPath249)"
          stroke="none"
-         id="text3244">ylim_bode_mag(self)</text>
+         id="text3244">ylim_apht_mag(self)</text>
     </g>
     <g
        fill="rgb(60,63,65)"
@@ -17238,7 +17238,7 @@ fPny5cuXL1++fPkSTf8H8EITxBnrGjEAAAAASUVORK5CYII="
          y="15"
          clip-path="url(#clipPath299)"
          stroke="none"
-         id="text3262">ylim_bode_mag(self, ylim_bode_mag)</text>
+         id="text3262">ylim_apht_mag(self, ylim_apht_mag)</text>
     </g>
     <g
        fill="rgb(60,63,65)"
@@ -17376,7 +17376,7 @@ x8LjhwoVKlSoUKFChQoVKlSoUKFCqab/A7mTS3V79LCjAAAAAElFTkSuQmCC"
          y="15"
          clip-path="url(#clipPath302)"
          stroke="none"
-         id="text3280">str_plot_bode_desc(self)</text>
+         id="text3280">str_plot_apht_desc(self)</text>
     </g>
     <g
        fill="rgb(60,63,65)"
@@ -17517,7 +17517,7 @@ fPny5cuXL1++fPkSTf8H8EITxBnrGjEAAAAASUVORK5CYII="
          y="15"
          clip-path="url(#clipPath305)"
          stroke="none"
-         id="text3298">str_plot_bode_desc(self, str_plot_bode_desc_in)</text>
+         id="text3298">str_plot_apht_desc(self, str_plot_apht_desc_in)</text>
     </g>
     <g
        fill="rgb(60,63,65)"
@@ -20212,7 +20212,7 @@ VK+d7EJenL9IJBKJRCKRSCQSiUQiUdL0H4oHxa3EYL65AAAAAElFTkSuQmCC"
          y="15"
          clip-path="url(#clipPath351)"
          stroke="none"
-         id="text3658">plt_bode(self, str_plot_bode_desc_in=None)</text>
+         id="text3658">plt_apht(self, str_plot_apht_desc_in=None)</text>
     </g>
     <g
        fill="rgb(60,63,65)"

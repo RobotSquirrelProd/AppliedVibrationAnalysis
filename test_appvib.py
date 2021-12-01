@@ -69,7 +69,7 @@ class TestClSig(TestCase):
     def test_np_sig(self):
         # Real-valued child
         class_test_real = appvib.ClSigReal(self.np_test_real, self.d_fs)
-        self.assertAlmostEqual(self.np_test_real[0], class_test_real.np_sig[0], 12)
+        self.assertAlmostEqual(self.np_test_real[0], class_test_real.np_d_sig[0], 12)
 
         # Attempt to send a complex-valued signal to the real-valued class
         with self.assertRaises(Exception):
@@ -77,12 +77,12 @@ class TestClSig(TestCase):
 
         # Complex-valued child and verify inheritance is working
         class_test_comp = appvib.ClSigComp(self.np_test_comp, self.d_fs)
-        self.assertAlmostEqual(self.np_test_comp[0], class_test_comp.np_sig[0], 12)
-        self.assertAlmostEqual(self.np_test_real[0], class_test_real.np_sig[0], 12)
+        self.assertAlmostEqual(self.np_test_comp[0], class_test_comp.np_d_sig[0], 12)
+        self.assertAlmostEqual(self.np_test_real[0], class_test_real.np_d_sig[0], 12)
 
         # Signal feature class, first signal
         class_test_sig_features = appvib.ClSigFeatures(self.np_test, self.d_fs)
-        self.assertAlmostEqual(self.np_test_comp[0], class_test_comp.np_sig[0], 12)
+        self.assertAlmostEqual(self.np_test_comp[0], class_test_comp.np_d_sig[0], 12)
         self.assertAlmostEqual(self.np_test[0], class_test_sig_features.np_d_sig[0], 12)
 
         # Signal feature class, second signal
@@ -233,14 +233,14 @@ class TestClSig(TestCase):
 
         # Test real signal, rising signal
         class_test_real = appvib.ClSigReal(self.np_test_trigger, self.d_fs_test_trigger)
-        d_eventtimes_real = class_test_real.np_d_est_triggers(np_sig_in=class_test_real.np_sig,
+        d_eventtimes_real = class_test_real.np_d_est_triggers(np_sig_in=class_test_real.np_d_sig,
                                                               i_direction=self.i_direction_test_trigger_rising,
                                                               d_threshold=self.d_threshold_test_trigger,
                                                               d_hysteresis=self.d_hysteresis_test_trigger,
                                                               b_verbose=False)
         self.assertAlmostEqual(d_eventtimes_real[0], 1. / self.d_freq_law, 7)
         self.assertAlmostEqual(d_eventtimes_real[-1] - d_eventtimes_real[-2], 1. / self.d_freq_law, 7)
-        np_d_nx = class_test_real.calc_nx(np_sig_in=class_test_real.np_sig, np_d_eventtimes=d_eventtimes_real,
+        np_d_nx = class_test_real.calc_nx(np_sig_in=class_test_real.np_d_sig, np_d_eventtimes=d_eventtimes_real,
                                           b_verbose=False)
         self.assertAlmostEqual(np.abs(np_d_nx[0]), self.d_test_trigger_amp, 2)
         self.assertLess(np.rad2deg(np.angle(np_d_nx[0])) - 90.0, 1.0)
@@ -249,76 +249,79 @@ class TestClSig(TestCase):
 
         # Signal feature class test using same input as the real signal class above
         class_test_sig_features = appvib.ClSigFeatures(self.np_test_trigger, self.d_fs_test_trigger)
-        d_eventtimes_sig = class_test_sig_features.np_d_est_triggers(np_sig_in=class_test_real.np_sig,
+        d_eventtimes_sig = class_test_sig_features.np_d_est_triggers(np_sig_in=class_test_real.np_d_sig,
                                                                      i_direction=self.i_direction_test_trigger_rising,
                                                                      d_threshold=self.d_threshold_test_trigger,
                                                                      d_hysteresis=self.d_hysteresis_test_trigger,
                                                                      b_verbose=False, idx=0)
         self.assertAlmostEqual(d_eventtimes_sig[0], 1. / self.d_freq_law, 7)
         self.assertAlmostEqual(d_eventtimes_sig[-1] - d_eventtimes_sig[-2], 1. / self.d_freq_law, 7)
-        np_d_nx_sig = class_test_sig_features.calc_nx(np_sig_in=class_test_real.np_sig, d_eventtimes=d_eventtimes_real,
+        np_d_nx_sig = class_test_sig_features.calc_nx(np_sig_in=class_test_real.np_d_sig,
+                                                      d_eventtimes=d_eventtimes_real,
                                                       b_verbose=False, idx=0)
         self.assertAlmostEqual(np.abs(np_d_nx_sig[0]), self.d_test_trigger_amp, 2)
         self.assertLess(np.rad2deg(np.angle(np_d_nx_sig[0])) - 90.0, 1.0)
         self.assertAlmostEqual(np.abs(np_d_nx_sig[-1]), self.d_test_trigger_amp, 2)
         self.assertLess(np.rad2deg(np.angle(np_d_nx_sig[-1])) - 90.0, 1.0)
 
-    def test_plt_bode(self):
+    def test_plt_apht(self):
 
         # Test real signal, rising signal
         class_test_real = appvib.ClSigReal(self.np_test_trigger, self.d_fs_test_trigger)
-        d_eventtimes_real = class_test_real.np_d_est_triggers(np_sig_in=class_test_real.np_sig,
+        d_eventtimes_real = class_test_real.np_d_est_triggers(np_sig_in=class_test_real.np_d_sig,
                                                               i_direction=self.i_direction_test_trigger_rising,
                                                               d_threshold=self.d_threshold_test_trigger,
                                                               d_hysteresis=self.d_hysteresis_test_trigger,
                                                               b_verbose=False)
-        np_d_nx = class_test_real.calc_nx(np_sig_in=class_test_real.np_sig, np_d_eventtimes=d_eventtimes_real,
+        np_d_nx = class_test_real.calc_nx(np_sig_in=class_test_real.np_d_sig, np_d_eventtimes=d_eventtimes_real,
                                           b_verbose=False)
         self.assertAlmostEqual(np.abs(np_d_nx[0]), self.d_test_trigger_amp, 2)
-        class_test_real.plt_bode()
-        class_test_real.str_plot_bode_desc = 'Test data'
-        class_test_real.ylim_bode_mag = [-0.1, 1.1]
-        class_test_real.plt_bode()
+        class_test_real.plt_apht()
+        class_test_real.str_plot_apht_desc = 'Test data'
+        class_test_real.ylim_apht_mag = [-0.1, 1.1]
+        class_test_real.plt_apht()
 
-        # Signal feature class test for bode plots
+        # Signal feature class test for apht plots
         class_test_sig_features = appvib.ClSigFeatures(self.np_test_trigger, self.d_fs_test_trigger)
-        d_eventtimes_sig = class_test_sig_features.np_d_est_triggers(np_sig_in=class_test_real.np_sig,
+        d_eventtimes_sig = class_test_sig_features.np_d_est_triggers(np_sig_in=class_test_real.np_d_sig,
                                                                      i_direction=self.i_direction_test_trigger_rising,
                                                                      d_threshold=self.d_threshold_test_trigger,
                                                                      d_hysteresis=self.d_hysteresis_test_trigger,
                                                                      b_verbose=False, idx=0)
         self.assertAlmostEqual(d_eventtimes_sig[0], 1. / self.d_freq_law, 7)
-        np_d_nx_sig = class_test_sig_features.calc_nx(np_sig_in=class_test_real.np_sig, d_eventtimes=d_eventtimes_real,
+        np_d_nx_sig = class_test_sig_features.calc_nx(np_sig_in=class_test_real.np_d_sig,
+                                                      d_eventtimes=d_eventtimes_real,
                                                       b_verbose=False, idx=0)
         self.assertAlmostEqual(np.abs(np_d_nx_sig[0]), self.d_test_trigger_amp, 2)
-        class_test_sig_features.plt_bode(str_plot_bode_desc='Signal feature class data ')
+        class_test_sig_features.plt_apht(str_plot_apht_desc='Signal feature class data ')
 
     def test_plt_polar(self):
 
         # Test real signal, falling signal
         class_test_real = appvib.ClSigReal(self.np_test_trigger, self.d_fs_test_trigger)
-        d_eventtimes_real = class_test_real.np_d_est_triggers(np_sig_in=class_test_real.np_sig,
+        d_eventtimes_real = class_test_real.np_d_est_triggers(np_sig_in=class_test_real.np_d_sig,
                                                               i_direction=self.i_direction_test_trigger_falling,
                                                               d_threshold=self.d_threshold_test_trigger,
                                                               d_hysteresis=self.d_hysteresis_test_trigger,
                                                               b_verbose=False)
-        np_d_nx = class_test_real.calc_nx(np_sig_in=class_test_real.np_sig, np_d_eventtimes=d_eventtimes_real,
+        np_d_nx = class_test_real.calc_nx(np_sig_in=class_test_real.np_d_sig, np_d_eventtimes=d_eventtimes_real,
                                           b_verbose=False)
         self.assertAlmostEqual(np.abs(np_d_nx[0]), self.d_test_trigger_amp, 1)
         class_test_real.plt_polar()
         class_test_real.str_plot_polar_desc = 'Polar test data'
-        class_test_real.ylim_bode_mag = [-0.1, 2.1]
+        class_test_real.ylim_apht_mag = [-0.1, 2.1]
         class_test_real.plt_polar()
 
-        # Signal feature class test for bode plots. Also on the falling part of the signal
+        # Signal feature class test for apht plots. Also on the falling part of the signal
         class_test_sig_features = appvib.ClSigFeatures(self.np_test_trigger, self.d_fs_test_trigger)
-        d_eventtimes_sig = class_test_sig_features.np_d_est_triggers(np_sig_in=class_test_real.np_sig,
+        d_eventtimes_sig = class_test_sig_features.np_d_est_triggers(np_sig_in=class_test_real.np_d_sig,
                                                                      i_direction=self.i_direction_test_trigger_falling,
                                                                      d_threshold=self.d_threshold_test_trigger,
                                                                      d_hysteresis=self.d_hysteresis_test_trigger,
                                                                      b_verbose=False, idx=0)
         self.assertAlmostEqual(d_eventtimes_sig[1]-d_eventtimes_sig[0], 1. / self.d_freq_law, 7)
-        np_d_nx_sig = class_test_sig_features.calc_nx(np_sig_in=class_test_real.np_sig, d_eventtimes=d_eventtimes_real,
+        np_d_nx_sig = class_test_sig_features.calc_nx(np_sig_in=class_test_real.np_d_sig,
+                                                      d_eventtimes=d_eventtimes_real,
                                                       b_verbose=False, idx=0)
         self.assertAlmostEqual(np.abs(np_d_nx_sig[0]), self.d_test_trigger_amp, 1)
         class_test_sig_features.plt_polar(str_plot_polar_desc='Signal feature class data ')

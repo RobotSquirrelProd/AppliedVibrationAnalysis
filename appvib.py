@@ -13,7 +13,7 @@ class ClSig(abc.ABC):
 
     @property
     @abc.abstractmethod
-    def np_sig(self):
+    def np_d_sig(self):
         """Numpy array containing the signal"""
         pass
 
@@ -70,7 +70,7 @@ class ClSigReal(ClSig):
 
         # Signal meta data
         self.__b_complex = False
-        self.np_sig = np_sig_in
+        self.np_d_sig = np_sig_in
         self.__d_fs = d_fs
         self.__b_is_stale_fs = True
 
@@ -92,7 +92,7 @@ class ClSigReal(ClSig):
         self.str_eu = str_eu_in
 
         # Setup the s-g array and filtering parameters
-        self.__np_sig_filt_sg = np_sig_in
+        self.__np_d_sig_filt_sg = np_sig_in
         self.__i_win_len = 31
         self.__i_poly_order = 1
         self.__str_filt_sg_desc = 'No Savitsky-Golay filtering'
@@ -100,7 +100,7 @@ class ClSigReal(ClSig):
         self.__b_is_stale_filt_sg = True
 
         # Setup the butterworth FIR filtered signal vector and parameters
-        self.__np_sig_filt_butter = np_sig_in
+        self.__np_d_sig_filt_butter = np_sig_in
         self.__i_poles = 1
         self.__d_wn = 0.
         self.__str_filt_butter_desc = 'No Butterworth filtering'
@@ -125,27 +125,27 @@ class ClSigReal(ClSig):
         self.__set_new_sig(True)
 
     @property
-    def np_sig(self):
+    def np_d_sig(self):
         """Numpy array containing the signal"""
-        return self.__np_sig
+        return self.__np_d_sig
 
-    @np_sig.setter
-    def np_sig(self, np_sig):
+    @np_d_sig.setter
+    def np_d_sig(self, np_d_sig_in):
         """
         Update the signal vector. This update forces a recalculation of all derived parameters.
 
         Parameters
         ----------
-        np_sig : numpy array
+        np_d_sig_in : numpy array
             Vector with the signal of interest. Must be real-valued.
 
         """
         # With a new signal, all the filtering will have to be done
-        if np.iscomplexobj(np_sig):
+        if np.iscomplexobj(np_d_sig_in):
             raise Exception("Must be a real-valued signal vector")
 
         # Store the vector into the object, reset filtering state, and update related features
-        self.__np_sig = np_sig
+        self.__np_d_sig = np_d_sig_in
         self.__set_new_sig(True)
         self.__i_ns = self.__get_num_samples()
 
@@ -201,7 +201,7 @@ class ClSigReal(ClSig):
     # Calculate the number of samples in the signal
     def __get_num_samples(self):
         """Calculate number of samples in the signal"""
-        return len(self.__np_sig)
+        return len(self.__np_d_sig)
 
     @property
     def i_ns(self):
@@ -241,7 +241,7 @@ class ClSigReal(ClSig):
             self.__ylim_tb = ylim_tb
         else:
             self.__ylim_tb = np.array(
-                [np.min(self.__np_sig), np.max(self.__np_sig)])
+                [np.min(self.__np_d_sig), np.max(self.__np_d_sig)])
 
     @property
     def i_y_divisions_tb(self):
@@ -282,20 +282,20 @@ class ClSigReal(ClSig):
         return [self.__d_time_min, self.__d_time_max]
 
     @property
-    def ylim_bode_mag(self):
+    def ylim_apht_mag(self):
         return self.__class_sig_comp.ylim_mag
 
-    @ylim_bode_mag.setter
-    def ylim_bode_mag(self, ylim_bode_mag):
-        self.__class_sig_comp.ylim_mag = ylim_bode_mag
+    @ylim_apht_mag.setter
+    def ylim_apht_mag(self, ylim_apht_mag):
+        self.__class_sig_comp.ylim_mag = ylim_apht_mag
 
     @property
-    def str_plot_bode_desc(self):
-        return self.__class_sig_comp.str_plot_bode_desc
+    def str_plot_apht_desc(self):
+        return self.__class_sig_comp.str_plot_apht_desc
 
-    @str_plot_bode_desc.setter
-    def str_plot_bode_desc(self, str_plot_bode_desc_in):
-        self.__class_sig_comp.str_plot_bode_desc = str_plot_bode_desc_in
+    @str_plot_apht_desc.setter
+    def str_plot_apht_desc(self, str_plot_apht_desc_in):
+        self.__class_sig_comp.str_plot_apht_desc = str_plot_apht_desc_in
 
     def __get_d_time(self):
         """
@@ -375,7 +375,7 @@ class ClSigReal(ClSig):
         return self.__str_filt_sg_desc_short
 
     @property
-    def np_sig_filt_sg(self):
+    def np_d_sig_filt_sg(self):
         """ Return the signal, filtered with Savitsky-Golay"""
 
         # Does the filter need to be applied (signal updated) or can
@@ -384,9 +384,9 @@ class ClSigReal(ClSig):
 
             # If there are enough samples, filter
             if self.i_ns > self.__i_win_len:
-                self.__np_sig_filt_sg = sig.savgol_filter(self.np_sig,
-                                                          self.__i_win_len,
-                                                          self.__i_poly_order)
+                self.__np_d_sig_filt_sg = sig.savgol_filter(self.np_d_sig,
+                                                            self.__i_win_len,
+                                                            self.__i_poly_order)
                 self.__str_filt_sg_desc = ('Savitsky-Golay | Window Length: ' +
                                            '%3.f' % self.__i_win_len +
                                            ' | Polynomial Order: ' +
@@ -396,14 +396,14 @@ class ClSigReal(ClSig):
             else:
                 # Since we cannot perform the filtering, copy the original
                 # signal into the vector and modify the descriptions
-                self.__np_sig_filt_sg = self.np_sig
+                self.__np_d_sig_filt_sg = self.np_d_sig
                 self.__str_filt_sg_desc = 'No Savitsky-Golay filtering'
                 self.__str_filt_sg_desc_short = 'No S-G Filter'
 
             # Flag that the filtering is done
             self.__b_is_stale_filt_sg = False
 
-        return self.__np_sig_filt_sg
+        return self.__np_d_sig_filt_sg
 
     @property
     def str_filt_butter_desc(self):
@@ -420,7 +420,7 @@ class ClSigReal(ClSig):
         return self.__i_poles
 
     @property
-    def np_sig_filt_butter(self):
+    def np_d_sig_filt_butter(self):
         """
         Return the signal, filtered with butterworth FIR filter
 
@@ -443,7 +443,7 @@ class ClSigReal(ClSig):
                              fs=self.d_fs, output='sos')
 
             # Perform the filtering
-            self.__np_sig_filt_butter = sig.sosfilt(sos, self.np_sig)
+            self.__np_d_sig_filt_butter = sig.sosfilt(sos, self.np_d_sig)
 
             # Generate the plain text descriptions for the plots
             self.__str_filt_butter_desc = ('Butterworth | Poles: ' +
@@ -454,7 +454,7 @@ class ClSigReal(ClSig):
             self.__b_is_stale_filt_butter = False
 
         # Return the filtered signal
-        return self.__np_sig_filt_butter
+        return self.__np_d_sig_filt_butter
 
     @property
     def i_ns_rfft(self):
@@ -463,7 +463,7 @@ class ClSigReal(ClSig):
     # Method for calculating the spectrum for a real signal
     def d_fft_real(self):
         """Calculate the half spectrum since this is a real-valued signal"""
-        d_y = rfft(self.np_sig)
+        d_y = rfft(self.np_d_sig)
         self.__i_ns_rfft = len(d_y)
 
         # Scale the fft. I'm using the actual number
@@ -560,7 +560,7 @@ class ClSigReal(ClSig):
         np_sig_in : numpy array, None
             Signal to be evaluated for crossings. It can be any signal, but the class is designed
             for the input to be one of the signals already defined in the class so that an example
-            looks like: np_sig_in=class_test_real.np_sig. This defaults to 'None' and assigns the
+            looks like: np_sig_in=class_test_real.np_d_sig. This defaults to 'None' and assigns the
             class attribute 'np_sig' to 'np_sig_in'
         i_direction : integer, None
             0 to search for threshold on rising signal, 1 to search on a falling signal. Set to
@@ -584,7 +584,7 @@ class ClSigReal(ClSig):
         if np_sig_in is None:
 
             # Copy the class vector into this method
-            np_sig_in = self.np_sig
+            np_sig_in = self.np_d_sig
         else:
             # User is possibly adding a new signal, force recalculation
             self.__b_is_stale_eventtimes = True
@@ -737,7 +737,7 @@ class ClSigReal(ClSig):
         ----------
         np_sig_in : numpy array
             Signal to be evaluated for crossings. Should reference a signal already loaded
-            into the object (i.e. np_sig_in = {ClSigReal}.np_sig). Setting 'np_sig_in' to None
+            into the object (i.e. np_sig_in = {ClSigReal}.np_d_sig). Setting 'np_sig_in' to None
             forces the function to use .np sig.
         np_d_eventtimes : numpy array
             Vector of trigger event times. Setting to None forces use of eventtimes defined
@@ -757,7 +757,7 @@ class ClSigReal(ClSig):
         if np_sig_in is None:
 
             # Copy the class vector into this method
-            np_sig_in = self.np_sig
+            np_sig_in = self.np_d_sig
 
         else:
             # User is possibly adding a new signal, force recalculation
@@ -810,11 +810,11 @@ class ClSigReal(ClSig):
             self.__class_sig_comp = ClSigCompUneven(d_nx, self.__np_d_eventtimes)
 
         # Return the values
-        return self.__class_sig_comp.np_sig
+        return self.__class_sig_comp.np_d_sig
 
-    # Call the method to plot the bode plot
-    def plt_bode(self, str_plot_bode_desc_in=None):
-        return self.__class_sig_comp.plt_bode(str_plot_bode_desc=str_plot_bode_desc_in)
+    # Call the method to plot the apht plot
+    def plt_apht(self, str_plot_apht_desc_in=None):
+        return self.__class_sig_comp.plt_apht(str_plot_apht_desc=str_plot_apht_desc_in)
 
     # Call polar plotting method.
     def plt_polar(self, str_plot_polar_desc=None):
@@ -839,17 +839,17 @@ class ClSigComp(ClSig):
     def __init__(self, np_sig, d_fs):
         super(ClSigComp, self).__init__()
         self.__b_complex = True
-        self.__np_sig = np_sig
+        self.__np_d_sig = np_sig
         self.__d_fs = d_fs
         self.__i_ns = self.__get_num_samples()
         self.__ylim_tb = [0]
         self.set_ylim_tb(self.__ylim_tb)
 
     @property
-    def np_sig(self):
+    def np_d_sig(self):
         """Numpy array containing the signal"""
         self.__i_ns = self.__get_num_samples()
-        return self.__np_sig
+        return self.__np_d_sig
 
     @property
     def d_fs(self):
@@ -863,7 +863,7 @@ class ClSigComp(ClSig):
     # Calculate the number of samples in the signal
     def __get_num_samples(self):
         """Calculate number of samples in the signal"""
-        return len(self.__np_sig)
+        return len(self.__np_d_sig)
 
     @property
     def i_ns(self):
@@ -887,7 +887,7 @@ class ClSigComp(ClSig):
             self.__ylim_tb = ylim_tb
         else:
             self.__ylim_tb = np.array(
-                [np.max(self.__np_sig), np.min(self.__np_sig)])
+                [np.max(self.__np_d_sig), np.min(self.__np_d_sig)])
 
 
 class ClSigCompUneven(ClSig):
@@ -922,7 +922,7 @@ class ClSigCompUneven(ClSig):
 
         super(ClSigCompUneven, self).__init__()
         self.__b_complex = True
-        self.__np_sig = np_sig_in
+        self.__np_d_sig = np_sig_in
         self.__np_d_time = np_d_time
         self.__i_ns = self.__get_num_samples()
         self.__ylim_mag = [0]
@@ -930,14 +930,14 @@ class ClSigCompUneven(ClSig):
         self.__ylim_tb = [0]
         self.set_ylim_tb(self.__ylim_tb)
         self.__str_eu = str_eu_in
-        self.__str_plot_bode_desc = '-'
+        self.__str_plot_apht_desc = '-'
         self.__str_plot_polar_desc = '-'
 
     @property
-    def np_sig(self):
+    def np_d_sig(self):
         """Numpy array containing the signal"""
         self.__i_ns = self.__get_num_samples()
-        return self.__np_sig
+        return self.__np_d_sig
 
     @property
     def np_d_time(self):
@@ -951,7 +951,7 @@ class ClSigCompUneven(ClSig):
     # Calculate the number of samples in the signal
     def __get_num_samples(self):
         """Calculate number of samples in the signal"""
-        return len(self.__np_sig)
+        return len(self.__np_d_sig)
 
     @property
     def i_ns(self):
@@ -960,12 +960,12 @@ class ClSigCompUneven(ClSig):
 
     @property
     def ylim_mag(self):
-        """Bode magnitude vertical limits"""
+        """apht magnitude vertical limits"""
         return self.__ylim_mag
 
     @ylim_mag.setter
     def ylim_mag(self, ylim_mag):
-        """Vertical limits for bode magnitude (tb) plots"""
+        """Vertical limits for apht magnitude (tb) plots"""
         self.set_ylim_mag(ylim_mag)
 
     @property
@@ -985,7 +985,7 @@ class ClSigCompUneven(ClSig):
             self.__ylim_mag = ylim_mag
         else:
             self.__ylim_mag = np.array(
-                [1.05 * np.max(np.abs(self.__np_sig)), 0.95 * np.min(np.abs(self.__np_sig))])
+                [1.05 * np.max(np.abs(self.__np_d_sig)), 0.95 * np.min(np.abs(self.__np_d_sig))])
 
     def set_ylim_tb(self, ylim_tb):
         """Y limits for magnitude timebase plot"""
@@ -994,7 +994,7 @@ class ClSigCompUneven(ClSig):
             self.__ylim_tb = ylim_tb
         else:
             self.__ylim_tb = np.array(
-                [np.max(np.abs(self.__np_sig)), np.abs(np.min(self.__np_sig))])
+                [np.max(np.abs(self.__np_d_sig)), np.abs(np.min(self.__np_d_sig))])
 
     @property
     def str_eu(self):
@@ -1005,45 +1005,45 @@ class ClSigCompUneven(ClSig):
         self.__str_eu = str_eu_in
 
     @property
-    def str_plot_bode_desc(self):
-        return self.__str_plot_bode_desc
+    def str_plot_apht_desc(self):
+        return self.__str_plot_apht_desc
 
-    @str_plot_bode_desc.setter
-    def str_plot_bode_desc(self, str_plot_bode_desc_in):
-        self.__str_plot_bode_desc = str_plot_bode_desc_in
+    @str_plot_apht_desc.setter
+    def str_plot_apht_desc(self, str_plot_apht_desc_in):
+        self.__str_plot_apht_desc = str_plot_apht_desc_in
 
-    # Plotting method, bode plots.
-    def plt_bode(self, str_plot_bode_desc=None):
-        """Plot out amplitude in phase in bode format
+    # Plotting method, apht plots.
+    def plt_apht(self, str_plot_apht_desc=None):
+        """Plot out amplitude in phase in apht format
 
         Return values:
         handle to the plot
         """
 
         # Parse inputs
-        if str_plot_bode_desc is not None:
+        if str_plot_apht_desc is not None:
             # Update class attribute
-            self.__str_plot_bode_desc = str_plot_bode_desc
+            self.__str_plot_apht_desc = str_plot_apht_desc
 
         # Figure with subplots
         fig, axs = plt.subplots(2)
-        fig.suptitle('Bode plot')
+        fig.suptitle('apht plot')
 
         # Plot the phase
-        axs[0].plot(self.__np_d_time, np.rad2deg(np.angle(self.__np_sig)))
+        axs[0].plot(self.__np_d_time, np.rad2deg(np.angle(self.__np_d_sig)))
         axs[0].grid()
         axs[0].set_xlabel("Time, seconds")
         axs[0].set_ylabel("Phase, degrees")
         axs[0].set_ylim([-360.0, 360.0])
-        axs[0].set_title(self.__str_plot_bode_desc + " phase")
+        axs[0].set_title(self.__str_plot_apht_desc + " phase")
 
         # Plot the magnitude
-        axs[1].plot(self.__np_d_time, np.abs(self.__np_sig))
+        axs[1].plot(self.__np_d_time, np.abs(self.__np_d_sig))
         axs[1].grid()
         axs[1].set_xlabel("Time, seconds")
         axs[1].set_ylabel("Magnitude, " + self.str_eu)
         axs[1].set_ylim(self.ylim_mag)
-        axs[1].set_title(self.__str_plot_bode_desc + " magnitude")
+        axs[1].set_title(self.__str_plot_apht_desc + " magnitude")
 
         # Set the layout
         plt.tight_layout()
@@ -1087,7 +1087,7 @@ class ClSigCompUneven(ClSig):
         fig, ax = plt.subplots(subplot_kw={'projection': 'polar'})
 
         # Polar plot
-        ax.plot(np.angle(self.__np_sig), np.abs(self.__np_sig))
+        ax.plot(np.angle(self.__np_d_sig), np.abs(self.__np_d_sig))
         ax.set_rmax(np.max(self.ylim_mag))
         d_tick_radial = np.round(np.max(self.ylim_mag) / 4.0, decimals=1)
         ax.set_rticks([d_tick_radial, d_tick_radial * 2.0, d_tick_radial * 3.0, d_tick_radial * 4.0])
@@ -1147,7 +1147,7 @@ class ClSigFeatures:
 
         # Instantiate and save common signal features to this class
         self.idx_add_sig(np_sig, d_fs_in=d_fs)
-        self.__np_d_rpm = np.zeros_like(self.__lst_cl_sgs[0].np_sig)
+        self.__np_d_rpm = np.zeros_like(self.__lst_cl_sgs[0].np_d_sig)
 
         # Attributes related to file save/read behavior
         self.__str_file = ''
@@ -1169,17 +1169,17 @@ class ClSigFeatures:
     @property
     def np_d_sig(self):
         """Numpy array containing the first signal"""
-        return self.__lst_cl_sgs[0].np_sig
+        return self.__lst_cl_sgs[0].np_d_sig
 
     def get_np_d_sig(self, idx=0):
         """Numpy array containing arbitrary signal"""
-        return self.__lst_cl_sgs[idx].np_sig
+        return self.__lst_cl_sgs[idx].np_d_sig
 
     @np_d_sig.setter
     def np_d_sig(self, lst_in):
         np_sig_in = lst_in[0]
         idx = lst_in[1]
-        self.__lst_cl_sgs[idx].np_sig = np_sig_in
+        self.__lst_cl_sgs[idx].np_d_sig = np_sig_in
         self.__lst_b_active[idx] = True
 
     def idx_add_sig(self, np_sig_in, d_fs_in):
@@ -1448,8 +1448,8 @@ class ClSigFeatures:
 
         # Channel 1
         ax1.plot(self.__lst_cl_sgs[0].d_time_plot, self.get_np_d_sig(idx=0))
-        ax1.plot(self.__lst_cl_sgs[0].d_time_plot, self.__lst_cl_sgs[0].np_sig_filt_sg)
-        ax1.plot(self.__lst_cl_sgs[0].d_time_plot, self.__lst_cl_sgs[0].np_sig_filt_butter)
+        ax1.plot(self.__lst_cl_sgs[0].d_time_plot, self.__lst_cl_sgs[0].np_d_sig_filt_sg)
+        ax1.plot(self.__lst_cl_sgs[0].d_time_plot, self.__lst_cl_sgs[0].np_d_sig_filt_butter)
         ax1.grid()
         ax1.set_xlabel("Time, " + self.__lst_cl_sgs[0].str_eu_x)
         ax1.set_xlim(self.__lst_cl_sgs[0].xlim_tb)
@@ -1478,8 +1478,8 @@ class ClSigFeatures:
                 i_ch = 1
 
                 axs[i_ch].plot(self.__lst_cl_sgs[i_ch].d_time_plot, self.get_np_d_sig(idx=i_ch))
-                axs[i_ch].plot(self.__lst_cl_sgs[i_ch].d_time_plot, self.__lst_cl_sgs[i_ch].np_sig_filt_sg)
-                axs[i_ch].plot(self.__lst_cl_sgs[i_ch].d_time_plot, self.__lst_cl_sgs[i_ch].np_sig_filt_butter)
+                axs[i_ch].plot(self.__lst_cl_sgs[i_ch].d_time_plot, self.__lst_cl_sgs[i_ch].np_d_sig_filt_sg)
+                axs[i_ch].plot(self.__lst_cl_sgs[i_ch].d_time_plot, self.__lst_cl_sgs[i_ch].np_d_sig_filt_butter)
                 axs[i_ch].grid()
                 axs[i_ch].set_xlabel("Time, " + self.__lst_cl_sgs[i_ch].str_eu_x)
                 axs[i_ch].set_xlim(self.__lst_cl_sgs[i_ch].xlim_tb)
@@ -1611,13 +1611,13 @@ class ClSigFeatures:
         return [plot_handle, self.__np_d_rpm]
 
     # Plotting method, time domain signals.
-    def plt_bode(self, str_plot_bode_desc=None, idx=0):
-        """Plot out amplitude in phase in bode format
+    def plt_apht(self, str_plot_apht_desc=None, idx=0):
+        """Plot out amplitude and phase versus time ("apht") format
 
         Parameters
         ----------
-        str_plot_bode_desc : string
-            Description of data to be included in bode plot title
+        str_plot_apht_desc : string
+            Description of data to be included in apht plot title
         idx : integer
             Index of signal to pull description. Defaults to 0 (first signal)
 
@@ -1626,11 +1626,11 @@ class ClSigFeatures:
         """
 
         # Parse inputs
-        if str_plot_bode_desc is not None:
+        if str_plot_apht_desc is not None:
             # Update class attribute
-            self.__lst_cl_sgs[idx].str_plot_bode_desc = str_plot_bode_desc
+            self.__lst_cl_sgs[idx].str_plot_apht_desc = str_plot_apht_desc
 
-        return self.__lst_cl_sgs[idx].plt_bode(str_plot_bode_desc)
+        return self.__lst_cl_sgs[idx].plt_apht(str_plot_apht_desc)
 
     # Call polar plotting method.
     def plt_polar(self, str_plot_polar_desc=None, idx=0):
@@ -1706,7 +1706,7 @@ class ClSigFeatures:
 
             # add samples from each signal to the file
             for cl_obj in self.__lst_cl_sgs:
-                str_line = str_line + ',' + '%0.8f' % cl_obj.np_sig[idx_line]
+                str_line = str_line + ',' + '%0.8f' % cl_obj.np_d_sig[idx_line]
 
             # header items
             if idx_line == 0:
