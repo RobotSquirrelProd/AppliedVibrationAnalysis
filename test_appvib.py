@@ -50,6 +50,16 @@ class TestClSig(TestCase):
         self.str_eu_default = "volts"
         self.str_eu_acc = "g's"
 
+        # Test data set 000 : This one caused the nx_est to fail
+        self.str_filename_000 = 'test_appvib_data_000.csv'
+        self.df_test_000 = pd.read_csv(self.str_filename_000, header=None, skiprows=1,
+                                       names=['Ch1', 'Ch2', 'FS'])
+        self.np_d_test_data_000_Ch1 = self.df_test_000.Ch1
+        self.np_d_test_data_000_Ch2 = self.df_test_000.Ch2
+        self.d_fs_data_000 = self.df_test_000.FS[0]
+        self.i_direction_test_000_trigger_slope = 0
+        self.d_threshold_test_000 = 0.125
+
     def test_b_complex(self):
         # Is the real-valued class setting the flags correctly?
         class_test_real = appvib.ClSigReal(self.np_test, self.d_fs)
@@ -93,7 +103,7 @@ class TestClSig(TestCase):
         self.assertAlmostEqual(self.np_test[0], class_test_sig_features.np_d_sig[0], 12)
 
         # Signal feature class, third signal
-        idx_new = class_test_sig_features.idx_add_sig(self.np_test_ch3, d_fs_in=self.d_fs_ch3)
+        idx_new = class_test_sig_features.idx_add_sig(self.np_test_ch3, d_fs=self.d_fs_ch3)
         self.assertEqual(idx_new, 2, msg='Failed to return correct index')
         self.np_return = class_test_sig_features.get_np_d_sig(idx=2)
         self.assertAlmostEqual(self.np_test_ch3[1], self.np_return[1], 12)
@@ -118,7 +128,7 @@ class TestClSig(TestCase):
         # Signal feature class check on sample count for the second signal
         class_test_sig_features = appvib.ClSigFeatures(self.np_test_comp_long, self.d_fs)
         with self.assertRaises(Exception):
-            class_test_sig_features.idx_add_sig(self.np_test_ch2, d_fs_in=self.d_fs_ch2)
+            class_test_sig_features.idx_add_sig(self.np_test_ch2, d_fs=self.d_fs_ch2)
         class_test_sig_features = appvib.ClSigFeatures(self.np_test, self.d_fs)
         self.assertEqual(class_test_sig_features.i_ns, 3)
 
@@ -209,7 +219,7 @@ class TestClSig(TestCase):
         class_test_sig_features = appvib.ClSigFeatures(self.np_test_trigger, self.d_fs_test_trigger)
         print('Signal frequency, hertz: ' + '%0.6f' % self.d_freq_law)
         class_test_sig_features.plt_sigs()
-        class_test_sig_features.np_d_est_triggers(np_sig_in=self.np_test_trigger,
+        class_test_sig_features.np_d_est_triggers(np_d_sig=self.np_test_trigger,
                                                   i_direction=self.i_direction_test_trigger_rising,
                                                   d_threshold=self.d_threshold_test_trigger,
                                                   d_hysteresis=self.d_hysteresis_test_trigger,
@@ -221,7 +231,7 @@ class TestClSig(TestCase):
         class_test_sig_features.plt_eventtimes()
 
         # Signal feature class test, falling signal with threshold of zero
-        class_test_sig_features.np_d_est_triggers(np_sig_in=self.np_test_trigger,
+        class_test_sig_features.np_d_est_triggers(np_d_sig=self.np_test_trigger,
                                                   i_direction=self.i_direction_test_trigger_falling,
                                                   d_threshold=self.d_threshold_test_trigger,
                                                   d_hysteresis=self.d_hysteresis_test_trigger,
@@ -249,20 +259,35 @@ class TestClSig(TestCase):
 
         # Signal feature class test using same input as the real signal class above
         class_test_sig_features = appvib.ClSigFeatures(self.np_test_trigger, self.d_fs_test_trigger)
-        d_eventtimes_sig = class_test_sig_features.np_d_est_triggers(np_sig_in=class_test_real.np_d_sig,
+        d_eventtimes_sig = class_test_sig_features.np_d_est_triggers(np_d_sig=class_test_sig_features.np_d_sig,
                                                                      i_direction=self.i_direction_test_trigger_rising,
                                                                      d_threshold=self.d_threshold_test_trigger,
                                                                      d_hysteresis=self.d_hysteresis_test_trigger,
                                                                      b_verbose=False, idx=0)
         self.assertAlmostEqual(d_eventtimes_sig[0], 1. / self.d_freq_law, 7)
         self.assertAlmostEqual(d_eventtimes_sig[-1] - d_eventtimes_sig[-2], 1. / self.d_freq_law, 7)
-        np_d_nx_sig = class_test_sig_features.calc_nx(np_sig_in=class_test_real.np_d_sig,
-                                                      d_eventtimes=d_eventtimes_real,
+        np_d_nx_sig = class_test_sig_features.calc_nx(np_d_sig=class_test_sig_features.np_d_sig,
+                                                      np_d_eventtimes=d_eventtimes_real,
                                                       b_verbose=False, idx=0)
         self.assertAlmostEqual(np.abs(np_d_nx_sig[0]), self.d_test_trigger_amp, 2)
         self.assertLess(np.rad2deg(np.angle(np_d_nx_sig[0])) - 90.0, 1.0)
         self.assertAlmostEqual(np.abs(np_d_nx_sig[-1]), self.d_test_trigger_amp, 2)
         self.assertLess(np.rad2deg(np.angle(np_d_nx_sig[-1])) - 90.0, 1.0)
+
+        # This call structure surfaced a reference bug
+        class_test_sig_features = appvib.ClSigFeatures(self.np_d_test_data_000_Ch1,
+                                                       self.d_fs_data_000)
+        class_test_sig_features.idx_add_sig(np_d_sig=self.np_d_test_data_000_Ch2,
+                                            d_fs=self.d_fs_data_000)
+        class_test_sig_features.np_d_est_triggers(np_d_sig=class_test_sig_features.np_d_sig,
+                                                  i_direction=self.i_direction_test_000_trigger_slope,
+                                                  d_threshold=self.d_threshold_test_000)
+        class_test_sig_features.calc_nx(np_d_sig=class_test_sig_features.np_d_sig,
+                                        np_d_eventtimes=class_test_sig_features.np_d_eventtimes(),
+                                        b_verbose=False, idx=0)
+        class_test_sig_features.calc_nx(np_d_sig=class_test_sig_features.get_np_d_sig(idx=1),
+                                        np_d_eventtimes=class_test_sig_features.np_d_eventtimes(),
+                                        b_verbose=False, idx=0)
 
     def test_plt_apht(self):
 
@@ -283,14 +308,14 @@ class TestClSig(TestCase):
 
         # Signal feature class test for apht plots
         class_test_sig_features = appvib.ClSigFeatures(self.np_test_trigger, self.d_fs_test_trigger)
-        d_eventtimes_sig = class_test_sig_features.np_d_est_triggers(np_sig_in=class_test_real.np_d_sig,
+        d_eventtimes_sig = class_test_sig_features.np_d_est_triggers(np_d_sig=class_test_real.np_d_sig,
                                                                      i_direction=self.i_direction_test_trigger_rising,
                                                                      d_threshold=self.d_threshold_test_trigger,
                                                                      d_hysteresis=self.d_hysteresis_test_trigger,
                                                                      b_verbose=False, idx=0)
         self.assertAlmostEqual(d_eventtimes_sig[0], 1. / self.d_freq_law, 7)
-        np_d_nx_sig = class_test_sig_features.calc_nx(np_sig_in=class_test_real.np_d_sig,
-                                                      d_eventtimes=d_eventtimes_real,
+        np_d_nx_sig = class_test_sig_features.calc_nx(np_d_sig=class_test_real.np_d_sig,
+                                                      np_d_eventtimes=d_eventtimes_real,
                                                       b_verbose=False, idx=0)
         self.assertAlmostEqual(np.abs(np_d_nx_sig[0]), self.d_test_trigger_amp, 2)
         class_test_sig_features.plt_apht(str_plot_apht_desc='Signal feature class data ')
@@ -314,14 +339,14 @@ class TestClSig(TestCase):
 
         # Signal feature class test for apht plots. Also on the falling part of the signal
         class_test_sig_features = appvib.ClSigFeatures(self.np_test_trigger, self.d_fs_test_trigger)
-        d_eventtimes_sig = class_test_sig_features.np_d_est_triggers(np_sig_in=class_test_real.np_d_sig,
+        d_eventtimes_sig = class_test_sig_features.np_d_est_triggers(np_d_sig=class_test_real.np_d_sig,
                                                                      i_direction=self.i_direction_test_trigger_falling,
                                                                      d_threshold=self.d_threshold_test_trigger,
                                                                      d_hysteresis=self.d_hysteresis_test_trigger,
                                                                      b_verbose=False, idx=0)
-        self.assertAlmostEqual(d_eventtimes_sig[1]-d_eventtimes_sig[0], 1. / self.d_freq_law, 7)
-        np_d_nx_sig = class_test_sig_features.calc_nx(np_sig_in=class_test_real.np_d_sig,
-                                                      d_eventtimes=d_eventtimes_real,
+        self.assertAlmostEqual(d_eventtimes_sig[1] - d_eventtimes_sig[0], 1. / self.d_freq_law, 7)
+        np_d_nx_sig = class_test_sig_features.calc_nx(np_d_sig=class_test_real.np_d_sig,
+                                                      np_d_eventtimes=d_eventtimes_real,
                                                       b_verbose=False, idx=0)
         self.assertAlmostEqual(np.abs(np_d_nx_sig[0]), self.d_test_trigger_amp, 1)
         class_test_sig_features.plt_polar(str_plot_polar_desc='Signal feature class data ')
@@ -341,14 +366,14 @@ class TestClSig(TestCase):
         file_handle.close()
 
         df_test = pd.read_csv(str_filename, header=None, skiprows=2, names=csv_header[0:5])
-        for idx in range(class_test_sig_features.i_ns-1):
+        for idx in range(class_test_sig_features.i_ns - 1):
             self.assertAlmostEqual(df_test.CH1[idx], self.np_test_trigger[idx], 8)
         # Be sure delta time and sampling frequency are coherent
         self.assertAlmostEqual(df_test['Delta Time'][0], 1.0 / df_test['Sampling Frequency'][0], 9)
 
         # Add a signal
         class_test_sig_features.idx_add_sig(self.np_test_trigger_ch2,
-                                            d_fs_in=class_test_sig_features.d_fs(idx=0))
+                                            d_fs=class_test_sig_features.d_fs(idx=0))
         class_test_sig_features.b_save_data(str_data_prefix='SignalFeatureTestCh2')
 
         # Read the CSV headers
@@ -361,7 +386,7 @@ class TestClSig(TestCase):
         file_handle.close()
 
         df_test_ch2 = pd.read_csv(str_filename, header=None, skiprows=2, names=csv_header[0:5])
-        for idx in range(class_test_sig_features.i_ns-1):
+        for idx in range(class_test_sig_features.i_ns - 1):
             self.assertAlmostEqual(df_test_ch2.CH2[idx], self.np_test_trigger_ch2[idx], 8)
         # Be sure delta time and sampling frequency are coherent
         self.assertAlmostEqual(df_test_ch2['Delta Time'][0], 1.0 / df_test_ch2['Sampling Frequency'][0], 9)

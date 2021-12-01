@@ -1132,11 +1132,11 @@ class ClSigFeatures:
         -------
     """
 
-    def __init__(self, np_sig, d_fs):
+    def __init__(self, np_d_sig, d_fs):
         """
         Parameters
         ----------
-        np_sig : numpy array
+        np_d_sig : numpy array
             Vector with the signal of interest. Can be real- or complex-valued.
         d_fs : double
             Describes the sampling frequency in samples/second (hertz).
@@ -1146,7 +1146,7 @@ class ClSigFeatures:
         self.__lst_b_active = []
 
         # Instantiate and save common signal features to this class
-        self.idx_add_sig(np_sig, d_fs_in=d_fs)
+        self.idx_add_sig(np_d_sig, d_fs=d_fs)
         self.__np_d_rpm = np.zeros_like(self.__lst_cl_sgs[0].np_d_sig)
 
         # Attributes related to file save/read behavior
@@ -1182,9 +1182,17 @@ class ClSigFeatures:
         self.__lst_cl_sgs[idx].np_d_sig = np_sig_in
         self.__lst_b_active[idx] = True
 
-    def idx_add_sig(self, np_sig_in, d_fs_in):
+    def idx_add_sig(self, np_d_sig, d_fs):
         """Add another signal to this object.
         returns index to the newly added signal.
+
+        Parameters
+        ----------
+        np_d_sig : numpy array, double
+            Signal to be added
+
+        d_fs : double
+            Sampling frequency, hertz
         """
 
         # TO DO: try/catch might be a better option here
@@ -1192,14 +1200,16 @@ class ClSigFeatures:
         # samples as the ones already present?
         if len(self.__lst_cl_sgs) > 0:
 
-            if len(np_sig_in) != self.i_ns:
+            if len(np_d_sig) != self.i_ns:
                 raise Exception('Cannot add signal with different number of samples')
 
+        # cast to numpy array
+        np_d_sig = np.array(np_d_sig)
         # Add the signals, looking for complex and real
-        if np.iscomplexobj(np_sig_in):
-            self.__lst_cl_sgs.append(ClSigComp(np_sig_in, d_fs_in))
+        if np.iscomplexobj(np_d_sig):
+            self.__lst_cl_sgs.append(ClSigComp(np_d_sig, d_fs))
         else:
-            self.__lst_cl_sgs.append(ClSigReal(np_sig_in, d_fs_in))
+            self.__lst_cl_sgs.append(ClSigReal(np_d_sig, d_fs))
 
         # Mark this one as active
         self.__lst_b_active.append(True)
@@ -1301,7 +1311,7 @@ class ClSigFeatures:
         return self.__lst_cl_sgs[idx].np_d_eventtimes
 
     # Estimate triggers for speed
-    def np_d_est_triggers(self, np_sig_in, i_direction=0, d_threshold=0,
+    def np_d_est_triggers(self, np_d_sig, i_direction=0, d_threshold=0,
                           d_hysteresis=0.1, b_verbose=False, idx=0):
         """
         This method estimates speed by identifying trigger points in time,
@@ -1316,7 +1326,7 @@ class ClSigFeatures:
 
         Parameters
         ----------
-        np_sig_in : numpy array
+        np_d_sig : numpy array
             Signal to be evaluated for crossings
         i_direction : integer
             0 to search for threshold on rising signal, 1 to search on a falling signal.
@@ -1335,19 +1345,19 @@ class ClSigFeatures:
         numpy array : list of trigger event times
 
         """
-        return self.__lst_cl_sgs[idx].np_d_est_triggers(np_sig_in, i_direction, d_threshold,
+        return self.__lst_cl_sgs[idx].np_d_est_triggers(np_d_sig, i_direction, d_threshold,
                                                         d_hysteresis, b_verbose)
 
     # Estimate the filtered nX response
-    def calc_nx(self, np_sig_in, d_eventtimes, b_verbose=True, idx=0):
+    def calc_nx(self, np_d_sig, np_d_eventtimes, b_verbose=True, idx=0):
         """
         This method calls the estimation method for each signal
 
         Parameters
         ----------
-        np_sig_in : numpy array
+        np_d_sig : numpy array
             Signal to be evaluated for crossings
-        d_eventtimes : numpy array
+        np_d_eventtimes : numpy array
             Vector of trigger event times
         b_verbose : boolean
             Print the intermediate steps (default: False). Useful for stepping through the
@@ -1360,7 +1370,8 @@ class ClSigFeatures:
         numpy array : list of trigger event times
 
         """
-        return self.__lst_cl_sgs[idx].calc_nx(np_sig_in, d_eventtimes, b_verbose)
+        return self.__lst_cl_sgs[idx].calc_nx(np_d_sig,
+                                              np_d_eventtimes=np_d_eventtimes, b_verbose=b_verbose)
 
     @property
     def np_d_rpm(self):
