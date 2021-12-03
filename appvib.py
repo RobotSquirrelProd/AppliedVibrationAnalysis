@@ -1557,33 +1557,42 @@ class ClSigFeatures:
         return [plot_handle, spec[0], spec[1]]
 
     # Plotting method for the eventtimes
-    def plt_eventtimes(self):
-        """Plot event data in time.
+    def plt_eventtimes(self, idx_eventtimes=0, idx=0):
+        """
+        Plot a signal and overlay event data in timebase format.
+        Parameter
+        ---------
+        idx_eventtimes : integer
+            Index of signal eventtimes. Defaults to 0 (first signal)
+        idx : integer
+            Index of signal to be plotted. Defaults to 0 (first signal)
 
-        Return values:
+        Returns
+        -------
         list: [handle to the plot, np array of eventtimes]
         """
 
         # The eventtimes all should have threshold value for voltage
         np_d_event_value = np.ones_like(
-            self.__lst_cl_sgs[0].np_d_eventtimes) * self.__lst_cl_sgs[0].d_threshold
+            self.__lst_cl_sgs[idx_eventtimes].np_d_eventtimes) * self.__lst_cl_sgs[idx_eventtimes].d_threshold
 
         # Put up the the plot time
         plt.figure()
-        plt.plot(self.__lst_cl_sgs[0].d_time, self.np_d_sig)
-        plt.plot(self.np_d_eventtimes(idx=0), np_d_event_value, "ok")
+        plt.plot(self.__lst_cl_sgs[idx].d_time, self.__lst_cl_sgs[idx].np_d_sig)
+        plt.plot(self.np_d_eventtimes(idx=idx_eventtimes), np_d_event_value, "ok")
         plt.grid(True)
 
-        plt.xlabel("Time, " + self.__lst_cl_sgs[0].str_eu_x)
-        plt.xlim(self.__lst_cl_sgs[0].xlim_tb)
-        plt.xticks(np.linspace(self.__lst_cl_sgs[0].xlim_tb[0],
-                               self.__lst_cl_sgs[0].xlim_tb[1],
-                               self.__lst_cl_sgs[0].i_x_divisions_tb))
-        plt.ylabel("Amplitude, " + self.__lst_cl_sgs[0].str_eu)
-        plt.ylim(self.__lst_cl_sgs[0].ylim_tb)
-        plt.yticks(np.linspace(self.__lst_cl_sgs[0].ylim_tb[0],
-                               self.__lst_cl_sgs[0].ylim_tb[1],
-                               self.__lst_cl_sgs[0].i_y_divisions_tb))
+        plt.xlabel("Time, " + self.__lst_cl_sgs[idx].str_eu_x)
+        plt.xlim(self.__lst_cl_sgs[idx].xlim_tb)
+        plt.xticks(np.linspace(self.__lst_cl_sgs[idx].xlim_tb[0],
+                               self.__lst_cl_sgs[idx].xlim_tb[1],
+                               self.__lst_cl_sgs[idx].i_x_divisions_tb))
+        plt.gca().xaxis.set_major_formatter(FormatStrFormatter('%.2f'))
+        plt.ylabel("Amplitude, " + self.__lst_cl_sgs[idx].str_eu)
+        plt.ylim(self.__lst_cl_sgs[idx].ylim_tb)
+        plt.yticks(np.linspace(self.__lst_cl_sgs[idx].ylim_tb[0],
+                               self.__lst_cl_sgs[idx].ylim_tb[1],
+                               self.__lst_cl_sgs[idx].i_y_divisions_tb))
 
         plt.legend(['as-acquired', 'eventtimes'])
         plt.title(self.__str_plot_desc + ' Amplitude and eventtimes vs. time')
@@ -1594,7 +1603,7 @@ class ClSigFeatures:
         # Show the plot
         plt.show()
 
-        return [plot_handle, self.np_d_eventtimes(idx=0)]
+        return [plot_handle, self.np_d_eventtimes(idx=idx_eventtimes)]
 
     # Plotting method for the eventtimes, interpreted as RPM
     def plt_rpm(self):

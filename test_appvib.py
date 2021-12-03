@@ -288,6 +288,7 @@ class TestClSig(TestCase):
         class_test_sig_features.calc_nx(np_d_sig=class_test_sig_features.get_np_d_sig(idx=1),
                                         np_d_eventtimes=class_test_sig_features.np_d_eventtimes(),
                                         b_verbose=False, idx=0)
+        class_test_sig_features.plt_eventtimes(idx_eventtimes=0, idx=1)
 
     def test_plt_apht(self):
 
