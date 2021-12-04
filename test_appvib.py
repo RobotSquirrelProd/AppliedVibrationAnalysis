@@ -96,14 +96,14 @@ class TestClSig(TestCase):
         self.assertAlmostEqual(self.np_test[0], class_test_sig_features.np_d_sig[0], 12)
 
         # Signal feature class, second signal
-        idx_new = class_test_sig_features.idx_add_sig(self.np_test_ch2, self.d_fs)
+        idx_new = class_test_sig_features.idx_add_sig(self.np_test_ch2, self.d_fs, str_point_name='CH2')
         self.assertEqual(idx_new, 1, msg='Failed to return correct index')
         self.np_return = class_test_sig_features.get_np_d_sig(idx=1)
         self.assertAlmostEqual(self.np_test_ch2[0], self.np_return[0], 12)
         self.assertAlmostEqual(self.np_test[0], class_test_sig_features.np_d_sig[0], 12)
 
         # Signal feature class, third signal
-        idx_new = class_test_sig_features.idx_add_sig(self.np_test_ch3, d_fs=self.d_fs_ch3)
+        idx_new = class_test_sig_features.idx_add_sig(self.np_test_ch3, d_fs=self.d_fs_ch3, str_point_name='CH3')
         self.assertEqual(idx_new, 2, msg='Failed to return correct index')
         self.np_return = class_test_sig_features.get_np_d_sig(idx=2)
         self.assertAlmostEqual(self.np_test_ch3[1], self.np_return[1], 12)
@@ -128,7 +128,7 @@ class TestClSig(TestCase):
         # Signal feature class check on sample count for the second signal
         class_test_sig_features = appvib.ClSigFeatures(self.np_test_comp_long, self.d_fs)
         with self.assertRaises(Exception):
-            class_test_sig_features.idx_add_sig(self.np_test_ch2, d_fs=self.d_fs_ch2)
+            class_test_sig_features.idx_add_sig(self.np_test_ch2, d_fs=self.d_fs_ch2, str_point_name='CH2')
         class_test_sig_features = appvib.ClSigFeatures(self.np_test, self.d_fs)
         self.assertEqual(class_test_sig_features.i_ns, 3)
 
@@ -157,7 +157,7 @@ class TestClSig(TestCase):
         self.assertAlmostEqual(self.d_fs, class_test_sig_features.d_fs(), 12)
 
         # Add a second signal with a different sampling rate
-        idx_new = class_test_sig_features.idx_add_sig(self.np_test_ch2, self.d_fs)
+        idx_new = class_test_sig_features.idx_add_sig(self.np_test_ch2, self.d_fs, str_point_name='CH2')
         self.assertEqual(idx_new, 1, msg='Failed to return correct index')
         class_test_sig_features.d_fs_update(self.d_fs_ch2, idx=1)
 
@@ -174,7 +174,7 @@ class TestClSig(TestCase):
         class_test_sig_features.plt_sigs()
 
         # Signal feature class, second signal auto y-limits
-        idx_new = class_test_sig_features.idx_add_sig(self.np_test_ch2, self.d_fs)
+        idx_new = class_test_sig_features.idx_add_sig(self.np_test_ch2, self.d_fs, str_point_name='CH2')
         self.assertEqual(idx_new, 1, msg='Failed to return correct index')
         class_test_sig_features.plt_sigs()
 
@@ -278,7 +278,7 @@ class TestClSig(TestCase):
         class_test_sig_features = appvib.ClSigFeatures(self.np_d_test_data_000_Ch1,
                                                        self.d_fs_data_000)
         class_test_sig_features.idx_add_sig(np_d_sig=self.np_d_test_data_000_Ch2,
-                                            d_fs=self.d_fs_data_000)
+                                            d_fs=self.d_fs_data_000, str_point_name='CH2')
         class_test_sig_features.np_d_est_triggers(np_d_sig=class_test_sig_features.np_d_sig,
                                                   i_direction=self.i_direction_test_000_trigger_slope,
                                                   d_threshold=self.d_threshold_test_000)
@@ -357,40 +357,37 @@ class TestClSig(TestCase):
         # Signal feature class test for a single data set
         class_test_sig_features = appvib.ClSigFeatures(self.np_test_trigger, self.d_fs_test_trigger)
         class_test_sig_features.b_save_data(str_data_prefix='SignalFeatureTest')
+        print("Testing file: " + class_test_sig_features.str_file)
+        lst_file = class_test_sig_features.b_read_data_as_df(str_filename=class_test_sig_features.str_file)
+        # Extract the data frame
+        df_test = lst_file[0]
+        d_fs_test = lst_file[1]
+        d_delta_t_test = lst_file[2]
 
-        str_filename = class_test_sig_features.str_file
-        print(str_filename)
-        file_handle = open(str_filename)
-        csv_reader = csv.reader(file_handle)
-        csv_header = next(csv_reader)
-        print(csv_header)
-        file_handle.close()
-
-        df_test = pd.read_csv(str_filename, header=None, skiprows=2, names=csv_header[0:5])
         for idx in range(class_test_sig_features.i_ns - 1):
             self.assertAlmostEqual(df_test.CH1[idx], self.np_test_trigger[idx], 8)
+
         # Be sure delta time and sampling frequency are coherent
-        self.assertAlmostEqual(df_test['Delta Time'][0], 1.0 / df_test['Sampling Frequency'][0], 9)
+        self.assertAlmostEqual(d_fs_test[0], class_test_sig_features.d_fs(idx=0), 9)
+        self.assertAlmostEqual(1.0/d_fs_test[0], d_delta_t_test[0], 9)
 
-        # Add a signal
+        # Add a signal, save it, bring it back in
         class_test_sig_features.idx_add_sig(self.np_test_trigger_ch2,
-                                            d_fs=class_test_sig_features.d_fs(idx=0))
+                                            d_fs=class_test_sig_features.d_fs(idx=0), str_point_name='CH2')
         class_test_sig_features.b_save_data(str_data_prefix='SignalFeatureTestCh2')
+        lst_file = class_test_sig_features.b_read_data_as_df(str_filename=class_test_sig_features.str_file)
+        # Extract the data frame
+        df_test_ch2 = lst_file[0]
+        d_fs_test_ch2 = lst_file[1]
+        d_delta_t_test_ch2 = lst_file[2]
 
-        # Read the CSV headers
-        str_filename = class_test_sig_features.str_file
-        print(str_filename)
-        file_handle = open(str_filename)
-        csv_reader = csv.reader(file_handle)
-        csv_header = next(csv_reader)
-        print(csv_header)
-        file_handle.close()
-
-        df_test_ch2 = pd.read_csv(str_filename, header=None, skiprows=2, names=csv_header[0:5])
         for idx in range(class_test_sig_features.i_ns - 1):
             self.assertAlmostEqual(df_test_ch2.CH2[idx], self.np_test_trigger_ch2[idx], 8)
+
         # Be sure delta time and sampling frequency are coherent
-        self.assertAlmostEqual(df_test_ch2['Delta Time'][0], 1.0 / df_test_ch2['Sampling Frequency'][0], 9)
+        for idx, _ in enumerate(d_fs_test_ch2):
+            self.assertAlmostEqual(d_fs_test_ch2[idx], class_test_sig_features.d_fs(idx=idx), 9)
+            self.assertAlmostEqual(1.0/d_fs_test_ch2[idx], d_delta_t_test_ch2[idx], 9)
 
 
 if __name__ == '__main__':

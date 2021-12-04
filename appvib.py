@@ -1,6 +1,8 @@
 import matplotlib.pyplot as plt
 from matplotlib.ticker import FormatStrFormatter
 import numpy as np
+import csv
+import pandas as pd
 import scipy.signal as sig
 from scipy.fft import rfft, rfftfreq
 from scipy.interpolate import interp1d
@@ -41,6 +43,12 @@ class ClSig(abc.ABC):
         """Engineering units for the signal"""
         pass
 
+    @property
+    @abc.abstractmethod
+    def str_point_name(self):
+        """Point name signal"""
+        pass
+
     @abc.abstractmethod
     def set_ylim_tb(self, ylim_tb):
         pass
@@ -60,25 +68,29 @@ class ClSigReal(ClSig):
 
     """
 
-    def __init__(self, np_sig_in, d_fs, str_eu_in='volts'):
+    def __init__(self, np_sig, d_fs, str_eu='volts', str_point_name='CH1'):
         """
         Parameters
         ----------
-        np_sig_in : numpy array
+        np_sig : numpy array
             Vector with real-valued signal of interest
         d_fs : double
             Sampling frequency, hertz
-        str_eu_in : string
+        str_eu : string
             Engineering units. Defaults to 'volts'
+        str_point_name : string
+            Signal point name
         """
         # Parent class
         super(ClSigReal, self).__init__()
 
         # Signal meta data
         self.__b_complex = False
-        self.np_d_sig = np_sig_in
+        self.np_d_sig = np_sig
         self.__d_fs = d_fs
         self.__b_is_stale_fs = True
+        self.str_eu = str_eu
+        self.str_point_name = str_point_name
 
         # Derived features for the signal
         self.__i_ns = self.__get_num_samples()
@@ -95,10 +107,9 @@ class ClSigReal(ClSig):
         self.__i_x_divisions_tb = 12
         self.__i_y_divisions_tb = 9
         self.__str_eu_x = 'seconds'
-        self.str_eu = str_eu_in
 
         # Setup the s-g array and filtering parameters
-        self.__np_d_sig_filt_sg = np_sig_in
+        self.__np_d_sig_filt_sg = np_sig
         self.__i_win_len = 31
         self.__i_poly_order = 1
         self.__str_filt_sg_desc = 'No Savitsky-Golay filtering'
@@ -106,7 +117,7 @@ class ClSigReal(ClSig):
         self.__b_is_stale_filt_sg = True
 
         # Setup the butterworth FIR filtered signal vector and parameters
-        self.__np_d_sig_filt_butter = np_sig_in
+        self.__np_d_sig_filt_butter = np_sig
         self.__i_poles = 1
         self.__d_wn = 0.
         self.__str_filt_butter_desc = 'No Butterworth filtering'
@@ -120,7 +131,7 @@ class ClSigReal(ClSig):
         self.__d_threshold = 0.
         self.__d_hysteresis = 0.1
         self.__i_direction = 0
-        self.__np_d_eventtimes = np.zeros_like(np_sig_in)
+        self.__np_d_eventtimes = np.zeros_like(np_sig)
         self.__b_is_stale_eventtimes = True
 
         # Attributes for the nX vector estimation and plotting
@@ -199,6 +210,14 @@ class ClSigReal(ClSig):
     @str_eu.setter
     def str_eu(self, str_eu_in):
         self.__str_eu = str_eu_in
+
+    @property
+    def str_point_name(self):
+        return self.__str_point_name
+
+    @str_point_name.setter
+    def str_point_name(self, str_point_name):
+        self.__str_point_name = str_point_name
 
     @property
     def b_complex(self):
@@ -842,14 +861,33 @@ class ClSigComp(ClSig):
     """Class for storing, plotting, and manipulating complex-valued
        signals"""
 
-    def __init__(self, np_sig, d_fs, str_eu='volts'):
+    def __init__(self, np_sig, d_fs, str_eu='volts', str_point_name='CH1'):
+
+        """
+        Parameters
+        ----------
+        np_sig : numpy array, double
+            Vector with real-valued signal of interest
+        d_fs : double
+            Sampling frequency, hertz
+        str_eu : string
+            Engineering units. Defaults to 'volts'
+        str_point_name : string
+            Signal point name
+        """
+
         super(ClSigComp, self).__init__()
         self.__b_complex = True
         self.__np_d_sig = np_sig
+
+        # Signal metadata
+        self.__str_eu = str_eu
         self.__d_fs = d_fs
         self.__i_ns = self.__get_num_samples()
+        self.str_point_name = str_point_name
+
+        # Plot attributes
         self.__ylim_tb = [0]
-        self.__str_eu = str_eu
         self.set_ylim_tb(self.__ylim_tb)
 
     @property
@@ -879,6 +917,14 @@ class ClSigComp(ClSig):
     @str_eu.setter
     def str_eu(self, str_eu_in):
         self.__str_eu = str_eu_in
+
+    @property
+    def str_point_name(self):
+        return self.__str_point_name
+
+    @str_point_name.setter
+    def str_point_name(self, str_point_name):
+        self.__str_point_name = str_point_name
 
     @property
     def i_ns(self):
@@ -922,29 +968,38 @@ class ClSigCompUneven(ClSig):
 
     """
 
-    def __init__(self, np_sig_in, np_d_time, str_eu='volts'):
+    def __init__(self, np_sig, np_d_time, str_eu='volts', str_point_name='CH1'):
 
         """
         Parameters
         ----------
-        np_sig_in : numpy array, double
+        np_sig : numpy array, double
             Vector with real-valued signal of interest
         np_d_time : numpy array, double
             Time stamp for each sample, assumed to be seconds
-        str_eu_in : string
+        str_eu : string
             Engineering units. Defaults to 'volts'
+        str_point_name : string
+            Signal point name
         """
 
         super(ClSigCompUneven, self).__init__()
-        self.__b_complex = True
-        self.__np_d_sig = np_sig_in
+
+        # Bring in the signal and timestamps
+        self.__np_d_sig = np_sig
         self.__np_d_time = np_d_time
+
+        # Signal metadata
+        self.__b_complex = True
         self.__i_ns = self.__get_num_samples()
+        self.__str_eu = str_eu
+        self.str_point_name = str_point_name
+
+        # Plotting attributes
         self.__ylim_mag = [0]
         self.set_ylim_mag(self.__ylim_mag)
         self.__ylim_tb = [0]
         self.set_ylim_tb(self.__ylim_tb)
-        self.__str_eu = str_eu
         self.__str_plot_apht_desc = '-'
         self.__str_plot_polar_desc = '-'
 
@@ -1018,6 +1073,14 @@ class ClSigCompUneven(ClSig):
     @str_eu.setter
     def str_eu(self, str_eu_in):
         self.__str_eu = str_eu_in
+
+    @property
+    def str_point_name(self):
+        return self.__str_point_name
+
+    @str_point_name.setter
+    def str_point_name(self, str_point_name):
+        self.__str_point_name = str_point_name
 
     @property
     def str_plot_apht_desc(self):
@@ -1147,7 +1210,7 @@ class ClSigFeatures:
         -------
     """
 
-    def __init__(self, np_d_sig, d_fs):
+    def __init__(self, np_d_sig, d_fs, str_point_name='CH1'):
         """
         Parameters
         ----------
@@ -1155,17 +1218,20 @@ class ClSigFeatures:
             Vector with the signal of interest. Can be real- or complex-valued.
         d_fs : double
             Describes the sampling frequency in samples/second (hertz).
+        str_point_name : string
+            Signal point name
         """
         # Instantiation of class so begin list and add first signal
         self.__lst_cl_sgs = []
         self.__lst_b_active = []
 
         # Instantiate and save common signal features to this class
-        self.idx_add_sig(np_d_sig, d_fs=d_fs)
+        self.idx_add_sig(np_d_sig, d_fs=d_fs, str_point_name=str_point_name)
         self.__np_d_rpm = np.zeros_like(self.__lst_cl_sgs[0].np_d_sig)
 
         # Attributes related to file save/read behavior
         self.__str_file = ''
+        self.__i_header_rows = 0
 
         self.__d_thresh = np.NaN
         self.__d_events_per_rev = np.NaN
@@ -1197,7 +1263,7 @@ class ClSigFeatures:
         self.__lst_cl_sgs[idx].np_d_sig = np_sig_in
         self.__lst_b_active[idx] = True
 
-    def idx_add_sig(self, np_d_sig, d_fs):
+    def idx_add_sig(self, np_d_sig, d_fs, str_point_name):
         """Add another signal to this object.
         returns index to the newly added signal.
 
@@ -1208,6 +1274,9 @@ class ClSigFeatures:
 
         d_fs : double
             Sampling frequency, hertz
+
+        str_point_name : string
+            Signal point name
         """
 
         # TO DO: try/catch might be a better option here
@@ -1220,17 +1289,24 @@ class ClSigFeatures:
 
         # cast to numpy array
         np_d_sig = np.array(np_d_sig)
+
         # Add the signals, looking for complex and real
         if np.iscomplexobj(np_d_sig):
             self.__lst_cl_sgs.append(ClSigComp(np_d_sig, d_fs))
         else:
             self.__lst_cl_sgs.append(ClSigReal(np_d_sig, d_fs))
 
+        # signal index number
+        idx_class = len(self.__lst_cl_sgs) - 1
+
+        # add signal meta data
+        self.__lst_cl_sgs[idx_class].str_point_name = str_point_name
+
         # Mark this one as active
         self.__lst_b_active.append(True)
 
-        # Success, return True
-        return len(self.__lst_cl_sgs) - 1
+        # Success, return index to new signal
+        return idx_class
 
     @property
     def i_ns(self):
@@ -1396,6 +1472,18 @@ class ClSigFeatures:
     def str_eu(self, idx=0):
         """
         Engineering unit descriptor
+
+        Parameter
+        ---------
+        idx : integer
+            Index of signal to pull description. Defaults to 0 (first signal)
+
+        """
+        return self.__lst_cl_sgs[idx].str_eu
+
+    def str_point_name(self, idx=0):
+        """
+        Signal point name
 
         Parameter
         ---------
@@ -1713,25 +1801,38 @@ class ClSigFeatures:
         str_data_prefix : string
             String with file prefix (defaults to 'test_class')
         idx_file : integer
-            File index (defaults to 0)
+            File name index (defaults to 1)
 
         Return values:
         True if write succeeds
 
         """
+
+        # Construct the file name and open it
         self.__str_file = str_data_prefix + '_' '%03.0f' % idx_file + '.csv'
         file_data = open(self.__str_file, 'w+')
-        str_header = 'X,'
-        str_units = 'Sequence,'
-        idx_ch = 1
-        for _ in self.__lst_b_active:
-            str_header = str_header + 'CH' + '%0.0f' % idx_ch + ','
-            str_units = str_units + 'Volt,'
-            idx_ch = idx_ch + 1
 
-        str_header = str_header + 'Delta Time,Sampling Frequency\n'
-        str_units = str_units + 'seconds,hertz,' + '\n'
+        # Construct the header
+        self.__i_header_rows = 4
+        str_header = 'X'
+        str_fs = 'Sampling Frequency (Hz)'
+        str_delta_t = 'Delta Time (seconds)'
+        str_units = 'Sequence'
+        for idx, class_signal in enumerate(self.__lst_cl_sgs):
+            str_header = str_header + "," + class_signal.str_point_name
+            str_fs = str_fs + "," + '%0.6f' % class_signal.d_fs
+            str_delta_t = str_delta_t + "," + '%0.8f' % (self.__lst_cl_sgs[idx].d_time[1] -
+                                                         self.__lst_cl_sgs[idx].d_time[0])
+
+            str_units = str_units + class_signal.str_eu + ","
+
+        str_header = str_header + '\n'
+        str_fs = str_fs + '\n'
+        str_delta_t = str_delta_t + '\n'
+        str_units = str_units + '\n'
         file_data.write(str_header)
+        file_data.write(str_fs)
+        file_data.write(str_delta_t)
         file_data.write(str_units)
 
         for idx_line in range(0, self.i_ns):
@@ -1743,18 +1844,56 @@ class ClSigFeatures:
             for cl_obj in self.__lst_cl_sgs:
                 str_line = str_line + ',' + '%0.8f' % cl_obj.np_d_sig[idx_line]
 
-            # header items
-            if idx_line == 0:
-                # add the delta time values
-                str_line = str_line + ',' + '%0.8f' % (self.__lst_cl_sgs[0].d_time[1] -
-                                                       self.__lst_cl_sgs[0].d_time[0])
-
-                # add the sampling frequency to the header
-                str_line = str_line + ',' + '%0.8f' % self.__lst_cl_sgs[0].d_fs
-
             # terminate the line
             file_data.write(str_line + '\n')
 
         file_data.close()
 
         return True
+
+    # Retrieve the data for the whole file
+    def b_read_data_as_df(self, str_filename=None):
+
+        """
+        Read the entire file in as a pandas dataframe
+
+        Parameters
+        ----------
+        str_filename : string
+            Filename, including .csv extension,  to read. If None then filename stored
+            in the class is used
+
+        Returns
+        --------
+        lst_data : list
+                pandas dataframe : dataframe with all data from the file
+                numpy array : vector with signal sampling rates
+                numpy array : vector with delta time interval for each signal
+
+        """
+
+        # Pull the filename from the object if nothing is specified
+        if str_filename is None:
+            str_filename = self.str_file
+
+        # Open the file and read the file headers in
+        file_handle = open(str_filename)
+        csv_reader = csv.reader(file_handle)
+        csv_header = next(csv_reader)
+        csv_fs = next(csv_reader)
+        csv_delta_t = next(csv_reader)
+        file_handle.close()
+
+        # Parse the header information
+        i_signals = len(csv_fs)
+        assert len(csv_header) == i_signals, 'Inconsistent number of channels in file'
+        assert len(csv_delta_t) == i_signals, 'Inconsistent number of channels in file'
+        d_fs = np.array(list(map(float, csv_fs[1:i_signals])))
+        d_delta_t = np.array(list(map(float, csv_delta_t[1:i_signals])))
+
+        # Read the file as a dataframe
+        df_sig = pd.read_csv(str_filename, header=None,
+                             skiprows=self.__i_header_rows, names=csv_header[0:5])
+
+        # Return the data
+        return [df_sig, d_fs, d_delta_t]
