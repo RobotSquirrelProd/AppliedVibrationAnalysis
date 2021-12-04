@@ -48,6 +48,9 @@ class TestClSig(TestCase):
         self.d_fs_ch3 = 4.096e3
         self.str_eu_default = "volts"
         self.str_eu_acc = "g's"
+        self.str_eu_vel = "ips"
+        self.str_point_name = 'CH1 Test'
+        self.str_point_name_ch2 = 'CH2 Test'
 
         # Test data set 000 : This one caused the nx_est to fail
         self.str_filename_000 = 'test_appvib_data_000.csv'
@@ -164,8 +167,26 @@ class TestClSig(TestCase):
         # Signal feature base class unit check
         class_test_sig_features = appvib.ClSigFeatures(self.np_test, self.d_fs)
         self.assertEqual(self.str_eu_default, class_test_sig_features.str_eu())
-        class_test_sig_features.str_eu = self.str_eu_acc
-        self.assertEqual(self.str_eu_acc, class_test_sig_features.str_eu)
+        class_test_sig_features.str_eu_set(str_eu=self.str_eu_acc)
+        self.assertEqual(self.str_eu_acc, class_test_sig_features.str_eu())
+
+        # Add second signal and set point name
+        idx_ch2 = class_test_sig_features.idx_add_sig(np_d_sig=self.np_test_ch2, d_fs=self.d_fs_ch2,
+                                                      str_point_name=self.str_point_name_ch2)
+        class_test_sig_features.str_eu_set(str_eu=self.str_eu_vel, idx=idx_ch2)
+        self.assertEqual(self.str_eu_vel, class_test_sig_features.str_eu(idx=idx_ch2))
+
+    def test_str_point_name(self):
+        # Signal feature base class signal point name check
+        class_test_sig_features = appvib.ClSigFeatures(self.np_test, self.d_fs)
+        class_test_sig_features.str_point_name_set(str_point_name=self.str_point_name)
+        self.assertEqual(self.str_point_name, class_test_sig_features.str_point_name())
+
+        # Add second signal and set point name
+        idx_ch2 = class_test_sig_features.idx_add_sig(np_d_sig=self.np_test_ch2, d_fs=self.d_fs_ch2,
+                                                      str_point_name=self.str_point_name_ch2)
+        class_test_sig_features.str_point_name_set(str_point_name=self.str_point_name_ch2, idx=idx_ch2)
+        self.assertEqual(self.str_point_name_ch2, class_test_sig_features.str_point_name(idx=idx_ch2))
 
     def test_plt_sigs(self):
         # Signal feature class check of plotting on instantiation
@@ -368,7 +389,7 @@ class TestClSig(TestCase):
 
         # Be sure delta time and sampling frequency are coherent
         self.assertAlmostEqual(d_fs_test[0], class_test_sig_features.d_fs(idx=0), 9)
-        self.assertAlmostEqual(1.0/d_fs_test[0], d_delta_t_test[0], 9)
+        self.assertAlmostEqual(1.0 / d_fs_test[0], d_delta_t_test[0], 9)
 
         # Add a signal, save it, bring it back in
         class_test_sig_features.idx_add_sig(self.np_test_trigger_ch2,
@@ -386,7 +407,7 @@ class TestClSig(TestCase):
         # Be sure delta time and sampling frequency are coherent
         for idx, _ in enumerate(d_fs_test_ch2):
             self.assertAlmostEqual(d_fs_test_ch2[idx], class_test_sig_features.d_fs(idx=idx), 9)
-            self.assertAlmostEqual(1.0/d_fs_test_ch2[idx], d_delta_t_test_ch2[idx], 9)
+            self.assertAlmostEqual(1.0 / d_fs_test_ch2[idx], d_delta_t_test_ch2[idx], 9)
 
 
 if __name__ == '__main__':

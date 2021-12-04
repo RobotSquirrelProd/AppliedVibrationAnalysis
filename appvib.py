@@ -100,9 +100,9 @@ class ClSigReal(ClSig):
         self.np_d_sig = np_sig
         self.__d_fs = d_fs
         self.__b_is_stale_fs = True
-        self.str_eu = str_eu
-        self.str_point_name = str_point_name
-        self.dt_timestamp = dt_timestamp
+        self.__str_eu = str_eu
+        self.__str_point_name = str_point_name
+        self.__dt_timestamp = dt_timestamp
 
         # Derived features for the signal
         self.__i_ns = self.__get_num_samples()
@@ -1523,27 +1523,65 @@ class ClSigFeatures:
 
     def str_eu(self, idx=0):
         """
-        Engineering unit descriptor
+        Return engineering unit descriptor
 
         Parameter
         ---------
         idx : integer
             Index of signal to pull description. Defaults to 0 (first signal)
 
+        Returns
+        -------
+        str_eu : string
+            String describing engineering units
+
         """
         return self.__lst_cl_sgs[idx].str_eu
+
+    def str_eu_set(self, str_eu, idx=0):
+        """
+        Set engineering unit descriptor
+
+        Parameter
+        ---------
+        str_eu : string
+            String describing engineering units
+        idx : integer
+            Index of signal to pull description. Defaults to 0 (first signal)
+
+        """
+        self.__lst_cl_sgs[idx].str_eu = str_eu
 
     def str_point_name(self, idx=0):
         """
-        Signal point name
+        Return signal point name
 
         Parameter
         ---------
         idx : integer
             Index of signal to pull description. Defaults to 0 (first signal)
 
+        Returns
+        -------
+        str_eu : string
+            Engineering unit string
+
         """
-        return self.__lst_cl_sgs[idx].str_eu
+        return self.__lst_cl_sgs[idx].str_point_name
+
+    def str_point_name_set(self, str_point_name, idx=0):
+        """
+        Set signal point name
+
+        Parameter
+        ---------
+        str_point_name : string
+            Signal point name
+        idx : integer
+            Index of signal to pull description. Defaults to 0 (first signal)
+
+        """
+        self.__lst_cl_sgs[idx].str_point_name = str_point_name
 
     def dt_timestamp(self, idx=0):
         """
