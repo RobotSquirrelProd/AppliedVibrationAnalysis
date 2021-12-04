@@ -6,6 +6,7 @@ import pandas as pd
 import scipy.signal as sig
 from scipy.fft import rfft, rfftfreq
 from scipy.interpolate import interp1d
+from datetime import datetime
 
 import abc as abc
 
@@ -49,6 +50,12 @@ class ClSig(abc.ABC):
         """Point name signal"""
         pass
 
+    @property
+    @abc.abstractmethod
+    def dt_timestamp(self):
+        """signal timestamp"""
+        pass
+
     @abc.abstractmethod
     def set_ylim_tb(self, ylim_tb):
         pass
@@ -68,7 +75,8 @@ class ClSigReal(ClSig):
 
     """
 
-    def __init__(self, np_sig, d_fs, str_eu='volts', str_point_name='CH1'):
+    def __init__(self, np_sig, d_fs, str_eu='volts', str_point_name='CH1',
+                 dt_timestamp=datetime.fromisoformat('1970-01-01T00:00:00-00:00')):
         """
         Parameters
         ----------
@@ -80,17 +88,21 @@ class ClSigReal(ClSig):
             Engineering units. Defaults to 'volts'
         str_point_name : string
             Signal point name
+        dt_timestamp : datetime
+            Signal timestamp in datetime stamp. This is the timestamp when the first sample was acquired.
+            Defaults to 1-Jan-1970 UTC Timezone
         """
         # Parent class
         super(ClSigReal, self).__init__()
 
-        # Signal meta data
+        # Signal metadata
         self.__b_complex = False
         self.np_d_sig = np_sig
         self.__d_fs = d_fs
         self.__b_is_stale_fs = True
         self.str_eu = str_eu
         self.str_point_name = str_point_name
+        self.dt_timestamp = dt_timestamp
 
         # Derived features for the signal
         self.__i_ns = self.__get_num_samples()
@@ -210,6 +222,14 @@ class ClSigReal(ClSig):
     @str_eu.setter
     def str_eu(self, str_eu_in):
         self.__str_eu = str_eu_in
+
+    @property
+    def dt_timestamp(self):
+        return self.__dt_timestamp
+
+    @dt_timestamp.setter
+    def dt_timestamp(self, dt_timestamp):
+        self.__dt_timestamp = dt_timestamp
 
     @property
     def str_point_name(self):
@@ -861,7 +881,8 @@ class ClSigComp(ClSig):
     """Class for storing, plotting, and manipulating complex-valued
        signals"""
 
-    def __init__(self, np_sig, d_fs, str_eu='volts', str_point_name='CH1'):
+    def __init__(self, np_sig, d_fs, str_eu='volts', str_point_name='CH1',
+                 dt_timestamp=datetime.fromisoformat('1970-01-01T00:00:00-00:00')):
 
         """
         Parameters
@@ -874,6 +895,9 @@ class ClSigComp(ClSig):
             Engineering units. Defaults to 'volts'
         str_point_name : string
             Signal point name
+        dt_timestamp : datetime
+            Signal timestamp in datetime stamp. This is the timestamp when the first sample was acquired.
+            Defaults to 1-Jan-1970 UTC Timezone
         """
 
         super(ClSigComp, self).__init__()
@@ -885,6 +909,7 @@ class ClSigComp(ClSig):
         self.__d_fs = d_fs
         self.__i_ns = self.__get_num_samples()
         self.str_point_name = str_point_name
+        self.dt_timestamp = dt_timestamp
 
         # Plot attributes
         self.__ylim_tb = [0]
@@ -917,6 +942,14 @@ class ClSigComp(ClSig):
     @str_eu.setter
     def str_eu(self, str_eu_in):
         self.__str_eu = str_eu_in
+
+    @property
+    def dt_timestamp(self):
+        return self.__dt_timestamp
+
+    @dt_timestamp.setter
+    def dt_timestamp(self, dt_timestamp):
+        self.__dt_timestamp = dt_timestamp
 
     @property
     def str_point_name(self):
@@ -968,7 +1001,8 @@ class ClSigCompUneven(ClSig):
 
     """
 
-    def __init__(self, np_sig, np_d_time, str_eu='volts', str_point_name='CH1'):
+    def __init__(self, np_sig, np_d_time, str_eu='volts', str_point_name='CH1',
+                 dt_timestamp=datetime.fromisoformat('1970-01-01T00:00:00-00:00')):
 
         """
         Parameters
@@ -981,6 +1015,9 @@ class ClSigCompUneven(ClSig):
             Engineering units. Defaults to 'volts'
         str_point_name : string
             Signal point name
+        dt_timestamp : datetime
+            Signal timestamp in datetime stamp. This is the timestamp when the first sample was acquired.
+            Defaults to 1-Jan-1970 UTC Timezone
         """
 
         super(ClSigCompUneven, self).__init__()
@@ -994,6 +1031,7 @@ class ClSigCompUneven(ClSig):
         self.__i_ns = self.__get_num_samples()
         self.__str_eu = str_eu
         self.str_point_name = str_point_name
+        self.dt_timestamp = dt_timestamp
 
         # Plotting attributes
         self.__ylim_mag = [0]
@@ -1073,6 +1111,14 @@ class ClSigCompUneven(ClSig):
     @str_eu.setter
     def str_eu(self, str_eu_in):
         self.__str_eu = str_eu_in
+
+    @property
+    def dt_timestamp(self):
+        return self.__dt_timestamp
+
+    @dt_timestamp.setter
+    def dt_timestamp(self, dt_timestamp):
+        self.__dt_timestamp = dt_timestamp
 
     @property
     def str_point_name(self):
@@ -1210,7 +1256,8 @@ class ClSigFeatures:
         -------
     """
 
-    def __init__(self, np_d_sig, d_fs, str_point_name='CH1'):
+    def __init__(self, np_d_sig, d_fs, str_point_name='CH1',
+                 dt_timestamp=datetime.fromisoformat('1970-01-01T00:00:00-00:00')):
         """
         Parameters
         ----------
@@ -1220,13 +1267,16 @@ class ClSigFeatures:
             Describes the sampling frequency in samples/second (hertz).
         str_point_name : string
             Signal point name
+        dt_timestamp : datetime
+            Signal timestamp in datetime stamp. This is the timestamp when the first sample was acquired.
+            Defaults to 1-Jan-1970 UTC Timezone.
         """
         # Instantiation of class so begin list and add first signal
         self.__lst_cl_sgs = []
         self.__lst_b_active = []
 
         # Instantiate and save common signal features to this class
-        self.idx_add_sig(np_d_sig, d_fs=d_fs, str_point_name=str_point_name)
+        self.idx_add_sig(np_d_sig, d_fs=d_fs, str_point_name=str_point_name, dt_timestamp=dt_timestamp)
         self.__np_d_rpm = np.zeros_like(self.__lst_cl_sgs[0].np_d_sig)
 
         # Attributes related to file save/read behavior
@@ -1263,7 +1313,8 @@ class ClSigFeatures:
         self.__lst_cl_sgs[idx].np_d_sig = np_sig_in
         self.__lst_b_active[idx] = True
 
-    def idx_add_sig(self, np_d_sig, d_fs, str_point_name):
+    def idx_add_sig(self, np_d_sig, d_fs, str_point_name,
+                    dt_timestamp=datetime.fromisoformat('1970-01-01T00:00:00-00:00')):
         """Add another signal to this object.
         returns index to the newly added signal.
 
@@ -1271,12 +1322,13 @@ class ClSigFeatures:
         ----------
         np_d_sig : numpy array, double
             Signal to be added
-
         d_fs : double
             Sampling frequency, hertz
-
         str_point_name : string
             Signal point name
+        dt_timestamp : datetime
+            Signal timestamp in datetime stamp. This is the timestamp when the first sample was acquired.
+            Defaults to 1-Jan-1970 UTC Timezone
         """
 
         # TO DO: try/catch might be a better option here
@@ -1492,6 +1544,18 @@ class ClSigFeatures:
 
         """
         return self.__lst_cl_sgs[idx].str_eu
+
+    def dt_timestamp(self, idx=0):
+        """
+        Signal date and time
+
+        Parameter
+        ---------
+        idx : integer
+            Index of signal to pull description. Defaults to 0 (first signal)
+
+        """
+        return self.__lst_cl_sgs[idx].__dt_timestamp
 
     @property
     def str_plot_desc(self):

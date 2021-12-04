@@ -3,7 +3,6 @@ from unittest import TestCase
 import appvib
 import math
 import numpy as np
-import csv
 import pandas as pd
 
 
