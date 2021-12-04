@@ -35,6 +35,12 @@ class ClSig(abc.ABC):
         """Real-valued Timebase vertical limits"""
         pass
 
+    @property
+    @abc.abstractmethod
+    def str_eu(self):
+        """Engineering units for the signal"""
+        pass
+
     @abc.abstractmethod
     def set_ylim_tb(self, ylim_tb):
         pass
@@ -836,13 +842,14 @@ class ClSigComp(ClSig):
     """Class for storing, plotting, and manipulating complex-valued
        signals"""
 
-    def __init__(self, np_sig, d_fs):
+    def __init__(self, np_sig, d_fs, str_eu='volts'):
         super(ClSigComp, self).__init__()
         self.__b_complex = True
         self.__np_d_sig = np_sig
         self.__d_fs = d_fs
         self.__i_ns = self.__get_num_samples()
         self.__ylim_tb = [0]
+        self.__str_eu = str_eu
         self.set_ylim_tb(self.__ylim_tb)
 
     @property
@@ -864,6 +871,14 @@ class ClSigComp(ClSig):
     def __get_num_samples(self):
         """Calculate number of samples in the signal"""
         return len(self.__np_d_sig)
+
+    @property
+    def str_eu(self):
+        return self.__str_eu
+
+    @str_eu.setter
+    def str_eu(self, str_eu_in):
+        self.__str_eu = str_eu_in
 
     @property
     def i_ns(self):
@@ -907,7 +922,7 @@ class ClSigCompUneven(ClSig):
 
     """
 
-    def __init__(self, np_sig_in, np_d_time, str_eu_in='volts'):
+    def __init__(self, np_sig_in, np_d_time, str_eu='volts'):
 
         """
         Parameters
@@ -929,7 +944,7 @@ class ClSigCompUneven(ClSig):
         self.set_ylim_mag(self.__ylim_mag)
         self.__ylim_tb = [0]
         self.set_ylim_tb(self.__ylim_tb)
-        self.__str_eu = str_eu_in
+        self.__str_eu = str_eu
         self.__str_plot_apht_desc = '-'
         self.__str_plot_polar_desc = '-'
 

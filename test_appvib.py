@@ -352,7 +352,7 @@ class TestClSig(TestCase):
         self.assertAlmostEqual(np.abs(np_d_nx_sig[0]), self.d_test_trigger_amp, 1)
         class_test_sig_features.plt_polar(str_plot_polar_desc='Signal feature class data ')
 
-    def test_save_data(self):
+    def test_save_read_data(self):
 
         # Signal feature class test for a single data set
         class_test_sig_features = appvib.ClSigFeatures(self.np_test_trigger, self.d_fs_test_trigger)
