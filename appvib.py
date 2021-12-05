@@ -1138,7 +1138,14 @@ class ClSigCompUneven(ClSig):
 
     # Plotting method, apht plots.
     def plt_apht(self, str_plot_apht_desc=None):
-        """Plot out amplitude in phase in apht format
+        """
+
+        Plot out amplitude in phase in apht format
+
+        Parameters
+        ----------
+        str_plot_apht_desc : string
+            Signal metadata description for plot title. Defaults to ''
 
         Return values:
         handle to the plot
@@ -1552,7 +1559,7 @@ class ClSigFeatures:
         """
         self.__lst_cl_sgs[idx].str_eu = str_eu
 
-    def str_point_name(self, idx=0):
+    def str_point_name(self, idx=0) -> object:
         """
         Return signal point name
 
@@ -1613,9 +1620,10 @@ class ClSigFeatures:
     def str_plot_desc(self, str_plot_desc):
         self.__str_plot_desc = str_plot_desc
 
-    # Interface for the vertical plotting limits
     def ylim_tb(self, ylim_tb_in=None, idx=0):
         """
+        Interface for the vertical plotting limits
+
         Parameter
         ---------
         ylim_tb_in : list of doubles, None
@@ -1635,6 +1643,28 @@ class ClSigFeatures:
 
         return self.__lst_cl_sgs[idx].ylim_tb
 
+    def __str_plt_support_title_meta(self, str_plot_type='timebase', idx=0):
+        """
+
+        Method to concatenate and format the signal meta data to string format for plot titles
+
+        Parameters
+        ----------
+        str_plot_type : string
+            String describing the plot title. Defaults to 'timebase'
+        idx: integer
+           Index of signal to pull description. Defaults to 0 (first signal)
+
+        Returns
+        -------
+        str_meta : string
+            String with meta data, formatted for title
+        """
+        str_meta = self.__str_plot_desc + '\n' + self.str_point_name(idx=idx) + ' | ' + \
+                   str_plot_type + ' | ' + self.str_point_name(idx=idx)
+
+        return str_meta
+
     # Plotting method, time domain signals.
     def plt_sigs(self):
         """Plot out the data in this signal feature class in the time domain
@@ -1651,66 +1681,32 @@ class ClSigFeatures:
 
         # Figure with subplots
         fig, axs = plt.subplots(i_plots)
-        fig.suptitle('Oscilloscope data')
 
-        # Initialize active channel value
-        i_ch = 0
+        # A single plot returns handle to the axis which isn't iterable. Rather than branch to support
+        # this behavior, cast the single axis object to a list with one element
+        if not isinstance(axs, (list, tuple, np.ndarray)):
+            axs = [axs]
 
-        # Branching because a single axis is not scriptable
-        if i_plots > 1:
-            ax1 = axs[i_ch]
-        else:
-            ax1 = axs
-
-        # Channel 1
-        ax1.plot(self.__lst_cl_sgs[0].d_time_plot, self.get_np_d_sig(idx=0))
-        ax1.plot(self.__lst_cl_sgs[0].d_time_plot, self.__lst_cl_sgs[0].np_d_sig_filt_sg)
-        ax1.plot(self.__lst_cl_sgs[0].d_time_plot, self.__lst_cl_sgs[0].np_d_sig_filt_butter)
-        ax1.grid()
-        ax1.set_xlabel("Time, " + self.__lst_cl_sgs[0].str_eu_x)
-        ax1.set_xlim(self.__lst_cl_sgs[0].xlim_tb)
-        ax1.set_xticks(np.linspace(self.__lst_cl_sgs[0].xlim_tb[0],
-                                   self.__lst_cl_sgs[0].xlim_tb[1],
-                                   self.__lst_cl_sgs[0].i_x_divisions_tb))
-        ax1.xaxis.set_major_formatter(FormatStrFormatter('%.2f'))
-        ax1.set_ylabel("Channel output, " + self.__lst_cl_sgs[0].str_eu)
-        ax1.set_ylim(self.__lst_cl_sgs[0].ylim_tb)
-        ax1.set_yticks(np.linspace(self.__lst_cl_sgs[0].ylim_tb[0],
-                                   self.__lst_cl_sgs[0].ylim_tb[1],
-                                   self.__lst_cl_sgs[0].i_y_divisions_tb))
-        # ax1.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-        ax1.set_title(self.__str_plot_desc + " Timebase")
-        ax1.legend(['as-acquired', self.str_filt_sg_desc_short(),
-                    self.str_filt_butter_desc_short()])
-
-        # Debug - remove
-        print('ylim_tb[0] : ' + '%0.6f' % self.__lst_cl_sgs[0].ylim_tb[0] +
-              ' | ylim_tb[1] : ' + '%0.6f' % self.__lst_cl_sgs[0].ylim_tb[1] +
-              ' | i_y_divisions_tb : ' + '%0.6f' % self.__lst_cl_sgs[0].i_y_divisions_tb)
-
-        # Channel 2
-        if len(self.__lst_b_active) > 1:
-            if self.__lst_b_active[1]:
-                i_ch = 1
-
-                axs[i_ch].plot(self.__lst_cl_sgs[i_ch].d_time_plot, self.get_np_d_sig(idx=i_ch))
-                axs[i_ch].plot(self.__lst_cl_sgs[i_ch].d_time_plot, self.__lst_cl_sgs[i_ch].np_d_sig_filt_sg)
-                axs[i_ch].plot(self.__lst_cl_sgs[i_ch].d_time_plot, self.__lst_cl_sgs[i_ch].np_d_sig_filt_butter)
-                axs[i_ch].grid()
-                axs[i_ch].set_xlabel("Time, " + self.__lst_cl_sgs[i_ch].str_eu_x)
-                axs[i_ch].set_xlim(self.__lst_cl_sgs[i_ch].xlim_tb)
-                axs[i_ch].set_xticks(np.linspace(self.__lst_cl_sgs[i_ch].xlim_tb[0],
-                                                 self.__lst_cl_sgs[i_ch].xlim_tb[1],
-                                                 self.__lst_cl_sgs[i_ch].i_x_divisions_tb))
-                axs[i_ch].xaxis.set_major_formatter(FormatStrFormatter('%.2f'))
-                axs[i_ch].set_ylabel("Channel output, " + self.__lst_cl_sgs[i_ch].str_eu)
-                axs[i_ch].set_ylim(self.__lst_cl_sgs[i_ch].ylim_tb)
-                axs[i_ch].set_yticks(np.linspace(self.__lst_cl_sgs[i_ch].ylim_tb[0],
-                                                 self.__lst_cl_sgs[i_ch].ylim_tb[1],
-                                                 self.__lst_cl_sgs[i_ch].i_y_divisions_tb))
-                axs[i_ch].set_title(self.__str_plot_desc + " Timebase")
-                axs[i_ch].legend(['as-acquired', self.str_filt_sg_desc_short(idx=i_ch),
-                                  self.str_filt_butter_desc_short(idx=i_ch)])
+        # Step through the channels
+        for idx_ch, _ in enumerate(self.__lst_cl_sgs):
+            axs[idx_ch].plot(self.__lst_cl_sgs[idx_ch].d_time_plot, self.get_np_d_sig(idx=idx_ch))
+            axs[idx_ch].plot(self.__lst_cl_sgs[idx_ch].d_time_plot, self.__lst_cl_sgs[idx_ch].np_d_sig_filt_sg)
+            axs[idx_ch].plot(self.__lst_cl_sgs[idx_ch].d_time_plot, self.__lst_cl_sgs[idx_ch].np_d_sig_filt_butter)
+            axs[idx_ch].grid()
+            axs[idx_ch].set_xlabel("Time, " + self.__lst_cl_sgs[idx_ch].str_eu_x)
+            axs[idx_ch].set_xlim(self.__lst_cl_sgs[idx_ch].xlim_tb)
+            axs[idx_ch].set_xticks(np.linspace(self.__lst_cl_sgs[idx_ch].xlim_tb[0],
+                                               self.__lst_cl_sgs[idx_ch].xlim_tb[1],
+                                               self.__lst_cl_sgs[idx_ch].i_x_divisions_tb))
+            axs[idx_ch].xaxis.set_major_formatter(FormatStrFormatter('%.2f'))
+            axs[idx_ch].set_ylabel("Channel output, " + self.__lst_cl_sgs[idx_ch].str_eu)
+            axs[idx_ch].set_ylim(self.__lst_cl_sgs[idx_ch].ylim_tb)
+            axs[idx_ch].set_yticks(np.linspace(self.__lst_cl_sgs[idx_ch].ylim_tb[0],
+                                               self.__lst_cl_sgs[idx_ch].ylim_tb[1],
+                                               self.__lst_cl_sgs[idx_ch].i_y_divisions_tb))
+            axs[idx_ch].set_title(self.__str_plt_support_title_meta(str_plot_type='Timebase', idx=idx_ch))
+            axs[idx_ch].legend(['as-acquired', self.str_filt_sg_desc_short(idx=idx_ch),
+                                self.str_filt_butter_desc_short(idx=idx_ch)])
 
         # Set the layout
         plt.tight_layout()
@@ -1739,7 +1735,7 @@ class ClSigFeatures:
         plt.grid()
         plt.xlabel("Frequency, hertz")
         plt.ylabel("Channel amplitude, " + self.__lst_cl_sgs[0].str_eu)
-        plt.title(self.__str_plot_desc + " Spectrum")
+        plt.title(self.__str_plt_support_title_meta(str_plot_type='Spectrum', idx=0))
 
         # Annotate the peak
         if self.__b_spec_peak:
@@ -1800,7 +1796,7 @@ class ClSigFeatures:
                                self.__lst_cl_sgs[idx].i_y_divisions_tb))
 
         plt.legend(['as-acquired', 'eventtimes'])
-        plt.title(self.__str_plot_desc + ' Amplitude and eventtimes vs. time')
+        plt.title(self.__str_plt_support_title_meta(str_plot_type='Amplitude and eventtimes vs. time', idx=0))
 
         # Save the handle prior to showing
         plot_handle = plt.gcf()
@@ -1829,7 +1825,7 @@ class ClSigFeatures:
         ax1.set_ylabel('Amplitude, ' + self.__lst_cl_sgs[0].str_eu)
         ax2.set_ylabel('Event speed, RPM')
         plt.legend(['as-acquired', 'RPM'])
-        plt.title('Amplitude and eventtimes vs. time')
+        plt.title(self.__str_plt_support_title_meta(str_plot_type='RPM vs. time', idx=0))
         plt.show()
 
         plot_handle = plt.gcf()
@@ -1855,11 +1851,17 @@ class ClSigFeatures:
             # Update class attribute
             self.__lst_cl_sgs[idx].str_plot_apht_desc = str_plot_apht_desc
 
+        else:
+            # Update the signal class attribute with the metadata description from this object
+            self.__lst_cl_sgs[idx].str_plot_apht_desc = \
+                self.__str_plt_support_title_meta(str_plot_type='APHT Plot', idx=0)
+
         return self.__lst_cl_sgs[idx].plt_apht(str_plot_apht_desc)
 
     # Call polar plotting method.
     def plt_polar(self, str_plot_polar_desc=None, idx=0):
-        """Plot out amplitude in phase in polar format
+        """
+        Plot out amplitude in phase in polar format
 
         Parameters
         ----------
@@ -1871,6 +1873,16 @@ class ClSigFeatures:
         Return values:
         handle to the plot
         """
+
+        # Parse inputs
+        if str_plot_polar_desc is not None:
+            # Update class attribute
+            self.__lst_cl_sgs[idx].str_plot_apht_desc = str_plot_polar_desc
+
+        else:
+            # Update the signal class attribute with the metadata description from this object
+            self.__lst_cl_sgs[idx].str_plot_polar_desc = \
+                self.__str_plt_support_title_meta(str_plot_type='Polar Plot', idx=0)
 
         return self.__lst_cl_sgs[idx].plt_polar(str_plot_polar_desc)
 
