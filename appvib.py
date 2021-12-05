@@ -7,12 +7,17 @@ import scipy.signal as sig
 from scipy.fft import rfft, rfftfreq
 from scipy.interpolate import interp1d
 from datetime import datetime
+from dateutil import tz
 
 import abc as abc
 
 
 class ClSig(abc.ABC):
-    """Abstract class to manage signals. Abstract base class"""
+    """
+
+    Abstract base class to manage signals
+
+    """
 
     @property
     @abc.abstractmethod
@@ -76,7 +81,7 @@ class ClSigReal(ClSig):
     """
 
     def __init__(self, np_sig, d_fs, str_eu='volts', str_point_name='CH1',
-                 dt_timestamp=datetime.fromisoformat('1970-01-01T00:00:00-00:00')):
+                 dt_timestamp=datetime.fromisoformat('1990-01-01T00:00:00-00:00')):
         """
         Parameters
         ----------
@@ -103,6 +108,7 @@ class ClSigReal(ClSig):
         self.__str_eu = str_eu
         self.__str_point_name = str_point_name
         self.__dt_timestamp = dt_timestamp
+        self.__str_timedate_format = "%m/%d/%Y, %H:%M:%S.%f"
 
         # Derived features for the signal
         self.__i_ns = self.__get_num_samples()
@@ -882,7 +888,7 @@ class ClSigComp(ClSig):
        signals"""
 
     def __init__(self, np_sig, d_fs, str_eu='volts', str_point_name='CH1',
-                 dt_timestamp=datetime.fromisoformat('1970-01-01T00:00:00-00:00')):
+                 dt_timestamp=datetime.fromisoformat('1990-01-01T00:00:00-00:00')):
 
         """
         Parameters
@@ -910,6 +916,7 @@ class ClSigComp(ClSig):
         self.__i_ns = self.__get_num_samples()
         self.str_point_name = str_point_name
         self.dt_timestamp = dt_timestamp
+        self.__str_timedate_format = "%m/%d/%Y, %H:%M:%S"
 
         # Plot attributes
         self.__ylim_tb = [0]
@@ -1002,7 +1009,7 @@ class ClSigCompUneven(ClSig):
     """
 
     def __init__(self, np_sig, np_d_time, str_eu='volts', str_point_name='CH1',
-                 dt_timestamp=datetime.fromisoformat('1970-01-01T00:00:00-00:00')):
+                 dt_timestamp=datetime.fromisoformat('1990-01-01T00:00:00-00:00')):
 
         """
         Parameters
@@ -1032,6 +1039,7 @@ class ClSigCompUneven(ClSig):
         self.__str_eu = str_eu
         self.str_point_name = str_point_name
         self.dt_timestamp = dt_timestamp
+        self.__str_timedate_format = "%m/%d/%Y, %H:%M:%S.%f"
 
         # Plotting attributes
         self.__ylim_mag = [0]
@@ -1158,7 +1166,6 @@ class ClSigCompUneven(ClSig):
 
         # Figure with subplots
         fig, axs = plt.subplots(2)
-        fig.suptitle('apht plot')
 
         # Plot the phase
         axs[0].plot(self.__np_d_time, np.rad2deg(np.angle(self.__np_d_sig)))
@@ -1166,7 +1173,7 @@ class ClSigCompUneven(ClSig):
         axs[0].set_xlabel("Time, seconds")
         axs[0].set_ylabel("Phase, degrees")
         axs[0].set_ylim([-360.0, 360.0])
-        axs[0].set_title(self.__str_plot_apht_desc + " phase")
+        axs[0].set_title(self.__str_plot_apht_desc)
 
         # Plot the magnitude
         axs[1].plot(self.__np_d_time, np.abs(self.__np_d_sig))
@@ -1174,7 +1181,7 @@ class ClSigCompUneven(ClSig):
         axs[1].set_xlabel("Time, seconds")
         axs[1].set_ylabel("Magnitude, " + self.str_eu)
         axs[1].set_ylim(self.ylim_mag)
-        axs[1].set_title(self.__str_plot_apht_desc + " magnitude")
+        axs[1].set_title(self.__str_plot_apht_desc)
 
         # Set the layout
         plt.tight_layout()
@@ -1224,7 +1231,7 @@ class ClSigCompUneven(ClSig):
         ax.set_rticks([d_tick_radial, d_tick_radial * 2.0, d_tick_radial * 3.0, d_tick_radial * 4.0])
         ax.set_rlabel_position(-22.5)
         ax.grid(True)
-        ax.set_title(self.__str_plot_polar_desc + " polar plot")
+        ax.set_title(self.__str_plot_polar_desc)
 
         # Set the layout
         plt.tight_layout()
@@ -1264,7 +1271,7 @@ class ClSigFeatures:
     """
 
     def __init__(self, np_d_sig, d_fs, str_point_name='CH1',
-                 dt_timestamp=datetime.fromisoformat('1970-01-01T00:00:00-00:00')):
+                 dt_timestamp=datetime.fromisoformat('1990-01-01T00:00:00-00:00')):
         """
         Parameters
         ----------
@@ -1321,7 +1328,7 @@ class ClSigFeatures:
         self.__lst_b_active[idx] = True
 
     def idx_add_sig(self, np_d_sig, d_fs, str_point_name,
-                    dt_timestamp=datetime.fromisoformat('1970-01-01T00:00:00-00:00')):
+                    dt_timestamp=datetime.fromisoformat('1990-01-01T00:00:00-00:00')):
         """Add another signal to this object.
         returns index to the newly added signal.
 
@@ -1350,10 +1357,11 @@ class ClSigFeatures:
         np_d_sig = np.array(np_d_sig)
 
         # Add the signals, looking for complex and real
+        dt_timestamp_utc = dt_timestamp.astimezone(tz.tzutc())
         if np.iscomplexobj(np_d_sig):
-            self.__lst_cl_sgs.append(ClSigComp(np_d_sig, d_fs))
+            self.__lst_cl_sgs.append(ClSigComp(np_d_sig, d_fs, dt_timestamp=dt_timestamp_utc))
         else:
-            self.__lst_cl_sgs.append(ClSigReal(np_d_sig, d_fs))
+            self.__lst_cl_sgs.append(ClSigReal(np_d_sig, d_fs, dt_timestamp=dt_timestamp_utc))
 
         # signal index number
         idx_class = len(self.__lst_cl_sgs) - 1
@@ -1600,7 +1608,7 @@ class ClSigFeatures:
             Index of signal to pull description. Defaults to 0 (first signal)
 
         """
-        return self.__lst_cl_sgs[idx].__dt_timestamp
+        return self.__lst_cl_sgs[idx].dt_timestamp
 
     @property
     def str_plot_desc(self):
@@ -1643,6 +1651,30 @@ class ClSigFeatures:
 
         return self.__lst_cl_sgs[idx].ylim_tb
 
+    def __str_format_dt(self, idx=0):
+        """
+        Method to format date and time for plots, files, etc.
+
+        Parameters
+        ----------
+        idx: integer
+           Index of signal to pull description. Defaults to 0 (first signal)
+
+        Returns
+        -------
+        str_dt_timestamp : string
+            Formatted date-time string
+
+        """
+        # Convert from UTC to local time and then to string
+        dt_timestamp_working = self.dt_timestamp(idx=idx)
+        dt_timestamp_working = dt_timestamp_working.replace(tzinfo=tz.tzutc())
+        dt_local = dt_timestamp_working.astimezone(tz.tzlocal())
+        str_dt_timestamp = dt_local.isoformat(sep=' ', timespec='milliseconds')
+        # str_dt_timestamp = (dt_local.strftime("%m/%d/%Y, %H:%M:%S.%f")[:-3])
+
+        return str_dt_timestamp
+
     def __str_plt_support_title_meta(self, str_plot_type='timebase', idx=0):
         """
 
@@ -1660,8 +1692,10 @@ class ClSigFeatures:
         str_meta : string
             String with meta data, formatted for title
         """
-        str_meta = self.__str_plot_desc + '\n' + self.str_point_name(idx=idx) + ' | ' + \
-                   str_plot_type + ' | ' + self.str_point_name(idx=idx)
+
+        # Format and concatenate
+        str_meta = self.__str_plot_desc + '\n' + str_plot_type + ' | ' + self.str_point_name(idx=idx) + \
+            ' | ' + self.__str_format_dt(idx=idx)
 
         return str_meta
 
@@ -1796,7 +1830,7 @@ class ClSigFeatures:
                                self.__lst_cl_sgs[idx].i_y_divisions_tb))
 
         plt.legend(['as-acquired', 'eventtimes'])
-        plt.title(self.__str_plt_support_title_meta(str_plot_type='Amplitude and eventtimes vs. time', idx=0))
+        plt.title(self.__str_plt_support_title_meta(str_plot_type='Triggered Timebase', idx=0))
 
         # Save the handle prior to showing
         plot_handle = plt.gcf()
@@ -1875,16 +1909,18 @@ class ClSigFeatures:
         """
 
         # Parse inputs
+        str_plot_polar_desc_meta = ''
         if str_plot_polar_desc is not None:
-            # Update class attribute
-            self.__lst_cl_sgs[idx].str_plot_apht_desc = str_plot_polar_desc
+            # Update the signal class attribute with the metadata description from this object
+            str_plot_polar_desc_meta = \
+                self.__str_plt_support_title_meta(str_plot_type='Polar Plot | ' + str_plot_polar_desc, idx=idx)
 
         else:
             # Update the signal class attribute with the metadata description from this object
-            self.__lst_cl_sgs[idx].str_plot_polar_desc = \
-                self.__str_plt_support_title_meta(str_plot_type='Polar Plot', idx=0)
+            str_plot_polar_desc_meta = \
+                self.__str_plt_support_title_meta(str_plot_type='Polar Plot', idx=idx)
 
-        return self.__lst_cl_sgs[idx].plt_polar(str_plot_polar_desc)
+        return self.__lst_cl_sgs[idx].plt_polar(str_plot_polar_desc=str_plot_polar_desc_meta)
 
     # Method to estimate the RPM values
     def d_est_rpm(self, d_events_per_rev=1):
@@ -1927,24 +1963,28 @@ class ClSigFeatures:
         file_data = open(self.__str_file, 'w+')
 
         # Construct the header
-        self.__i_header_rows = 4
+        self.__i_header_rows = 5
         str_header = 'X'
+        str_datetime = 'Date and Time'
         str_fs = 'Sampling Frequency (Hz)'
         str_delta_t = 'Delta Time (seconds)'
         str_units = 'Sequence'
         for idx, class_signal in enumerate(self.__lst_cl_sgs):
             str_header = str_header + "," + class_signal.str_point_name
             str_fs = str_fs + "," + '%0.6f' % class_signal.d_fs
+            str_datetime = str_datetime + "," + self.__str_format_dt(idx=idx)
             str_delta_t = str_delta_t + "," + '%0.8f' % (self.__lst_cl_sgs[idx].d_time[1] -
                                                          self.__lst_cl_sgs[idx].d_time[0])
 
             str_units = str_units + class_signal.str_eu + ","
 
         str_header = str_header + '\n'
+        str_datetime = str_datetime + '\n'
         str_fs = str_fs + '\n'
         str_delta_t = str_delta_t + '\n'
         str_units = str_units + '\n'
         file_data.write(str_header)
+        file_data.write(str_datetime)
         file_data.write(str_fs)
         file_data.write(str_delta_t)
         file_data.write(str_units)
@@ -1981,8 +2021,9 @@ class ClSigFeatures:
         --------
         lst_data : list
                 pandas dataframe : dataframe with all data from the file
-                numpy array : vector with signal sampling rates
-                numpy array : vector with delta time interval for each signal
+                numpy array, datetime : vector with date and timestamps
+                numpy array, double : vector with signal sampling rates
+                numpy array, double : vector with delta time interval for each signal
 
         """
 
@@ -1994,6 +2035,7 @@ class ClSigFeatures:
         file_handle = open(str_filename)
         csv_reader = csv.reader(file_handle)
         csv_header = next(csv_reader)
+        csv_dt = next(csv_reader)
         csv_fs = next(csv_reader)
         csv_delta_t = next(csv_reader)
         file_handle.close()
@@ -2002,6 +2044,7 @@ class ClSigFeatures:
         i_signals = len(csv_fs)
         assert len(csv_header) == i_signals, 'Inconsistent number of channels in file'
         assert len(csv_delta_t) == i_signals, 'Inconsistent number of channels in file'
+        np_dt_timestamps = np.array(list(map(datetime.fromisoformat, csv_dt[1:i_signals])))
         d_fs = np.array(list(map(float, csv_fs[1:i_signals])))
         d_delta_t = np.array(list(map(float, csv_delta_t[1:i_signals])))
 
@@ -2010,4 +2053,4 @@ class ClSigFeatures:
                              skiprows=self.__i_header_rows, names=csv_header[0:5])
 
         # Return the data
-        return [df_sig, d_fs, d_delta_t]
+        return [df_sig, np_dt_timestamps, d_fs, d_delta_t]

@@ -4,6 +4,8 @@ import appvib
 import math
 import numpy as np
 import pandas as pd
+from datetime import datetime
+from dateutil import tz
 
 
 class TestClSig(TestCase):
@@ -375,19 +377,24 @@ class TestClSig(TestCase):
     def test_save_read_data(self):
 
         # Signal feature class test for a single data set
-        class_test_sig_features = appvib.ClSigFeatures(self.np_test_trigger, self.d_fs_test_trigger)
+        dt_test = datetime.now()
+        class_test_sig_features = appvib.ClSigFeatures(self.np_test_trigger, self.d_fs_test_trigger,
+                                                       dt_timestamp=dt_test)
+        class_test_sig_features.plt_sigs()
         class_test_sig_features.b_save_data(str_data_prefix='SignalFeatureTest')
         print("Testing file: " + class_test_sig_features.str_file)
         lst_file = class_test_sig_features.b_read_data_as_df(str_filename=class_test_sig_features.str_file)
         # Extract the data frame
         df_test = lst_file[0]
-        d_fs_test = lst_file[1]
-        d_delta_t_test = lst_file[2]
+        dt_test = lst_file[1]
+        d_fs_test = lst_file[2]
+        d_delta_t_test = lst_file[3]
 
         for idx in range(class_test_sig_features.i_ns - 1):
             self.assertAlmostEqual(df_test.CH1[idx], self.np_test_trigger[idx], 8)
 
-        # Be sure delta time and sampling frequency are coherent
+        # Be sure timestamps, delta time and sampling frequency are coherent
+        self.assertEqual(dt_test, dt_test[0])
         self.assertAlmostEqual(d_fs_test[0], class_test_sig_features.d_fs(idx=0), 9)
         self.assertAlmostEqual(1.0 / d_fs_test[0], d_delta_t_test[0], 9)
 
@@ -398,8 +405,9 @@ class TestClSig(TestCase):
         lst_file = class_test_sig_features.b_read_data_as_df(str_filename=class_test_sig_features.str_file)
         # Extract the data frame
         df_test_ch2 = lst_file[0]
-        d_fs_test_ch2 = lst_file[1]
-        d_delta_t_test_ch2 = lst_file[2]
+        d_dt_test_ch2 = lst_file[1]
+        d_fs_test_ch2 = lst_file[2]
+        d_delta_t_test_ch2 = lst_file[3]
 
         for idx in range(class_test_sig_features.i_ns - 1):
             self.assertAlmostEqual(df_test_ch2.CH2[idx], self.np_test_trigger_ch2[idx], 8)

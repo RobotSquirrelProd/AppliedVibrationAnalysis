@@ -1,5 +1,8 @@
-X,CH1,CH2,Delta Time,Sampling Frequency
-Sequence,Volt,Volt,seconds,hertz,
-0,1.00000000,3.00000000,0.90909091,1.10000000
+X,CH1,CH2
+Date and Time,1989-12-31 16:00:00.000-08:00,1989-12-31 16:00:00.000-08:00
+Sampling Frequency (Hz),1.100000,2.200000
+Delta Time (seconds),0.90909091,0.45454545
+Sequencevolts,volts,
+0,1.00000000,3.00000000
 1,2.00000000,2.50000000
 2,3.00000000,2.00000000
