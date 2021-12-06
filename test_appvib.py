@@ -6,7 +6,6 @@ import numpy as np
 import time
 import pandas as pd
 from datetime import datetime
-from dateutil import tz
 
 
 class TestClSig(TestCase):
