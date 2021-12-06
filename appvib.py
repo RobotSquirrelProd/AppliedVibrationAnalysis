@@ -548,12 +548,12 @@ class ClSigReal(ClSig):
     # This is effectively set with the estimate crossings methods
     @property
     def np_d_eventtimes(self):
-        self.np_d_est_triggers(np_sig_in=None, i_direction=None, d_threshold=None,
+        self.np_d_est_triggers(np_d_sig=None, i_direction=None, d_threshold=None,
                                d_hysteresis=None, b_verbose=False)
         return self.__np_d_eventtimes
 
     # Interpolation of points for instantaneous frequency estimation
-    def calc_interpolate_crossing(self, np_sig_in, idx, b_verbose=False):
+    def calc_interpolate_crossing(self, np_d_sig, idx, b_verbose=False):
 
         """
         This method estimates time of crossing using linear interpolation
@@ -563,7 +563,7 @@ class ClSigReal(ClSig):
         idx  : integer
             This is the sample index immediately after the trigger changed to active. The
             function assumes the prior sample was taken before the trigger state changed.
-        np_sig_in : numpy array
+        np_d_sig : numpy array
             Signal to be evaluated for crossings
         b_verbose : boolean
             Print the intermediate steps (default: False). Useful for stepping through the
@@ -577,7 +577,7 @@ class ClSigReal(ClSig):
 
         # Interpolate to estimate the actual crossing from
         # the 2 nearest points
-        xp = np.array([np_sig_in[idx], np_sig_in[idx + 1]])
+        xp = np.array([np_d_sig[idx], np_d_sig[idx + 1]])
         fp = np.array([self.d_time[idx], self.d_time[idx + 1]])
         f_interp = interp1d(xp, fp, assume_sorted=False)
         d_time_estimated = f_interp(self.d_threshold)
@@ -593,7 +593,7 @@ class ClSigReal(ClSig):
         return d_time_estimated
 
     # Estimate triggers for speed
-    def np_d_est_triggers(self, np_sig_in=None, i_direction=None, d_threshold=None,
+    def np_d_est_triggers(self, np_d_sig=None, i_direction=None, d_threshold=None,
                           d_hysteresis=None, b_verbose=False):
         """
         This method estimates speed by identifying trigger points in time,
@@ -608,11 +608,11 @@ class ClSigReal(ClSig):
 
         Parameters
         ----------
-        np_sig_in : numpy array, None
+        np_d_sig : numpy array, None
             Signal to be evaluated for crossings. It can be any signal, but the class is designed
             for the input to be one of the signals already defined in the class so that an example
-            looks like: np_sig_in=class_test_real.np_d_sig. This defaults to 'None' and assigns the
-            class attribute 'np_sig' to 'np_sig_in'
+            looks like: np_d_sig=class_test_real.np_d_sig. This defaults to 'None' and assigns the
+            class attribute 'np_sig' to 'np_d_sig'
         i_direction : integer, None
             0 to search for threshold on rising signal, 1 to search on a falling signal. Set to
             'None' to use prior value stored in the class
@@ -632,10 +632,10 @@ class ClSigReal(ClSig):
 
         # Parse the inputs, flagging stale data if any of these have been changed. Changes
         # in any of these attributes forces new eventtimes and nX calculations
-        if np_sig_in is None:
+        if np_d_sig is None:
 
             # Copy the class vector into this method
-            np_sig_in = self.np_d_sig
+            np_d_sig = self.np_d_sig
         else:
             # User is possibly adding a new signal, force recalculation
             self.__b_is_stale_eventtimes = True
@@ -676,7 +676,7 @@ class ClSigReal(ClSig):
             # 'up', (i_direction = 0) and another for falling signal,
             # 'down', (i_direction = 1)
             idx_event = 0
-            self.__np_d_eventtimes = np.zeros_like(np_sig_in)
+            self.__np_d_eventtimes = np.zeros_like(np_d_sig)
             if self.__i_direction == 0:
 
                 # Define the absolute hysteretic value, rising
@@ -685,16 +685,16 @@ class ClSigReal(ClSig):
                     print('d_hysteresis_abs: ' + '%0.4f' % d_hysteresis_abs)
 
                 # Loop through the signal
-                for idx, x in enumerate(np_sig_in[0:-1]):
+                for idx, x in enumerate(np_d_sig[0:-1]):
 
                     # Intermediate results
                     if b_verbose:
                         print('idx: ' + '%2.f' % idx + ' | x: ' + '%0.5f' % x +
-                              ' | s-g: ' + '%0.4f' % np_sig_in[idx])
+                              ' | s-g: ' + '%0.4f' % np_d_sig[idx])
 
                     # Only the sign matters so subtract this point from next to
                     # get sign of slope
-                    d_slope = np_sig_in[idx + 1] - np_sig_in[idx]
+                    d_slope = np_d_sig[idx + 1] - np_d_sig[idx]
 
                     # The trigger leaves 'hold-off' state if the slope is
                     # negative and we fall below the threshold
@@ -708,14 +708,14 @@ class ClSigReal(ClSig):
                     # If we are on the rising portion of the signal and there is
                     # no hold off state on the trigger then trigger, and change
                     # state
-                    if (x < self.d_threshold <= np_sig_in[idx + 1]) and d_slope > 0 and not b_trigger_hold:
+                    if (x < self.d_threshold <= np_d_sig[idx + 1]) and d_slope > 0 and not b_trigger_hold:
                         # Change state to hold off
                         b_trigger_hold = True
                         if b_verbose:
                             print('Triggered, rising')
 
                         # Estimate time of crossing with interpolation
-                        self.__np_d_eventtimes[idx_event] = self.calc_interpolate_crossing(np_sig_in, idx)
+                        self.__np_d_eventtimes[idx_event] = self.calc_interpolate_crossing(np_d_sig, idx)
 
                         # Increment the eventtimes index
                         idx_event += 1
@@ -726,16 +726,16 @@ class ClSigReal(ClSig):
                 d_hysteresis_abs = self.d_threshold + self.d_hysteresis
 
                 # Loop through the signal
-                for idx, x in enumerate(np_sig_in[0:-1]):
+                for idx, x in enumerate(np_d_sig[0:-1]):
 
                     # Intermediate results
                     if b_verbose:
                         print('idx: ' + '%2.f' % idx + ' | x: ' + '%0.5f' % x +
-                              ' | s-g: ' + '%0.4f' % np_sig_in[idx])
+                              ' | s-g: ' + '%0.4f' % np_d_sig[idx])
 
                     # Only the sign matters so subtract this point from next to
                     # get sign of slope
-                    d_slope = np_sig_in[idx + 1] - np_sig_in[idx]
+                    d_slope = np_d_sig[idx + 1] - np_d_sig[idx]
 
                     # The trigger leaves 'hold-off' state if the slope is
                     # positive and we rise above the threshold
@@ -749,14 +749,14 @@ class ClSigReal(ClSig):
                     # If we are on the falling portion of the signal and
                     # there is no hold off state on the trigger then trigger
                     # and change state
-                    if (x > self.d_threshold >= np_sig_in[idx + 1]) and d_slope < 0 and not b_trigger_hold:
+                    if (x > self.d_threshold >= np_d_sig[idx + 1]) and d_slope < 0 and not b_trigger_hold:
                         # Change state to hold off
                         b_trigger_hold = True
                         if b_verbose:
                             print('Triggered, falling')
 
                         # Estimate time of crossing with interpolation
-                        self.__np_d_eventtimes[idx_event] = self.calc_interpolate_crossing(np_sig_in, idx)
+                        self.__np_d_eventtimes[idx_event] = self.calc_interpolate_crossing(np_d_sig, idx)
 
                         # Increment the eventtimes index
                         idx_event += 1
@@ -776,7 +776,7 @@ class ClSigReal(ClSig):
         return self.__np_d_eventtimes
 
     # Estimate nX vectors, given trigger events and a signal
-    def calc_nx(self, np_sig_in=None, np_d_eventtimes=None, b_verbose=False):
+    def calc_nx(self, np_d_sig=None, np_d_eventtimes=None, b_verbose=False):
         """
         This method estimates the 1X vectors, given trigger event times. The
         phase reported in this estimation is intended to be used for balancing
@@ -786,9 +786,9 @@ class ClSigReal(ClSig):
 
         Parameters
         ----------
-        np_sig_in : numpy array
+        np_d_sig : numpy array
             Signal to be evaluated for crossings. Should reference a signal already loaded
-            into the object (i.e. np_sig_in = {ClSigReal}.np_d_sig). Setting 'np_sig_in' to None
+            into the object (i.e. np_d_sig = {ClSigReal}.np_d_sig). Setting 'np_d_sig' to None
             forces the function to use .np sig.
         np_d_eventtimes : numpy array
             Vector of trigger event times. Setting to None forces use of eventtimes defined
@@ -805,10 +805,10 @@ class ClSigReal(ClSig):
 
         # Parse the inputs, flagging stale data if any of these have been changed. Changes
         # in any of these attributes forces new eventtimes and nX calculations
-        if np_sig_in is None:
+        if np_d_sig is None:
 
             # Copy the class vector into this method
-            np_sig_in = self.np_d_sig
+            np_d_sig = self.np_d_sig
 
         else:
             # User is possibly adding a new signal, force recalculation
@@ -833,7 +833,7 @@ class ClSigReal(ClSig):
 
                 # Calculate the single-sided FFT, multiplying the result by -1 change
                 # from spectral phase to balance phase.
-                d_np_y = rfft(np_sig_in[idx_start:idx_end]) * (-1.0 + 0.0j)
+                d_np_y = rfft(np_d_sig[idx_start:idx_end]) * (-1.0 + 0.0j)
                 i_ns_rfft = len(d_np_y)
 
                 # Scale the fft using the actual number
@@ -1247,7 +1247,8 @@ class ClSigCompUneven(ClSig):
 
 
 class ClSigFeatures:
-    """Class to manage signal features on scope data and other signals
+    """
+    Class to manage signal features on scope data and other signals
 
     Example usage:
         cl_test = ClSigFeatures(np.array([1.,2., 3.]),1.1)
@@ -1295,7 +1296,7 @@ class ClSigFeatures:
 
         # Attributes related to file save/read behavior
         self.__str_file = ''
-        self.__i_header_rows = 0
+        self.__i_header_rows = 5
 
         self.__d_thresh = np.NaN
         self.__d_events_per_rev = np.NaN
@@ -1322,9 +1323,9 @@ class ClSigFeatures:
 
     @np_d_sig.setter
     def np_d_sig(self, lst_in):
-        np_sig_in = lst_in[0]
+        np_d_sig = lst_in[0]
         idx = lst_in[1]
-        self.__lst_cl_sgs[idx].np_d_sig = np_sig_in
+        self.__lst_cl_sgs[idx].np_d_sig = np_d_sig
         self.__lst_b_active[idx] = True
 
     def idx_add_sig(self, np_d_sig, d_fs, str_point_name,
@@ -1346,8 +1347,11 @@ class ClSigFeatures:
         """
 
         # TO DO: try/catch might be a better option here
-        # Does the incoming signal have the same number of
-        # samples as the ones already present?
+        # This is an implicit dataframe structure so all signals need to be the same length.
+        # Does the incoming signal have the same number of samples as the ones already present? The
+        # reason this restriction is enforced is that there a number of ways to interpolate or pad
+        # a signal to bring different sampling rates to the same length and it is not appropriate to
+        # assume a method since it will change the signal content.
         if len(self.__lst_cl_sgs) > 0:
 
             if len(np_d_sig) != self.i_ns:
@@ -1962,8 +1966,8 @@ class ClSigFeatures:
         self.__str_file = str_data_prefix + '_' '%03.0f' % idx_file + '.csv'
         file_data = open(self.__str_file, 'w+')
 
-        # Construct the header
-        self.__i_header_rows = 5
+        # Construct the header, self.__i_header_rows must be updated
+        # TO DO: convert to a linked list, this implementation is clunky
         str_header = 'X'
         str_datetime = 'Date and Time'
         str_fs = 'Sampling Frequency (Hz)'
@@ -1976,7 +1980,7 @@ class ClSigFeatures:
             str_delta_t = str_delta_t + "," + '%0.8f' % (self.__lst_cl_sgs[idx].d_time[1] -
                                                          self.__lst_cl_sgs[idx].d_time[0])
 
-            str_units = str_units + class_signal.str_eu + ","
+            str_units = str_units + "," + class_signal.str_eu
 
         str_header = str_header + '\n'
         str_datetime = str_datetime + '\n'

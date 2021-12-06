@@ -1,8 +1,8 @@
 X,CH1
-Date and Time,2021-12-05 09:11:58.126-08:00
+Date and Time,2021-12-06 04:57:47.264-08:00
 Sampling Frequency (Hz),2047.000000
 Delta Time (seconds),0.00048852
-Sequencevolts,
+Sequence,volts
 0,0.00000000
 1,0.03068978
 2,0.06135066

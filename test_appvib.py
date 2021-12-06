@@ -3,6 +3,7 @@ from unittest import TestCase
 import appvib
 import math
 import numpy as np
+import time
 import pandas as pd
 from datetime import datetime
 from dateutil import tz
@@ -217,7 +218,7 @@ class TestClSig(TestCase):
 
         # Real-valued check, rising signal, explicitly defining the arguments
         class_test_real = appvib.ClSigReal(self.np_test_real, self.d_fs_real)
-        class_test_real.np_d_est_triggers(np_sig_in=self.np_test_real, i_direction=self.i_direction_real_rising,
+        class_test_real.np_d_est_triggers(np_d_sig=self.np_test_real, i_direction=self.i_direction_real_rising,
                                           d_threshold=self.d_threshold_real, d_hysteresis=self.d_hysteresis_real,
                                           b_verbose=True)
         self.assertAlmostEqual(class_test_real.np_d_eventtimes[0], 7.5, 12)
@@ -232,7 +233,7 @@ class TestClSig(TestCase):
 
         # Real-valued check, falling signal
         class_test_real = appvib.ClSigReal(self.np_test_real, self.d_fs_real)
-        class_test_real.np_d_est_triggers(np_sig_in=self.np_test_real, i_direction=self.i_direction_real_falling,
+        class_test_real.np_d_est_triggers(np_d_sig=self.np_test_real, i_direction=self.i_direction_real_falling,
                                           d_threshold=self.d_threshold_real, d_hysteresis=self.d_hysteresis_real,
                                           b_verbose=True)
         self.assertAlmostEqual(class_test_real.np_d_eventtimes[0], 4.5, 12)
@@ -265,14 +266,14 @@ class TestClSig(TestCase):
 
         # Test real signal, rising signal
         class_test_real = appvib.ClSigReal(self.np_test_trigger, self.d_fs_test_trigger)
-        d_eventtimes_real = class_test_real.np_d_est_triggers(np_sig_in=class_test_real.np_d_sig,
+        d_eventtimes_real = class_test_real.np_d_est_triggers(np_d_sig=class_test_real.np_d_sig,
                                                               i_direction=self.i_direction_test_trigger_rising,
                                                               d_threshold=self.d_threshold_test_trigger,
                                                               d_hysteresis=self.d_hysteresis_test_trigger,
                                                               b_verbose=False)
         self.assertAlmostEqual(d_eventtimes_real[0], 1. / self.d_freq_law, 7)
         self.assertAlmostEqual(d_eventtimes_real[-1] - d_eventtimes_real[-2], 1. / self.d_freq_law, 7)
-        np_d_nx = class_test_real.calc_nx(np_sig_in=class_test_real.np_d_sig, np_d_eventtimes=d_eventtimes_real,
+        np_d_nx = class_test_real.calc_nx(np_d_sig=class_test_real.np_d_sig, np_d_eventtimes=d_eventtimes_real,
                                           b_verbose=False)
         self.assertAlmostEqual(np.abs(np_d_nx[0]), self.d_test_trigger_amp, 2)
         self.assertLess(np.rad2deg(np.angle(np_d_nx[0])) - 90.0, 1.0)
@@ -316,12 +317,12 @@ class TestClSig(TestCase):
 
         # Test real signal, rising signal
         class_test_real = appvib.ClSigReal(self.np_test_trigger, self.d_fs_test_trigger)
-        d_eventtimes_real = class_test_real.np_d_est_triggers(np_sig_in=class_test_real.np_d_sig,
+        d_eventtimes_real = class_test_real.np_d_est_triggers(np_d_sig=class_test_real.np_d_sig,
                                                               i_direction=self.i_direction_test_trigger_rising,
                                                               d_threshold=self.d_threshold_test_trigger,
                                                               d_hysteresis=self.d_hysteresis_test_trigger,
                                                               b_verbose=False)
-        np_d_nx = class_test_real.calc_nx(np_sig_in=class_test_real.np_d_sig, np_d_eventtimes=d_eventtimes_real,
+        np_d_nx = class_test_real.calc_nx(np_d_sig=class_test_real.np_d_sig, np_d_eventtimes=d_eventtimes_real,
                                           b_verbose=False)
         self.assertAlmostEqual(np.abs(np_d_nx[0]), self.d_test_trigger_amp, 2)
         class_test_real.plt_apht()
@@ -347,12 +348,12 @@ class TestClSig(TestCase):
 
         # Test real signal, falling signal
         class_test_real = appvib.ClSigReal(self.np_test_trigger, self.d_fs_test_trigger)
-        d_eventtimes_real = class_test_real.np_d_est_triggers(np_sig_in=class_test_real.np_d_sig,
+        d_eventtimes_real = class_test_real.np_d_est_triggers(np_d_sig=class_test_real.np_d_sig,
                                                               i_direction=self.i_direction_test_trigger_falling,
                                                               d_threshold=self.d_threshold_test_trigger,
                                                               d_hysteresis=self.d_hysteresis_test_trigger,
                                                               b_verbose=False)
-        np_d_nx = class_test_real.calc_nx(np_sig_in=class_test_real.np_d_sig, np_d_eventtimes=d_eventtimes_real,
+        np_d_nx = class_test_real.calc_nx(np_d_sig=class_test_real.np_d_sig, np_d_eventtimes=d_eventtimes_real,
                                           b_verbose=False)
         self.assertAlmostEqual(np.abs(np_d_nx[0]), self.d_test_trigger_amp, 1)
         class_test_real.plt_polar()
@@ -377,9 +378,9 @@ class TestClSig(TestCase):
     def test_save_read_data(self):
 
         # Signal feature class test for a single data set
-        dt_test = datetime.now()
+        dt_local = datetime.now()
         class_test_sig_features = appvib.ClSigFeatures(self.np_test_trigger, self.d_fs_test_trigger,
-                                                       dt_timestamp=dt_test)
+                                                       dt_timestamp=dt_local)
         class_test_sig_features.plt_sigs()
         class_test_sig_features.b_save_data(str_data_prefix='SignalFeatureTest')
         print("Testing file: " + class_test_sig_features.str_file)
@@ -394,28 +395,50 @@ class TestClSig(TestCase):
             self.assertAlmostEqual(df_test.CH1[idx], self.np_test_trigger[idx], 8)
 
         # Be sure timestamps, delta time and sampling frequency are coherent
-        self.assertEqual(dt_test, dt_test[0])
+        self.assertEqual(dt_local.day, dt_test[0].day)
+        self.assertEqual(dt_local.hour, dt_test[0].hour)
+        self.assertEqual(dt_local.minute, dt_test[0].minute)
+        self.assertEqual(dt_local.second, dt_test[0].second)
         self.assertAlmostEqual(d_fs_test[0], class_test_sig_features.d_fs(idx=0), 9)
         self.assertAlmostEqual(1.0 / d_fs_test[0], d_delta_t_test[0], 9)
 
         # Add a signal, save it, bring it back in
+        time.sleep(1)
+        dt_local_ch2 = datetime.now()
         class_test_sig_features.idx_add_sig(self.np_test_trigger_ch2,
-                                            d_fs=class_test_sig_features.d_fs(idx=0), str_point_name='CH2')
+                                            d_fs=class_test_sig_features.d_fs(idx=0), str_point_name='CH2',
+                                            dt_timestamp=dt_local_ch2)
         class_test_sig_features.b_save_data(str_data_prefix='SignalFeatureTestCh2')
         lst_file = class_test_sig_features.b_read_data_as_df(str_filename=class_test_sig_features.str_file)
         # Extract the data frame
         df_test_ch2 = lst_file[0]
-        d_dt_test_ch2 = lst_file[1]
+        dt_test_ch2 = lst_file[1]
         d_fs_test_ch2 = lst_file[2]
         d_delta_t_test_ch2 = lst_file[3]
 
         for idx in range(class_test_sig_features.i_ns - 1):
             self.assertAlmostEqual(df_test_ch2.CH2[idx], self.np_test_trigger_ch2[idx], 8)
 
-        # Be sure delta time and sampling frequency are coherent
+        # Be sure timestamps, delta time and sampling frequency are coherent
         for idx, _ in enumerate(d_fs_test_ch2):
+            self.assertEqual(dt_local_ch2.day, dt_test_ch2[1].day)
+            self.assertEqual(dt_local_ch2.hour, dt_test_ch2[1].hour)
+            self.assertEqual(dt_local_ch2.minute, dt_test_ch2[1].minute)
+            self.assertEqual(dt_local_ch2.second, dt_test_ch2[1].second)
             self.assertAlmostEqual(d_fs_test_ch2[idx], class_test_sig_features.d_fs(idx=idx), 9)
             self.assertAlmostEqual(1.0 / d_fs_test_ch2[idx], d_delta_t_test_ch2[idx], 9)
+
+        # Surfaced this defect in a stand-alone plotting workbook
+        class_file_test = appvib.ClSigFeatures([1., 2., 3.], 1.)
+        lst_file = class_file_test.b_read_data_as_df(str_filename=class_test_sig_features.str_file)
+        # Extract the data frame et. al.
+        df_test_file = lst_file[0]
+        dt_test_file = lst_file[1]
+        d_fs_test_file = lst_file[2]
+        d_delta_t_test_file = lst_file[3]
+
+        for idx in range(class_file_test.i_ns - 1):
+            self.assertAlmostEqual(df_test_file.CH2[idx], self.np_test_trigger_ch2[idx], 8)
 
 
 if __name__ == '__main__':
