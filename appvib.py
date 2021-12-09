@@ -1180,7 +1180,7 @@ class ClSigCompUneven(ClSig):
         axs[1].grid()
         axs[1].set_xlabel("Time, seconds")
         axs[1].set_ylabel("Magnitude, " + self.str_eu)
-        axs[1].set_ylim(self.ylim_mag)
+        axs[1].set_ylim([0, max(self.ylim_mag)])
         axs[1].set_title(self.__str_plot_apht_desc)
 
         # Set the layout
