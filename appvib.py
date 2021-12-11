@@ -125,6 +125,7 @@ class ClSigReal(ClSig):
         self.__i_x_divisions_tb = 12
         self.__i_y_divisions_tb = 9
         self.__str_eu_x = 'seconds'
+        self.__str_plot_desc = ' '
 
         # Setup the s-g array and filtering parameters
         self.__np_d_sig_filt_sg = np_sig
@@ -340,14 +341,6 @@ class ClSigReal(ClSig):
     @ylim_apht_mag.setter
     def ylim_apht_mag(self, ylim_apht_mag):
         self.__class_sig_comp.ylim_mag = ylim_apht_mag
-
-    @property
-    def str_plot_apht_desc(self):
-        return self.__class_sig_comp.str_plot_apht_desc
-
-    @str_plot_apht_desc.setter
-    def str_plot_apht_desc(self, str_plot_apht_desc_in):
-        self.__class_sig_comp.str_plot_apht_desc = str_plot_apht_desc_in
 
     def __get_d_time(self):
         """
@@ -880,24 +873,62 @@ class ClSigReal(ClSig):
         # Return the values
         return self.__class_sig_comp.np_d_sig
 
+    @property
+    def str_plot_desc(self):
+        return self.__str_plot_desc
+
+    @str_plot_desc.setter
+    def str_plot_desc(self, str_plot_desc):
+        self.__str_plot_desc = str_plot_desc
+        self.__class_sig_comp.str_plot_desc = str_plot_desc
+
+    @property
+    def __str_format_dt(self):
+        """
+        Method to format date and time for plots, files, etc.
+
+        Parameters
+        ----------
+
+        Returns
+        -------
+        str_dt_timestamp : string
+            Formatted date-time string
+
+        """
+        # Convert from UTC to local time and then to string
+        dt_timestamp_working = self.dt_timestamp
+        dt_timestamp_working = dt_timestamp_working.replace(tzinfo=tz.tzutc())
+        dt_local = dt_timestamp_working.astimezone(tz.tzlocal())
+        str_dt_timestamp = dt_local.isoformat(sep=' ', timespec='milliseconds')
+
+        return str_dt_timestamp
+
     # Call the method to plot the apht plot
     def plt_apht(self, str_plot_apht_desc_in=None):
-        return self.__class_sig_comp.plt_apht(str_plot_apht_desc=str_plot_apht_desc_in)
+
+        # Create plot title from class attributes
+        str_meta = str_plot_apht_desc_in
+        if str_plot_apht_desc_in is None:
+            str_meta = self.str_plot_desc + '\n' + 'apht' + ' | ' + self.str_point_name + \
+                       ' | ' + self.__str_format_dt
+
+        return self.__class_sig_comp.plt_apht(str_plot_apht_desc=str_meta)
 
     # Call polar plotting method.
-    def plt_polar(self, str_plot_polar_desc=None):
+    def plt_polar(self, str_plot_desc=None):
         """Plot out amplitude in phase in polar format
 
         Parameters
         ----------
-        str_plot_polar_desc : string
+        str_plot_desc : string
             Additional title text for the plot. If 'None' then method uses class attribute.
 
         Return values:
         handle to the plot
         """
 
-        return self.__class_sig_comp.plt_polar(str_plot_polar_desc)
+        return self.__class_sig_comp.plt_polar(str_plot_desc)
 
 
 class ClSigComp(ClSig):
@@ -1063,8 +1094,8 @@ class ClSigCompUneven(ClSig):
         self.set_ylim_mag(self.__ylim_mag)
         self.__ylim_tb = [0]
         self.set_ylim_tb(self.__ylim_tb)
-        self.__str_plot_apht_desc = '-'
-        self.__str_plot_polar_desc = '-'
+        self.__str_plot_desc = '-'
+        self.__str_plot_desc = '-'
 
     @property
     def np_d_sig(self):
@@ -1154,12 +1185,34 @@ class ClSigCompUneven(ClSig):
         self.__str_point_name = str_point_name
 
     @property
-    def str_plot_apht_desc(self):
-        return self.__str_plot_apht_desc
+    def str_plot_desc(self):
+        return self.__str_plot_desc
 
-    @str_plot_apht_desc.setter
-    def str_plot_apht_desc(self, str_plot_apht_desc_in):
-        self.__str_plot_apht_desc = str_plot_apht_desc_in
+    @str_plot_desc.setter
+    def str_plot_desc(self, str_plot_desc):
+        self.__str_plot_desc = str_plot_desc
+
+    @property
+    def __str_format_dt(self):
+        """
+        Method to format date and time for plots, files, etc.
+
+        Parameters
+        ----------
+
+        Returns
+        -------
+        str_dt_timestamp : string
+            Formatted date-time string
+
+        """
+        # Convert from UTC to local time and then to string
+        dt_timestamp_working = self.dt_timestamp
+        dt_timestamp_working = dt_timestamp_working.replace(tzinfo=tz.tzutc())
+        dt_local = dt_timestamp_working.astimezone(tz.tzlocal())
+        str_dt_timestamp = dt_local.isoformat(sep=' ', timespec='milliseconds')
+
+        return str_dt_timestamp
 
     # Plotting method, apht plots.
     def plt_apht(self, str_plot_apht_desc=None):
@@ -1179,7 +1232,11 @@ class ClSigCompUneven(ClSig):
         # Parse inputs
         if str_plot_apht_desc is not None:
             # Update class attribute
-            self.__str_plot_apht_desc = str_plot_apht_desc
+            self.__str_plot_desc = str_plot_apht_desc
+        else:
+            # Format and concatenate
+            self.__str_plot_desc = self.__str_plot_desc + '\n' + 'apht' + ' | ' + self.str_point_name + \
+                ' | ' + self.__str_format_dt
 
         # Figure with subplots
         fig, axs = plt.subplots(2)
@@ -1190,7 +1247,7 @@ class ClSigCompUneven(ClSig):
         axs[0].set_xlabel("Time, seconds")
         axs[0].set_ylabel("Phase, degrees")
         axs[0].set_ylim([-360.0, 360.0])
-        axs[0].set_title(self.__str_plot_apht_desc)
+        axs[0].set_title(self.__str_plot_desc)
 
         # Plot the magnitude
         axs[1].plot(self.__np_d_time, np.abs(self.__np_d_sig))
@@ -1198,7 +1255,7 @@ class ClSigCompUneven(ClSig):
         axs[1].set_xlabel("Time, seconds")
         axs[1].set_ylabel("Magnitude, " + self.str_eu)
         axs[1].set_ylim([0, max(self.ylim_mag)])
-        axs[1].set_title(self.__str_plot_apht_desc)
+        axs[1].set_title(self.__str_plot_desc)
 
         # Set the layout
         plt.tight_layout()
@@ -1211,14 +1268,6 @@ class ClSigCompUneven(ClSig):
         plt.show()
 
         return plot_handle
-
-    @property
-    def str_plot_polar_desc(self):
-        return self.__str_plot_polar_desc
-
-    @str_plot_polar_desc.setter
-    def str_plot_polar_desc(self, str_plot_polar_desc_in):
-        self.__str_plot_polar_desc = str_plot_polar_desc_in
 
     # Plotting method, polar plots.
     def plt_polar(self, str_plot_polar_desc=None):
@@ -1248,7 +1297,7 @@ class ClSigCompUneven(ClSig):
         ax.set_rticks([d_tick_radial, d_tick_radial * 2.0, d_tick_radial * 3.0, d_tick_radial * 4.0])
         ax.set_rlabel_position(-22.5)
         ax.grid(True)
-        ax.set_title(self.__str_plot_polar_desc)
+        ax.set_title(self.__str_plot_desc)
 
         # Set the layout
         plt.tight_layout()
@@ -1692,7 +1741,6 @@ class ClSigFeatures:
         dt_timestamp_working = dt_timestamp_working.replace(tzinfo=tz.tzutc())
         dt_local = dt_timestamp_working.astimezone(tz.tzlocal())
         str_dt_timestamp = dt_local.isoformat(sep=' ', timespec='milliseconds')
-        # str_dt_timestamp = (dt_local.strftime("%m/%d/%Y, %H:%M:%S.%f")[:-3])
 
         return str_dt_timestamp
 
@@ -1828,10 +1876,6 @@ class ClSigFeatures:
         list: [handle to the plot, np array of eventtimes]
         """
 
-        # The eventtimes all should have threshold value for voltage
-        np_d_event_value = np.ones_like(
-            self.__lst_cl_sgs[idx_eventtimes].np_d_eventtimes) * self.__lst_cl_sgs[idx_eventtimes].d_threshold
-
         # Put up the the plot time
         plt.figure()
         plt.plot(self.__lst_cl_sgs[idx].d_time, self.__lst_cl_sgs[idx].np_d_sig)
@@ -1915,34 +1959,35 @@ class ClSigFeatures:
         return self.__lst_cl_sgs[idx].plt_apht(str_plot_apht_desc)
 
     # Call polar plotting method.
-    def plt_polar(self, str_plot_polar_desc=None, idx=0):
+    def plt_polar(self, str_plot_desc=None, idx=0):
         """
         Plot out amplitude in phase in polar format
 
         Parameters
         ----------
-        str_plot_polar_desc : string
+        str_plot_desc : string
             Additional title text for the plot. If 'None' then method uses class attribute.
         idx : integer
             Index of signal to pull description. Defaults to 0 (first signal)
 
         Return values:
         handle to the plot
+
         """
 
         # Parse inputs
-        str_plot_polar_desc_meta = ''
-        if str_plot_polar_desc is not None:
+        str_plot_desc_meta = ''
+        if str_plot_desc is not None:
             # Update the signal class attribute with the metadata description from this object
-            str_plot_polar_desc_meta = \
-                self.__str_plt_support_title_meta(str_plot_type='Polar Plot | ' + str_plot_polar_desc, idx=idx)
+            str_plot_desc_meta = \
+                self.__str_plt_support_title_meta(str_plot_type='Polar Plot | ' + str_plot_desc, idx=idx)
 
         else:
             # Update the signal class attribute with the metadata description from this object
-            str_plot_polar_desc_meta = \
+            str_plot_desc_meta = \
                 self.__str_plt_support_title_meta(str_plot_type='Polar Plot', idx=idx)
 
-        return self.__lst_cl_sgs[idx].plt_polar(str_plot_polar_desc=str_plot_polar_desc_meta)
+        return self.__lst_cl_sgs[idx].plt_polar(str_plot_desc=str_plot_desc_meta)
 
     # Method to estimate the RPM values
     def d_est_rpm(self, d_events_per_rev=1):

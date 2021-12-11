@@ -366,10 +366,16 @@ class TestClSig(TestCase):
         np_d_nx = class_test_real.calc_nx(np_d_sig=class_test_real.np_d_sig, np_d_eventtimes=d_eventtimes_real,
                                           b_verbose=False)
         self.assertAlmostEqual(np.abs(np_d_nx[0]), self.d_test_trigger_amp, 2)
+        class_test_real.str_plot_desc = 'test_plt_apht | ClSigReal | Initial call'
         class_test_real.plt_apht()
-        class_test_real.str_plot_apht_desc = 'Test data'
+        class_test_real.str_plot_desc = 'test_plt_apht | ClSigReal | Test call'
         class_test_real.ylim_apht_mag = [-0.1, 1.1]
         class_test_real.plt_apht()
+
+        # Test base class
+        class_test_uneven = appvib.ClSigCompUneven(np_d_nx, class_test_real.np_d_eventtimes, str_eu='cat whiskers',
+                                                   str_point_name='TUNA')
+        class_test_uneven.plt_apht()
 
         # Signal feature class test for apht plots
         class_test_sig_features = appvib.ClSigFeatures(self.np_test_trigger, self.d_fs_test_trigger)
@@ -398,7 +404,7 @@ class TestClSig(TestCase):
                                           b_verbose=False)
         self.assertAlmostEqual(np.abs(np_d_nx[0]), self.d_test_trigger_amp, 1)
         class_test_real.plt_polar()
-        class_test_real.str_plot_polar_desc = 'Polar test data'
+        class_test_real.str_plot_desc = 'Polar test data'
         class_test_real.ylim_apht_mag = [-0.1, 2.1]
         class_test_real.plt_polar()
 
@@ -414,7 +420,7 @@ class TestClSig(TestCase):
                                                       np_d_eventtimes=d_eventtimes_real,
                                                       b_verbose=False, idx=0)
         self.assertAlmostEqual(np.abs(np_d_nx_sig[0]), self.d_test_trigger_amp, 1)
-        class_test_sig_features.plt_polar(str_plot_polar_desc='Signal feature class data ')
+        class_test_sig_features.plt_polar(str_plot_desc='Signal feature class data ')
 
     def test_save_read_data(self):
 
@@ -474,9 +480,6 @@ class TestClSig(TestCase):
         lst_file = class_file_test.b_read_data_as_df(str_filename=class_test_sig_features.str_file)
         # Extract the data frame et. al.
         df_test_file = lst_file[0]
-        dt_test_file = lst_file[1]
-        d_fs_test_file = lst_file[2]
-        d_delta_t_test_file = lst_file[3]
 
         for idx in range(class_file_test.i_ns - 1):
             self.assertAlmostEqual(df_test_file.CH2[idx], self.np_test_trigger_ch2[idx], 8)
