@@ -41,6 +41,24 @@ class TestClSig(TestCase):
         self.i_direction_test_trigger_rising = 0
         self.i_direction_test_trigger_falling = 1
 
+        # Data set for the signal feature class event plots
+        self.d_fs_test_plt_eventtimes = 2048
+        i_ns = (self.d_fs_test_plt_eventtimes * 1)
+        self.d_freq_law_test_plt_eventtimes = 5.
+        self.d_amp_test_plt_eventtimes = 2.0
+        d_time_ext_plt_eventtimes = np.linspace(0, (i_ns - 1), i_ns) / float(self.d_fs_test_plt_eventtimes)
+        self.np_test_plt_eventtimes = self.d_amp_test_plt_eventtimes * np.sin(2 * math.pi *
+                                                                              self.d_freq_law_test_plt_eventtimes *
+                                                                              d_time_ext_plt_eventtimes)
+        self.d_amp_ch2_test_plt_eventtimes = 0.5
+        self.np_test_plt_eventtimes_ch2 = self.d_amp_ch2_test_plt_eventtimes * np.sin(2 * math.pi *
+                                                                                      self.d_freq_law_test_plt_eventtimes *
+                                                                                      d_time_ext_plt_eventtimes)
+        self.d_threshold_test_plt_eventtimes = 1.0
+        self.d_hysteresis_test_plt_eventtimes = 0.1
+        self.i_direction_test_plt_eventtimes_rising = 0
+        self.i_direction_test_plt_eventtimes_falling = 1
+
         self.np_test_comp = np.array([0.1 - 0.2j, 1.0 - 2.0j, 10.0 - 20j])
         self.np_test_comp_long = np.array([0.1 - 0.2j, 1.0 - 2.0j, 10.0 - 20j, 100.0 - 200j, 1000.0 - 2000j])
         self.ylim_tb_test = [-1.1, 1.1]
@@ -260,6 +278,30 @@ class TestClSig(TestCase):
                                                   b_verbose=False)
         d_est_freq = 1. / (np.mean(np.diff(class_test_sig_features.np_d_eventtimes())))
         self.assertAlmostEqual(d_est_freq, self.d_freq_law, 7)
+
+    def test_plt_eventtimes(self):
+
+        # Signal feature class test, rising signal with threshold of 0.5
+        class_test_plt_eventtimes = appvib.ClSigFeatures(self.np_test_plt_eventtimes, self.d_fs_test_plt_eventtimes)
+        print('Signal frequency, hertz: ' + '%0.6f' % self.d_freq_law_test_plt_eventtimes)
+        class_test_plt_eventtimes.np_d_est_triggers(np_d_sig=self.np_test_plt_eventtimes,
+                                                    i_direction=self.i_direction_test_plt_eventtimes_rising,
+                                                    d_threshold=self.d_threshold_test_plt_eventtimes,
+                                                    d_hysteresis=self.d_hysteresis_test_plt_eventtimes,
+                                                    b_verbose=False)
+        class_test_plt_eventtimes.str_plot_desc = 'plt_eventtimes test (single)'
+        class_test_plt_eventtimes.str_point_name_set(str_point_name='CX1', idx=0)
+        d_est_freq = 1. / (np.mean(np.diff(class_test_plt_eventtimes.np_d_eventtimes())))
+        self.assertAlmostEqual(d_est_freq, self.d_freq_law_test_plt_eventtimes, 5)
+
+        # check the plot for a single channel
+        class_test_plt_eventtimes.plt_eventtimes()
+
+        # Add a second channel and plot those events
+        class_test_plt_eventtimes.idx_add_sig(np_d_sig=self.np_test_plt_eventtimes_ch2,
+                                              d_fs=self.d_fs_test_plt_eventtimes, str_point_name='CX2')
+        class_test_plt_eventtimes.str_plot_desc = 'plt_eventtimes test (second channel)'
+        class_test_plt_eventtimes.plt_eventtimes(idx_eventtimes=0, idx=1)
 
     def test_nX_est(self):
 

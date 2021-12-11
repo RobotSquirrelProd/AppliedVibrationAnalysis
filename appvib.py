@@ -150,6 +150,7 @@ class ClSigReal(ClSig):
         self.__d_hysteresis = 0.1
         self.__i_direction = 0
         self.__np_d_eventtimes = np.zeros_like(np_sig)
+        self.__idx_events = np.zeros_like(np_sig)
         self.__b_is_stale_eventtimes = True
 
         # Attributes for the nX vector estimation and plotting
@@ -545,11 +546,24 @@ class ClSigReal(ClSig):
     def i_direction(self):
         return self.__i_direction
 
+    @property
+    def idx_events(self):
+
+        # Update the eventtimes if stale
+        if self.__b_is_stale_eventtimes:
+            self.np_d_est_triggers(np_d_sig=None, i_direction=None, d_threshold=None,
+                                   d_hysteresis=None, b_verbose=False)
+
+        return self.__idx_events
+
     # This is effectively set with the estimate crossings methods
     @property
     def np_d_eventtimes(self):
-        self.np_d_est_triggers(np_d_sig=None, i_direction=None, d_threshold=None,
-                               d_hysteresis=None, b_verbose=False)
+
+        # Update the eventtimes if stale
+        if self.__b_is_stale_eventtimes:
+            self.np_d_est_triggers(np_d_sig=None, i_direction=None, d_threshold=None,
+                                   d_hysteresis=None, b_verbose=False)
         return self.__np_d_eventtimes
 
     # Interpolation of points for instantaneous frequency estimation
@@ -771,6 +785,9 @@ class ClSigReal(ClSig):
             # Since the eventtimes were calculated the nX vectors have to marked
             # as stale
             self.__b_is_stale_nx = True
+
+        # Create vector of indexes to closest points, needed for plotting
+        self.__idx_events = np.round(self.__np_d_eventtimes * self.d_fs, 0).astype(int)
 
         # Return the list of eventtimes.
         return self.__np_d_eventtimes
@@ -1818,7 +1835,8 @@ class ClSigFeatures:
         # Put up the the plot time
         plt.figure()
         plt.plot(self.__lst_cl_sgs[idx].d_time, self.__lst_cl_sgs[idx].np_d_sig)
-        plt.plot(self.np_d_eventtimes(idx=idx_eventtimes), np_d_event_value, "ok")
+        plt.plot(self.np_d_eventtimes(idx=idx_eventtimes),
+                 self.__lst_cl_sgs[idx].np_d_sig[self.__lst_cl_sgs[idx_eventtimes].idx_events], "ok")
         plt.grid(True)
 
         plt.xlabel("Time, " + self.__lst_cl_sgs[idx].str_eu_x)
