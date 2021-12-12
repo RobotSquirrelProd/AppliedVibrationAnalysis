@@ -548,6 +548,8 @@ class ClSigReal(ClSig):
         if self.__b_is_stale_eventtimes:
             self.np_d_est_triggers(np_d_sig=None, i_direction=None, d_threshold=None,
                                    d_hysteresis=None, b_verbose=False)
+        if self.__b_is_stale_nx:
+            self.calc_nx()
 
         return self.__idx_events
 
@@ -1942,14 +1944,14 @@ class ClSigFeatures:
         return [plot_handle, self.__np_d_rpm]
 
     # Plotting method, nX plots.
-    def plt_nx(self, str_plot_nx_desc=None, b_overlay=True):
+    def plt_nx(self, str_plot_desc=None, b_overlay=True):
         """
 
         Plot out amplitude in phase in apht format
 
         Parameters
         ----------
-        str_plot_nx_desc : string
+        str_plot_desc : string
             Signal metadata description for plot title. Defaults to None
 
         b_overlay : boolean
@@ -1960,13 +1962,9 @@ class ClSigFeatures:
         """
 
         # Parse inputs
-        if str_plot_nx_desc is not None:
+        if str_plot_desc is not None:
             # Update class attribute
-            self.__str_plot_desc = str_plot_nx_desc
-        else:
-            # Format and concatenate
-            self.__str_plot_desc = self.__str_plot_desc + '\n' + 'nx' + ' | ' + self.str_point_name() + \
-                                   ' | ' + self.__str_format_dt()
+            self.__str_plot_desc = str_plot_desc
 
         # How many plots, assuming 1 is given?
         i_plots = 0

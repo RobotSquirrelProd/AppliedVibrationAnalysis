@@ -348,16 +348,24 @@ class TestClSig(TestCase):
                                                                      i_direction=self.i_direction_test_trigger_rising,
                                                                      d_threshold=self.d_threshold_test_trigger,
                                                                      d_hysteresis=self.d_hysteresis_test_trigger,
-                                                                     b_verbose=False, idx=0)
+                                                                     b_verbose=False)
         self.assertAlmostEqual(d_eventtimes_sig[1] - d_eventtimes_sig[0], 1. / self.d_freq_law, 7)
         class_test_sig_features.str_plot_desc = 'test_plt_nx ClSigFeatures eventtimes'
         class_test_sig_features.plt_eventtimes()
+        d_eventtimes_sig = class_test_sig_features.np_d_est_triggers(np_d_sig=class_test_sig_features.np_d_sig,
+                                                                     i_direction=self.i_direction_test_trigger_rising,
+                                                                     d_threshold=self.d_threshold_test_trigger,
+                                                                     d_hysteresis=self.d_hysteresis_test_trigger,
+                                                                     b_verbose=False)
+        class_test_sig_features.plt_nx()
+        class_test_sig_features.plt_nx()
+        class_test_sig_features.plt_nx(str_plot_nx_desc='test_plt_nx ClSigFeatures Implicit call')
 
         np_d_nx_sig = class_test_sig_features.calc_nx(np_d_sig=class_test_sig_features.np_d_sig,
                                                       np_d_eventtimes=d_eventtimes_sig,
                                                       b_verbose=False, idx=0)
         self.assertAlmostEqual(np.abs(np_d_nx_sig[0]), self.d_test_trigger_amp, 2)
-        class_test_sig_features.plt_nx(str_plot_nx_desc='test_plt_nx ClSigFeatures')
+        class_test_sig_features.plt_nx(str_plot_nx_desc='test_plt_nx ClSigFeatures Explicit call')
 
     def test_plt_apht(self):
 
