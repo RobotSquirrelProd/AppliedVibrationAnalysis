@@ -1975,6 +1975,9 @@ class ClSigFeatures:
             # Update class attribute
             self.__str_plot_desc = str_plot_desc
 
+        # In this method, the eventtimes are always fixed to the first signal (idx=0)
+        idx_event_source = 0
+
         # How many plots, assuming 1 is given?
         i_plots = 0
         lst_nx = []
@@ -2021,8 +2024,8 @@ class ClSigFeatures:
             axs[idx_ch].plot(self.__lst_cl_sgs[idx_ch].d_time_plot, self.get_np_d_sig(idx=idx_ch))
             if b_overlay:
                 axs[idx_ch].plot(self.__lst_cl_sgs[idx_ch].d_time_plot, lst_nx[idx_ch])
-            plt.plot(self.np_d_eventtimes(idx=idx_ch),
-                     self.__lst_cl_sgs[idx_ch].np_d_sig[self.__lst_cl_sgs[idx_ch].idx_events], "ok")
+            axs[idx_ch].plot(self.np_d_eventtimes(idx=idx_event_source),
+                     self.__lst_cl_sgs[idx_ch].np_d_sig[self.__lst_cl_sgs[idx_event_source].idx_events], "ok")
             axs[idx_ch].grid()
             axs[idx_ch].set_xlabel("Time, " + self.__lst_cl_sgs[idx_ch].str_eu_x)
             axs[idx_ch].set_xlim(self.__lst_cl_sgs[idx_ch].xlim_tb)
