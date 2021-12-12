@@ -41,6 +41,24 @@ class TestClSig(TestCase):
         self.i_direction_test_trigger_rising = 0
         self.i_direction_test_trigger_falling = 1
 
+        # Data set for the signal feature class, nx phase test
+        self.d_fs_test_trigger_ph = 2048
+        i_ns = (self.d_fs_test_trigger_ph * 1)
+        self.d_freq_law_ph = 5.
+        self.d_test_trigger_amp_ph = 1.5
+        d_time_ext = np.linspace(0, (i_ns - 1), i_ns) / float(self.d_fs_test_trigger_ph)
+        self.d_phase_ph_ch1 = np.deg2rad(80)
+        self.np_test_trigger_ph = self.d_test_trigger_amp_ph * np.cos(2 * math.pi * self.d_freq_law_ph * d_time_ext -
+                                                                      self.d_phase_ph_ch1)
+        self.d_test_trigger_amp_ph_ch2 = 3.1
+        self.d_phase_ph_ch2 = np.deg2rad(33)
+        self.np_test_trigger_ph_ch2 = self.d_test_trigger_amp_ph_ch2 * np.cos(2 * math.pi * self.d_freq_law_ph *
+                                                                              d_time_ext - self.d_phase_ph_ch2)
+        self.d_threshold_test_trigger_ph = 0.0
+        self.d_hysteresis_test_trigger_ph = 0.1
+        self.i_direction_test_trigger_rising_ph = 0
+        self.i_direction_test_trigger_falling_ph = 1
+
         # Data set for the signal feature class event plots
         self.d_fs_test_plt_eventtimes = 2048
         i_ns = (self.d_fs_test_plt_eventtimes * 1)
@@ -381,6 +399,19 @@ class TestClSig(TestCase):
         self.assertAlmostEqual(np.abs(np_d_nx_sig[0]), self.d_test_trigger_amp, 2)
         class_test_sig_features.plt_nx(str_plot_desc='test_plt_nx ClSigFeatures Explicit call complete')
 
+    # Validate phase
+    def test_plt_nx_phase(self):
+
+        class_phase = appvib.ClSigFeatures(self.np_test_trigger_ph, d_fs=self.d_fs_test_trigger_ph)
+        np_d_eventtimes = class_phase.np_d_eventtimes()
+        class_phase.calc_nx(class_phase.np_d_sig, np_d_eventtimes)
+        class_phase.plt_nx()
+        class_phase.idx_add_sig(np_d_sig=self.np_test_trigger_ph_ch2, d_fs=self.d_fs_test_trigger_ph,
+                                str_point_name='CH2')
+        np_d_eventtimes = class_phase.np_d_eventtimes()
+        class_phase.calc_nx(class_phase.np_d_sig, np_d_eventtimes)
+        class_phase.plt_nx()
+
     # Tests targeted to behavior discovered in specific data sets
     def test_plt_nx_001(self):
 
@@ -424,7 +455,7 @@ class TestClSig(TestCase):
                                                                      d_threshold=self.d_threshold_test_trigger,
                                                                      d_hysteresis=self.d_hysteresis_test_trigger,
                                                                      b_verbose=False, idx=0)
-        self.assertAlmostEqual(d_eventtimes_sig[1]-d_eventtimes_sig[0], 1. / self.d_freq_law, 7)
+        self.assertAlmostEqual(d_eventtimes_sig[1] - d_eventtimes_sig[0], 1. / self.d_freq_law, 7)
         np_d_nx_sig = class_test_sig_features.calc_nx(np_d_sig=class_test_real.np_d_sig,
                                                       np_d_eventtimes=d_eventtimes_real,
                                                       b_verbose=False, idx=0)
