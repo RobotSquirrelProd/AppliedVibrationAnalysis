@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 from matplotlib.ticker import FormatStrFormatter
+import math
 import numpy as np
 import csv
 import pandas as pd
@@ -103,6 +104,7 @@ class ClSigReal(ClSig):
         # Signal metadata
         self.__b_complex = False
         self.np_d_sig = np_sig
+        self.__np_d_nx = np.zeros_like(np_sig)
         self.__d_fs = d_fs
         self.__b_is_stale_fs = True
         self.__str_eu = str_eu
@@ -785,6 +787,10 @@ class ClSigReal(ClSig):
         # Return the list of eventtimes.
         return self.__np_d_eventtimes
 
+    @property
+    def np_d_nx(self):
+        return self.__np_d_nx
+
     # Estimate nX vectors, given trigger events and a signal
     def calc_nx(self, np_d_sig=None, np_d_eventtimes=None, b_verbose=False):
         """
@@ -843,7 +849,7 @@ class ClSigReal(ClSig):
 
                 # Calculate the single-sided FFT, multiplying the result by -1 change
                 # from spectral phase to balance phase.
-                d_np_y = rfft(np_d_sig[idx_start:idx_end]) * (-1.0 + 0.0j)
+                d_np_y = rfft(np_d_sig[idx_start:idx_end])
                 i_ns_rfft = len(d_np_y)
 
                 # Scale the fft using the actual number
@@ -853,7 +859,7 @@ class ClSigReal(ClSig):
                 # Grab the first element since it is the best estimate
                 # of the sinusoid with the same frequency as the
                 # spacing of eventtimes
-                d_nx[idx] = d_np_y[1]
+                d_nx[idx] = d_np_y[1] * (-1.0 + 0.0j)
 
                 # Print summary
                 if b_verbose:
@@ -870,8 +876,11 @@ class ClSigReal(ClSig):
             # Update the complex class
             self.__class_sig_comp = ClSigCompUneven(d_nx, self.__np_d_eventtimes)
 
+        # Save to class attribute
+        self.__np_d_nx = self.__class_sig_comp.np_d_sig
+
         # Return the values
-        return self.__class_sig_comp.np_d_sig
+        return self.__np_d_nx
 
     @property
     def str_plot_desc(self):
@@ -1236,7 +1245,7 @@ class ClSigCompUneven(ClSig):
         else:
             # Format and concatenate
             self.__str_plot_desc = self.__str_plot_desc + '\n' + 'apht' + ' | ' + self.str_point_name + \
-                ' | ' + self.__str_format_dt
+                                   ' | ' + self.__str_format_dt
 
         # Figure with subplots
         fig, axs = plt.subplots(2)
@@ -1285,7 +1294,7 @@ class ClSigCompUneven(ClSig):
         # Parse inputs
         if str_plot_polar_desc is not None:
             # Update class attribute
-            self.__str_plot_polar_desc = str_plot_polar_desc
+            self.__str_plot_desc = str_plot_polar_desc
 
         # Figure with subplots
         fig, ax = plt.subplots(subplot_kw={'projection': 'polar'})
@@ -1598,6 +1607,7 @@ class ClSigFeatures:
         numpy array : list of trigger event times
 
         """
+
         return self.__lst_cl_sgs[idx].calc_nx(np_d_sig,
                                               np_d_eventtimes=np_d_eventtimes, b_verbose=b_verbose)
 
@@ -1637,7 +1647,7 @@ class ClSigFeatures:
         """
         self.__lst_cl_sgs[idx].str_eu = str_eu
 
-    def str_point_name(self, idx=0) -> object:
+    def str_point_name(self, idx=0):
         """
         Return signal point name
 
@@ -1764,7 +1774,7 @@ class ClSigFeatures:
 
         # Format and concatenate
         str_meta = self.__str_plot_desc + '\n' + str_plot_type + ' | ' + self.str_point_name(idx=idx) + \
-            ' | ' + self.__str_format_dt(idx=idx)
+                   ' | ' + self.__str_format_dt(idx=idx)
 
         return str_meta
 
@@ -1930,6 +1940,109 @@ class ClSigFeatures:
 
         plot_handle = plt.gcf()
         return [plot_handle, self.__np_d_rpm]
+
+    # Plotting method, nX plots.
+    def plt_nx(self, str_plot_nx_desc=None, b_overlay=True):
+        """
+
+        Plot out amplitude in phase in apht format
+
+        Parameters
+        ----------
+        str_plot_nx_desc : string
+            Signal metadata description for plot title. Defaults to None
+
+        b_overlay : boolean
+            Overlay the nX on top of the original signal. Defaults to True
+
+        Return values:
+        handle to the plot
+        """
+
+        # Parse inputs
+        if str_plot_nx_desc is not None:
+            # Update class attribute
+            self.__str_plot_desc = str_plot_nx_desc
+        else:
+            # Format and concatenate
+            self.__str_plot_desc = self.__str_plot_desc + '\n' + 'nx' + ' | ' + self.str_point_name() + \
+                                   ' | ' + self.__str_format_dt()
+
+        # How many plots, assuming 1 is given?
+        i_plots = 0
+        lst_nx = []
+        for idx_ch, b_obj in enumerate(self.__lst_b_active):
+
+            # The signal could be inactive
+            if b_obj:
+
+                # Setup arrays
+                np_d_nx_tb = np.zeros_like(self.np_d_sig)
+                np_d_time = self.__lst_cl_sgs[idx_ch].d_time_plot
+
+                # array of index events
+                idx_events = self.__lst_cl_sgs[idx_ch].idx_events
+
+                for idx, idx_active in enumerate(idx_events[0:-1]):
+                    # Vector phase and angle
+                    d_amp = abs(self.__lst_cl_sgs[idx_ch].np_d_nx[idx])
+                    d_ang = np.angle(self.__lst_cl_sgs[idx_ch].np_d_nx[idx])
+                    d_freq_law = 1.0 / (self.__lst_cl_sgs[idx_ch].np_d_eventtimes[idx + 1] -
+                                        self.__lst_cl_sgs[idx_ch].np_d_eventtimes[idx])
+
+                    # Define starting and ending index
+                    idx_start = int(idx_active)
+                    idx_end = int(idx_events[idx + 1]) - 1
+
+                    # Synthesize the 1X, subtracting phase to correct from balance phase to spectral phase
+                    np_d_time_nx = np_d_time[idx_start:idx_end] - np_d_time[idx_start]
+                    np_d_nx_tb[idx_start:idx_end] = d_amp * np.cos(2 * math.pi * d_freq_law * np_d_time_nx - d_ang)
+
+                lst_nx.append(np_d_nx_tb)
+                i_plots += 1
+
+        # Figure with subplots
+        fig, axs = plt.subplots(i_plots)
+
+        # A single plot returns handle to the axis which isn't iterable. Rather than branch to support
+        # this behavior, cast the single axis object to a list with one element
+        if not isinstance(axs, (list, tuple, np.ndarray)):
+            axs = [axs]
+
+        # Step through the channels
+        for idx_ch, _ in enumerate(self.__lst_cl_sgs):
+            axs[idx_ch].plot(self.__lst_cl_sgs[idx_ch].d_time_plot, self.get_np_d_sig(idx=idx_ch))
+            if b_overlay:
+                axs[idx_ch].plot(self.__lst_cl_sgs[idx_ch].d_time_plot, lst_nx[idx_ch])
+            plt.plot(self.np_d_eventtimes(idx=idx_ch),
+                     self.__lst_cl_sgs[idx_ch].np_d_sig[self.__lst_cl_sgs[idx_ch].idx_events], "ok")
+            axs[idx_ch].grid()
+            axs[idx_ch].set_xlabel("Time, " + self.__lst_cl_sgs[idx_ch].str_eu_x)
+            axs[idx_ch].set_xlim(self.__lst_cl_sgs[idx_ch].xlim_tb)
+            axs[idx_ch].set_xticks(np.linspace(self.__lst_cl_sgs[idx_ch].xlim_tb[0],
+                                               self.__lst_cl_sgs[idx_ch].xlim_tb[1],
+                                               self.__lst_cl_sgs[idx_ch].i_x_divisions_tb))
+            axs[idx_ch].xaxis.set_major_formatter(FormatStrFormatter('%.2f'))
+            axs[idx_ch].set_ylabel("Channel output, " + self.__lst_cl_sgs[idx_ch].str_eu)
+            axs[idx_ch].set_ylim(self.__lst_cl_sgs[idx_ch].ylim_tb)
+            axs[idx_ch].set_yticks(np.linspace(self.__lst_cl_sgs[idx_ch].ylim_tb[0],
+                                               self.__lst_cl_sgs[idx_ch].ylim_tb[1],
+                                               self.__lst_cl_sgs[idx_ch].i_y_divisions_tb))
+            axs[idx_ch].set_title(self.__str_plt_support_title_meta(str_plot_type='Timebase', idx=idx_ch))
+            if b_overlay:
+                axs[idx_ch].legend(['as-acquired', 'nX Vector'])
+
+        # Set the layout
+        plt.tight_layout()
+
+        # Save off the handle to the plot
+        plot_handle = plt.gcf()
+
+        # Show the plot, creating a new figure. This command resets the graphics context
+        # so the plot handle has to be saved first.
+        plt.show()
+
+        return plot_handle
 
     # Plotting method, time domain signals.
     def plt_apht(self, str_plot_apht_desc=None, idx=0):

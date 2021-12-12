@@ -33,9 +33,9 @@ class TestClSig(TestCase):
         self.d_freq_law = 10.
         self.d_test_trigger_amp = 1.0
         d_time_ext = np.linspace(0, (i_ns - 1), i_ns) / float(self.d_fs_test_trigger)
-        self.np_test_trigger = self.d_test_trigger_amp * np.sin(2 * math.pi * self.d_freq_law * d_time_ext)
+        self.np_test_trigger = self.d_test_trigger_amp * np.cos(2 * math.pi * self.d_freq_law * d_time_ext)
         self.d_test_trigger_amp_ch2 = 2.1
-        self.np_test_trigger_ch2 = self.d_test_trigger_amp_ch2 * np.sin(2 * math.pi * self.d_freq_law * d_time_ext)
+        self.np_test_trigger_ch2 = self.d_test_trigger_amp_ch2 * np.cos(2 * math.pi * self.d_freq_law * d_time_ext)
         self.d_threshold_test_trigger = 0.0
         self.d_hysteresis_test_trigger = 0.1
         self.i_direction_test_trigger_rising = 0
@@ -312,47 +312,52 @@ class TestClSig(TestCase):
                                                               d_threshold=self.d_threshold_test_trigger,
                                                               d_hysteresis=self.d_hysteresis_test_trigger,
                                                               b_verbose=False)
-        self.assertAlmostEqual(d_eventtimes_real[0], 1. / self.d_freq_law, 7)
-        self.assertAlmostEqual(d_eventtimes_real[-1] - d_eventtimes_real[-2], 1. / self.d_freq_law, 7)
         np_d_nx = class_test_real.calc_nx(np_d_sig=class_test_real.np_d_sig, np_d_eventtimes=d_eventtimes_real,
                                           b_verbose=False)
         self.assertAlmostEqual(np.abs(np_d_nx[0]), self.d_test_trigger_amp, 2)
-        self.assertLess(np.rad2deg(np.angle(np_d_nx[0])) - 90.0, 1.0)
-        self.assertAlmostEqual(np.abs(np_d_nx[-1]), self.d_test_trigger_amp, 2)
-        self.assertLess(np.rad2deg(np.angle(np_d_nx[-1])) - 90.0, 1.0)
+        class_test_real.str_plot_desc = 'test_plt_apht | ClSigReal | Initial call'
+        class_test_real.plt_apht()
+        class_test_real.str_plot_desc = 'test_plt_apht | ClSigReal | Test call'
+        class_test_real.ylim_apht_mag = [-0.1, 1.1]
+        class_test_real.plt_apht()
 
-        # Signal feature class test using same input as the real signal class above
+        # Test base class
+        class_test_uneven = appvib.ClSigCompUneven(np_d_nx, class_test_real.np_d_eventtimes, str_eu='cat whiskers',
+                                                   str_point_name='TUNA')
+        class_test_uneven.plt_apht()
+
+        # Signal feature class test for apht plots
         class_test_sig_features = appvib.ClSigFeatures(self.np_test_trigger, self.d_fs_test_trigger)
         d_eventtimes_sig = class_test_sig_features.np_d_est_triggers(np_d_sig=class_test_sig_features.np_d_sig,
                                                                      i_direction=self.i_direction_test_trigger_rising,
                                                                      d_threshold=self.d_threshold_test_trigger,
                                                                      d_hysteresis=self.d_hysteresis_test_trigger,
                                                                      b_verbose=False, idx=0)
-        self.assertAlmostEqual(d_eventtimes_sig[0], 1. / self.d_freq_law, 7)
-        self.assertAlmostEqual(d_eventtimes_sig[-1] - d_eventtimes_sig[-2], 1. / self.d_freq_law, 7)
+        self.assertAlmostEqual(d_eventtimes_sig[1] - d_eventtimes_sig[0], 1. / self.d_freq_law, 7)
         np_d_nx_sig = class_test_sig_features.calc_nx(np_d_sig=class_test_sig_features.np_d_sig,
-                                                      np_d_eventtimes=d_eventtimes_real,
+                                                      np_d_eventtimes=d_eventtimes_sig,
                                                       b_verbose=False, idx=0)
         self.assertAlmostEqual(np.abs(np_d_nx_sig[0]), self.d_test_trigger_amp, 2)
-        self.assertLess(np.rad2deg(np.angle(np_d_nx_sig[0])) - 90.0, 1.0)
-        self.assertAlmostEqual(np.abs(np_d_nx_sig[-1]), self.d_test_trigger_amp, 2)
-        self.assertLess(np.rad2deg(np.angle(np_d_nx_sig[-1])) - 90.0, 1.0)
+        class_test_sig_features.plt_apht(str_plot_apht_desc='test_nX_est ClSigFeatures')
 
-        # This call structure surfaced a reference bug
-        class_test_sig_features = appvib.ClSigFeatures(self.np_d_test_data_000_Ch1,
-                                                       self.d_fs_data_000)
-        class_test_sig_features.idx_add_sig(np_d_sig=self.np_d_test_data_000_Ch2,
-                                            d_fs=self.d_fs_data_000, str_point_name='CH2')
-        class_test_sig_features.np_d_est_triggers(np_d_sig=class_test_sig_features.np_d_sig,
-                                                  i_direction=self.i_direction_test_000_trigger_slope,
-                                                  d_threshold=self.d_threshold_test_000)
-        class_test_sig_features.calc_nx(np_d_sig=class_test_sig_features.np_d_sig,
-                                        np_d_eventtimes=class_test_sig_features.np_d_eventtimes(),
-                                        b_verbose=False, idx=0)
-        class_test_sig_features.calc_nx(np_d_sig=class_test_sig_features.get_np_d_sig(idx=1),
-                                        np_d_eventtimes=class_test_sig_features.np_d_eventtimes(),
-                                        b_verbose=False, idx=0)
-        class_test_sig_features.plt_eventtimes(idx_eventtimes=0, idx=1)
+    def test_plt_nx(self):
+
+        # Signal feature class test for nx plots
+        class_test_sig_features = appvib.ClSigFeatures(self.np_test_trigger, self.d_fs_test_trigger)
+        d_eventtimes_sig = class_test_sig_features.np_d_est_triggers(np_d_sig=class_test_sig_features.np_d_sig,
+                                                                     i_direction=self.i_direction_test_trigger_rising,
+                                                                     d_threshold=self.d_threshold_test_trigger,
+                                                                     d_hysteresis=self.d_hysteresis_test_trigger,
+                                                                     b_verbose=False, idx=0)
+        self.assertAlmostEqual(d_eventtimes_sig[1] - d_eventtimes_sig[0], 1. / self.d_freq_law, 7)
+        class_test_sig_features.str_plot_desc = 'test_plt_nx ClSigFeatures eventtimes'
+        class_test_sig_features.plt_eventtimes()
+
+        np_d_nx_sig = class_test_sig_features.calc_nx(np_d_sig=class_test_sig_features.np_d_sig,
+                                                      np_d_eventtimes=d_eventtimes_sig,
+                                                      b_verbose=False, idx=0)
+        self.assertAlmostEqual(np.abs(np_d_nx_sig[0]), self.d_test_trigger_amp, 2)
+        class_test_sig_features.plt_nx(str_plot_nx_desc='test_plt_nx ClSigFeatures')
 
     def test_plt_apht(self):
 
@@ -384,7 +389,7 @@ class TestClSig(TestCase):
                                                                      d_threshold=self.d_threshold_test_trigger,
                                                                      d_hysteresis=self.d_hysteresis_test_trigger,
                                                                      b_verbose=False, idx=0)
-        self.assertAlmostEqual(d_eventtimes_sig[0], 1. / self.d_freq_law, 7)
+        self.assertAlmostEqual(d_eventtimes_sig[1]-d_eventtimes_sig[0], 1. / self.d_freq_law, 7)
         np_d_nx_sig = class_test_sig_features.calc_nx(np_d_sig=class_test_real.np_d_sig,
                                                       np_d_eventtimes=d_eventtimes_real,
                                                       b_verbose=False, idx=0)
