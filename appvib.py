@@ -691,7 +691,7 @@ class ClSigReal(ClSig):
             if self.__i_direction == 0:
 
                 # Define the absolute hysteretic value, rising
-                d_hysteresis_abs = self.d_threshold - d_hysteresis
+                d_hysteresis_abs = self.d_threshold - self.d_hysteresis
                 if b_verbose:
                     print('d_hysteresis_abs: ' + '%0.4f' % d_hysteresis_abs)
 
