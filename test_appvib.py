@@ -82,6 +82,16 @@ class TestClSig(TestCase):
         self.i_direction_test_000_trigger_slope = 0
         self.d_threshold_test_000 = 0.125
 
+        # Test data set 001 : This one caused the nx_est to fail, no vectors
+        self.str_filename_001 = 'test_appvib_data_001.csv'
+        self.df_test_001 = pd.read_csv(self.str_filename_001, header=None, skiprows=1,
+                                       names=['Ch1', 'Ch2', 'FS'])
+        self.np_d_test_data_001_Ch1 = self.df_test_001.Ch1
+        self.np_d_test_data_001_Ch2 = self.df_test_001.Ch2
+        self.d_fs_data_001 = self.df_test_001.FS[0]
+        self.i_direction_test_001_trigger_slope = 0
+        self.d_threshold_test_001 = 0.125
+
     def test_b_complex(self):
         # Is the real-valued class setting the flags correctly?
         class_test_real = appvib.ClSigReal(self.np_test, self.d_fs)
@@ -342,7 +352,7 @@ class TestClSig(TestCase):
 
     def test_plt_nx(self):
 
-        # Signal feature class test for nx plots
+        # Signal feature class test for nx plots, start with implicit calls
         class_test_sig_features = appvib.ClSigFeatures(self.np_test_trigger, self.d_fs_test_trigger)
         class_test_sig_features.plt_nx()
         d_eventtimes_sig = class_test_sig_features.np_d_est_triggers(np_d_sig=class_test_sig_features.np_d_sig,
@@ -351,6 +361,8 @@ class TestClSig(TestCase):
                                                                      d_hysteresis=self.d_hysteresis_test_trigger,
                                                                      b_verbose=False)
         self.assertAlmostEqual(d_eventtimes_sig[1] - d_eventtimes_sig[0], 1. / self.d_freq_law, 7)
+
+        # More plots and more implicit calls
         class_test_sig_features.str_plot_desc = 'test_plt_nx ClSigFeatures eventtimes'
         class_test_sig_features.plt_eventtimes()
         d_eventtimes_sig = class_test_sig_features.np_d_est_triggers(np_d_sig=class_test_sig_features.np_d_sig,
@@ -361,13 +373,26 @@ class TestClSig(TestCase):
         # This sequence caught mis-management of plot titles.
         class_test_sig_features.plt_nx()
         class_test_sig_features.plt_nx()
-        class_test_sig_features.plt_nx(str_plot_desc='test_plt_nx ClSigFeatures Implicit call')
+        class_test_sig_features.plt_nx(str_plot_desc='test_plt_nx ClSigFeatures Implicit call complete')
 
         np_d_nx_sig = class_test_sig_features.calc_nx(np_d_sig=class_test_sig_features.np_d_sig,
                                                       np_d_eventtimes=d_eventtimes_sig,
                                                       b_verbose=False, idx=0)
         self.assertAlmostEqual(np.abs(np_d_nx_sig[0]), self.d_test_trigger_amp, 2)
-        class_test_sig_features.plt_nx(str_plot_desc='test_plt_nx ClSigFeatures Explicit call')
+        class_test_sig_features.plt_nx(str_plot_desc='test_plt_nx ClSigFeatures Explicit call complete')
+
+    # Tests targeted to behavior discovered in specific data sets
+    def test_plt_nx_001(self):
+
+        # This data set caused no vectors to be found, re-worked
+        # to handle this gracefully
+        class_001 = appvib.ClSigFeatures(self.np_d_test_data_001_Ch1, self.d_fs_data_001)
+        class_001.idx_add_sig(self.np_d_test_data_001_Ch2, self.d_fs_data_001, str_point_name='CH2')
+        np_d_eventtimes = class_001.np_d_est_triggers(np_d_sig=class_001.np_d_sig,
+                                                      i_direction=self.i_direction_test_001_trigger_slope,
+                                                      d_threshold=self.d_threshold_test_001)
+        print(np_d_eventtimes)
+        class_001.plt_nx(str_plot_desc='Unique eventtimes and nx vectors')
 
     def test_plt_apht(self):
 

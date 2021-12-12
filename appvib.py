@@ -870,7 +870,8 @@ class ClSigReal(ClSig):
                           ' | %2.6f' % np.rad2deg(np.angle(d_nx[idx])) + ' deg.')
 
             # Pad the end
-            d_nx[-1] = d_nx[-2]
+            if len(d_nx) > 0:
+                d_nx[-1] = d_nx[-2]
 
             # Update calculation status
             self.__b_is_stale_nx = False
@@ -1159,8 +1160,11 @@ class ClSigCompUneven(ClSig):
         if len(ylim_mag) == 2:
             self.__ylim_mag = ylim_mag
         else:
-            self.__ylim_mag = np.array(
-                [1.05 * np.max(np.abs(self.__np_d_sig)), 0.95 * np.min(np.abs(self.__np_d_sig))])
+
+            # Only change the limits if the signal is valid
+            if len(self.__np_d_sig) > 0:
+                self.__ylim_mag = np.array(
+                    [1.05 * np.max(np.abs(self.__np_d_sig)), 0.95 * np.min(np.abs(self.__np_d_sig))])
 
     def set_ylim_tb(self, ylim_tb):
         """Y limits for magnitude timebase plot"""
@@ -1168,8 +1172,11 @@ class ClSigCompUneven(ClSig):
         if len(ylim_tb) == 2:
             self.__ylim_tb = ylim_tb
         else:
-            self.__ylim_tb = np.array(
-                [np.max(np.abs(self.__np_d_sig)), np.abs(np.min(self.__np_d_sig))])
+
+            # Only change limits if the signal is valid
+            if len(self.__np_d_sig) > 0:
+                self.__ylim_tb = np.array(
+                    [np.max(np.abs(self.__np_d_sig)), np.abs(np.min(self.__np_d_sig))])
 
     @property
     def str_eu(self):
@@ -1550,7 +1557,7 @@ class ClSigFeatures:
         return self.__lst_cl_sgs[idx].np_d_eventtimes
 
     # Estimate triggers for speed
-    def np_d_est_triggers(self, np_d_sig, i_direction=0, d_threshold=0,
+    def np_d_est_triggers(self, np_d_sig, i_direction=0, d_threshold=0.0,
                           d_hysteresis=0.1, b_verbose=False, idx=0):
         """
         This method estimates speed by identifying trigger points in time,
@@ -1947,18 +1954,20 @@ class ClSigFeatures:
     def plt_nx(self, str_plot_desc=None, b_overlay=True):
         """
 
-        Plot out amplitude in phase in apht format
+        Plot out the synthesized nx and timebase. This call assumes that the first
+        signal (idx=0) has the eventtimes that will be applied to all signals in
+        the object for nx vector estimation.
 
         Parameters
         ----------
         str_plot_desc : string
             Signal metadata description for plot title. Defaults to None
-
         b_overlay : boolean
             Overlay the nX on top of the original signal. Defaults to True
 
         Return values:
         handle to the plot
+
         """
 
         # Parse inputs
