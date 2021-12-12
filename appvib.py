@@ -1978,6 +1978,10 @@ class ClSigFeatures:
         # In this method, the eventtimes are always fixed to the first signal (idx=0)
         idx_event_source = 0
 
+        # array of index events
+        idx_events = self.__lst_cl_sgs[idx_event_source].idx_events
+        np_d_eventtimes = self.__lst_cl_sgs[idx_event_source].np_d_eventtimes
+
         # How many plots, assuming 1 is given?
         i_plots = 0
         lst_nx = []
@@ -1990,15 +1994,16 @@ class ClSigFeatures:
                 np_d_nx_tb = np.zeros_like(self.np_d_sig)
                 np_d_time = self.__lst_cl_sgs[idx_ch].d_time_plot
 
-                # array of index events
-                idx_events = self.__lst_cl_sgs[idx_ch].idx_events
-
                 for idx, idx_active in enumerate(idx_events[0:-1]):
+
+                    # Use the eventtimes from the first signal to calculate the nx vectors
+                    # for this signal
+                    self.__lst_cl_sgs[idx_ch].calc_nx(np_d_eventtimes=np_d_eventtimes)
+
                     # Vector phase and angle
                     d_amp = abs(self.__lst_cl_sgs[idx_ch].np_d_nx[idx])
                     d_ang = np.angle(self.__lst_cl_sgs[idx_ch].np_d_nx[idx])
-                    d_freq_law = 1.0 / (self.__lst_cl_sgs[idx_ch].np_d_eventtimes[idx + 1] -
-                                        self.__lst_cl_sgs[idx_ch].np_d_eventtimes[idx])
+                    d_freq_law = 1.0 / (np_d_eventtimes[idx + 1] - np_d_eventtimes[idx])
 
                     # Define starting and ending index
                     idx_start = int(idx_active)
@@ -2025,7 +2030,7 @@ class ClSigFeatures:
             if b_overlay:
                 axs[idx_ch].plot(self.__lst_cl_sgs[idx_ch].d_time_plot, lst_nx[idx_ch])
             axs[idx_ch].plot(self.np_d_eventtimes(idx=idx_event_source),
-                     self.__lst_cl_sgs[idx_ch].np_d_sig[self.__lst_cl_sgs[idx_event_source].idx_events], "ok")
+                             lst_nx[idx_ch][self.__lst_cl_sgs[idx_event_source].idx_events], "ok")
             axs[idx_ch].grid()
             axs[idx_ch].set_xlabel("Time, " + self.__lst_cl_sgs[idx_ch].str_eu_x)
             axs[idx_ch].set_xlim(self.__lst_cl_sgs[idx_ch].xlim_tb)
