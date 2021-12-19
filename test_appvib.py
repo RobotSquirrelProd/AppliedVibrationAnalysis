@@ -402,14 +402,21 @@ class TestClSig(TestCase):
     # Validate phase
     def test_plt_nx_phase(self):
 
+        # Test phase for a single channel
         class_phase = appvib.ClSigFeatures(self.np_test_trigger_ph, d_fs=self.d_fs_test_trigger_ph)
+        class_phase.np_d_est_triggers(class_phase.np_d_sig, i_direction=self.i_direction_test_trigger_rising,
+                                      d_threshold=self.np_test_trigger_ph[0])
         np_d_eventtimes = class_phase.np_d_eventtimes()
-        class_phase.calc_nx(class_phase.np_d_sig, np_d_eventtimes)
+        np_d_nx = class_phase.calc_nx(class_phase.np_d_sig, np_d_eventtimes)
+        class_phase.str_plot_desc = 'test_plt_nx_phase | Single channel'
+        class_phase.plt_eventtimes()
         class_phase.plt_nx()
+        self.assertAlmostEqual(np.angle(np_d_nx[0]), self.d_phase_ph_ch1, 1)
         class_phase.idx_add_sig(np_d_sig=self.np_test_trigger_ph_ch2, d_fs=self.d_fs_test_trigger_ph,
                                 str_point_name='CH2')
         np_d_eventtimes = class_phase.np_d_eventtimes()
-        class_phase.calc_nx(class_phase.np_d_sig, np_d_eventtimes)
+        np_d_nx = class_phase.calc_nx(class_phase.np_d_sig, np_d_eventtimes, idx=0)
+        self.assertAlmostEqual(np.rad2deg(np.angle(np_d_nx[0])), np.rad2deg(self.d_phase_ph_ch1), 0)
         class_phase.plt_nx()
 
     # Tests targeted to behavior discovered in specific data sets

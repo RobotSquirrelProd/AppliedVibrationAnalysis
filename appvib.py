@@ -799,7 +799,7 @@ class ClSigReal(ClSig):
         This method estimates the 1X vectors, given trigger event times. The
         phase reported in this estimation is intended to be used for balancing
         so phase lag is positive (spectral phase lag is negative). Since this is 
-        implemented in the real signal class, the method assumes the signal in
+        implemented in the real signal class, the method assumes the signal
         is also real. 
 
         Parameters
@@ -858,10 +858,14 @@ class ClSigReal(ClSig):
                 # of points to scale.
                 d_np_y = d_np_y / float(i_ns_rfft)
 
-                # Grab the first element since it is the best estimate
+                # Grab the second bin since it is the best estimate
                 # of the sinusoid with the same frequency as the
                 # spacing of eventtimes
                 d_nx[idx] = d_np_y[1] * (-1.0 + 0.0j)
+
+                # This is needed to correct for offset introduced by a non-zero threshold setting
+                d_cor = -2.0 * (np.angle(d_nx[idx]) - np.deg2rad(90.0))
+                d_nx[idx] = d_nx[idx] * np.exp(d_cor*1j)
 
                 # Print summary
                 if b_verbose:
@@ -1879,6 +1883,39 @@ class ClSigFeatures:
 
         return [plot_handle, spec[0], spec[1]]
 
+    # Plotting methods including eventtimes need different
+    # x-axis limits methods
+    def __get_x_limit_events(self, idx_eventtimes=0, idx=0):
+        """
+        This method returns x-limits modified to actual events
+
+        Parameters
+        ----------
+        idx_eventtimes: integer
+            Index to signal of interest
+        idx : integer
+            Index of signal to be plotted. Defaults to 0 (first signal)
+
+        Returns
+        -------
+            list, double : [x-limit start, x-limit end]
+
+        """
+
+        # The x-axis needs to be bounded by either x-limits or eventtimes, but should
+        # not display data outside the events
+        np_d_eventtimes = self.np_d_eventtimes(idx=idx_eventtimes)
+
+        d_xlim_start = self.__lst_cl_sgs[idx].xlim_tb[0]
+        if self.__lst_cl_sgs[idx].xlim_tb[0] < np_d_eventtimes[0]:
+            d_xlim_start = np_d_eventtimes[0]
+
+        d_xlim_end = self.__lst_cl_sgs[idx].xlim_tb[1]
+        if self.__lst_cl_sgs[idx].xlim_tb[1] > np_d_eventtimes[-1]:
+            d_xlim_end = np_d_eventtimes[-1]
+
+        return [d_xlim_start, d_xlim_end]
+
     # Plotting method for the eventtimes
     def plt_eventtimes(self, idx_eventtimes=0, idx=0):
         """
@@ -1893,19 +1930,26 @@ class ClSigFeatures:
         Returns
         -------
         list: [handle to the plot, np array of eventtimes]
+
         """
+
+        # The x-axis needs to be bounded by either x-limits or eventtimes, but should
+        # not display data outside the events
+        np_d_eventtimes = self.np_d_eventtimes(idx=idx_eventtimes)
+        [d_xlim_start, d_xlim_end] = self.__get_x_limit_events(idx_eventtimes=idx_eventtimes, idx=idx)
 
         # Put up the the plot time
         plt.figure()
         plt.plot(self.__lst_cl_sgs[idx].d_time, self.__lst_cl_sgs[idx].np_d_sig)
-        plt.plot(self.np_d_eventtimes(idx=idx_eventtimes),
+        plt.plot(np_d_eventtimes,
                  self.__lst_cl_sgs[idx].np_d_sig[self.__lst_cl_sgs[idx_eventtimes].idx_events], "ok")
         plt.grid(True)
 
         plt.xlabel("Time, " + self.__lst_cl_sgs[idx].str_eu_x)
-        plt.xlim(self.__lst_cl_sgs[idx].xlim_tb)
-        plt.xticks(np.linspace(self.__lst_cl_sgs[idx].xlim_tb[0],
-                               self.__lst_cl_sgs[idx].xlim_tb[1],
+        # plt.xlim(self.__lst_cl_sgs[idx].xlim_tb)
+        plt.xlim([d_xlim_start, d_xlim_end])
+        plt.xticks(np.linspace(d_xlim_start,
+                               d_xlim_end,
                                self.__lst_cl_sgs[idx].i_x_divisions_tb))
         plt.gca().xaxis.set_major_formatter(FormatStrFormatter('%.2f'))
         plt.ylabel("Amplitude, " + self.__lst_cl_sgs[idx].str_eu)
@@ -1994,6 +2038,7 @@ class ClSigFeatures:
                 np_d_nx_tb = np.zeros_like(self.np_d_sig)
                 np_d_time = self.__lst_cl_sgs[idx_ch].d_time_plot
 
+                # Synthesize the nx vector for each revolution
                 for idx, idx_active in enumerate(idx_events[0:-1]):
 
                     # Use the eventtimes from the first signal to calculate the nx vectors
@@ -2007,10 +2052,12 @@ class ClSigFeatures:
 
                     # Define starting and ending index
                     idx_start = int(idx_active)
-                    idx_end = int(idx_events[idx + 1]) - 1
+                    idx_end = int(idx_events[idx + 1]) + 1
 
                     # Synthesize the 1X, subtracting phase to correct from balance phase to spectral phase
                     np_d_time_nx = np_d_time[idx_start:idx_end] - np_d_time[idx_start]
+
+                    # Synthesize the 1X, subtracting phase to correct from balance phase to spectral phase
                     np_d_nx_tb[idx_start:idx_end] = d_amp * np.cos(2 * math.pi * d_freq_law * np_d_time_nx - d_ang)
 
                 lst_nx.append(np_d_nx_tb)
@@ -2029,13 +2076,16 @@ class ClSigFeatures:
             axs[idx_ch].plot(self.__lst_cl_sgs[idx_ch].d_time_plot, self.get_np_d_sig(idx=idx_ch))
             if b_overlay:
                 axs[idx_ch].plot(self.__lst_cl_sgs[idx_ch].d_time_plot, lst_nx[idx_ch])
+
             axs[idx_ch].plot(self.np_d_eventtimes(idx=idx_event_source),
                              lst_nx[idx_ch][self.__lst_cl_sgs[idx_event_source].idx_events], "ok")
+
             axs[idx_ch].grid()
             axs[idx_ch].set_xlabel("Time, " + self.__lst_cl_sgs[idx_ch].str_eu_x)
-            axs[idx_ch].set_xlim(self.__lst_cl_sgs[idx_ch].xlim_tb)
-            axs[idx_ch].set_xticks(np.linspace(self.__lst_cl_sgs[idx_ch].xlim_tb[0],
-                                               self.__lst_cl_sgs[idx_ch].xlim_tb[1],
+            [d_xlim_start, d_xlim_end] = self.__get_x_limit_events(idx_eventtimes=idx_event_source, idx=idx_ch)
+            axs[idx_ch].set_xlim([d_xlim_start, d_xlim_end])
+            axs[idx_ch].set_xticks(np.linspace(d_xlim_start,
+                                               d_xlim_end,
                                                self.__lst_cl_sgs[idx_ch].i_x_divisions_tb))
             axs[idx_ch].xaxis.set_major_formatter(FormatStrFormatter('%.2f'))
             axs[idx_ch].set_ylabel("Channel output, " + self.__lst_cl_sgs[idx_ch].str_eu)
@@ -2043,7 +2093,7 @@ class ClSigFeatures:
             axs[idx_ch].set_yticks(np.linspace(self.__lst_cl_sgs[idx_ch].ylim_tb[0],
                                                self.__lst_cl_sgs[idx_ch].ylim_tb[1],
                                                self.__lst_cl_sgs[idx_ch].i_y_divisions_tb))
-            axs[idx_ch].set_title(self.__str_plt_support_title_meta(str_plot_type='Timebase', idx=idx_ch))
+            axs[idx_ch].set_title(self.__str_plt_support_title_meta(str_plot_type='nX Timebase', idx=idx_ch))
             if b_overlay:
                 axs[idx_ch].legend(['as-acquired', 'nX Vector'])
 
