@@ -9,8 +9,39 @@ from scipy.fft import rfft, rfftfreq
 from scipy.interpolate import interp1d
 from datetime import datetime
 from dateutil import tz
-
 import abc as abc
+
+
+def get_trace(i_trace):
+     """
+     Global function that returns trace colors
+
+     Parameters
+     ----------
+         i_trace : integer
+             0-based index to the trace on the plot
+
+     Returns
+     -------
+         str_color : string with the color code to use
+
+     """
+     match i_trace:
+         case 0:
+             # Blue hue
+             return "619fccff"
+         case 1:
+             # Red hue
+             return "af4d57ff"
+         case 2:
+             # Light green hue
+             return "9dae87ff"
+         case 3:
+             # Light orange hue
+             return "d99f77ff"
+         case _:
+             # Charcoal
+             return "1a1a1aff"
 
 
 class ClSig(abc.ABC):

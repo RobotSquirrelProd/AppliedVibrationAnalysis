@@ -239,15 +239,18 @@ class TestClSig(TestCase):
     def test_plt_sigs(self):
         # Signal feature class check of plotting on instantiation
         class_test_sig_features = appvib.ClSigFeatures(self.np_test, self.d_fs)
+        class_test_sig_features.str_plot_desc = 'test_plt_sigs | CLSigFeatures | Defaults'
         class_test_sig_features.plt_sigs()
 
         # Signal feature class, second signal auto y-limits
         idx_new = class_test_sig_features.idx_add_sig(self.np_test_ch2, self.d_fs, str_point_name='CH2')
+        class_test_sig_features.str_plot_desc = 'test_plt_sigs | CLSigFeatures | 2nd Point'
         self.assertEqual(idx_new, 1, msg='Failed to return correct index')
         class_test_sig_features.plt_sigs()
 
         # Signal feature class, second signal manual y-limits
         class_test_sig_features.ylim_tb(ylim_tb_in=[0.0, 16.0], idx=0)
+        class_test_sig_features.str_plot_desc = 'test_plt_sigs | CLSigFeatures | 2nd Point, y-limits'
         class_test_sig_features.plt_sigs()
 
     def test_plt_spec(self):
