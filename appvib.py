@@ -13,7 +13,7 @@ import abc as abc
 
 
 def get_trace(i_trace):
-     """
+    """
      Global function that returns trace colors
 
      Parameters
@@ -26,22 +26,22 @@ def get_trace(i_trace):
          str_color : string with the color code to use
 
      """
-     match i_trace:
-         case 0:
-             # Blue hue
-             return "619fccff"
-         case 1:
-             # Red hue
-             return "af4d57ff"
-         case 2:
-             # Light green hue
-             return "9dae87ff"
-         case 3:
-             # Light orange hue
-             return "d99f77ff"
-         case _:
-             # Charcoal
-             return "1a1a1aff"
+    match i_trace:
+        case 0:
+            # Blue hue
+            return "#619fccff"
+        case 1:
+            # Red hue
+            return "#af4d57ff"
+        case 2:
+            # Light green hue
+            return "#9dae87ff"
+        case 3:
+            # Light orange hue
+            return "#d99f77ff"
+        case _:
+            # Charcoal
+            return "#1a1a1aff"
 
 
 class ClSig(abc.ABC):
@@ -896,7 +896,7 @@ class ClSigReal(ClSig):
 
                 # This is needed to correct for offset introduced by a non-zero threshold setting
                 d_cor = -2.0 * (np.angle(d_nx[idx]) - np.deg2rad(90.0))
-                d_nx[idx] = d_nx[idx] * np.exp(d_cor*1j)
+                d_nx[idx] = d_nx[idx] * np.exp(d_cor * 1j)
 
                 # Print summary
                 if b_verbose:
@@ -1295,7 +1295,7 @@ class ClSigCompUneven(ClSig):
         fig, axs = plt.subplots(2)
 
         # Plot the phase
-        axs[0].plot(self.__np_d_time, np.rad2deg(np.angle(self.__np_d_sig)))
+        axs[0].plot(self.__np_d_time, np.rad2deg(np.angle(self.__np_d_sig)), color=get_trace(0))
         axs[0].grid()
         axs[0].set_xlabel("Time, seconds")
         axs[0].set_ylabel("Phase, degrees")
@@ -1303,7 +1303,7 @@ class ClSigCompUneven(ClSig):
         axs[0].set_title(self.__str_plot_desc)
 
         # Plot the magnitude
-        axs[1].plot(self.__np_d_time, np.abs(self.__np_d_sig))
+        axs[1].plot(self.__np_d_time, np.abs(self.__np_d_sig), color=get_trace(0))
         axs[1].grid()
         axs[1].set_xlabel("Time, seconds")
         axs[1].set_ylabel("Magnitude, " + self.str_eu)
@@ -1344,7 +1344,7 @@ class ClSigCompUneven(ClSig):
         fig, ax = plt.subplots(subplot_kw={'projection': 'polar'})
 
         # Polar plot
-        ax.plot(np.angle(self.__np_d_sig), np.abs(self.__np_d_sig))
+        ax.plot(np.angle(self.__np_d_sig), np.abs(self.__np_d_sig), color=get_trace(0))
         ax.set_rmax(np.max(self.ylim_mag))
         d_tick_radial = np.round(np.max(self.ylim_mag) / 4.0, decimals=1)
         ax.set_rticks([d_tick_radial, d_tick_radial * 2.0, d_tick_radial * 3.0, d_tick_radial * 4.0])
@@ -1846,9 +1846,12 @@ class ClSigFeatures:
 
         # Step through the channels
         for idx_ch, _ in enumerate(self.__lst_cl_sgs):
-            axs[idx_ch].plot(self.__lst_cl_sgs[idx_ch].d_time_plot, self.get_np_d_sig(idx=idx_ch))
-            axs[idx_ch].plot(self.__lst_cl_sgs[idx_ch].d_time_plot, self.__lst_cl_sgs[idx_ch].np_d_sig_filt_sg)
-            axs[idx_ch].plot(self.__lst_cl_sgs[idx_ch].d_time_plot, self.__lst_cl_sgs[idx_ch].np_d_sig_filt_butter)
+            axs[idx_ch].plot(self.__lst_cl_sgs[idx_ch].d_time_plot, self.get_np_d_sig(idx=idx_ch),
+                             color=get_trace(0), linewidth=3.5)
+            axs[idx_ch].plot(self.__lst_cl_sgs[idx_ch].d_time_plot, self.__lst_cl_sgs[idx_ch].np_d_sig_filt_sg,
+                             color=get_trace(1), linewidth=2.5)
+            axs[idx_ch].plot(self.__lst_cl_sgs[idx_ch].d_time_plot, self.__lst_cl_sgs[idx_ch].np_d_sig_filt_butter,
+                             color=get_trace(2), linewidth=1.5)
             axs[idx_ch].grid()
             axs[idx_ch].set_xlabel("Time, " + self.__lst_cl_sgs[idx_ch].str_eu_x)
             axs[idx_ch].set_xlim(self.__lst_cl_sgs[idx_ch].xlim_tb)
@@ -1888,7 +1891,7 @@ class ClSigFeatures:
         spec = self.__lst_cl_sgs[0].d_fft_real()
         d_mag = np.abs(spec[1])
         plt.figure()
-        plt.plot(spec[0], d_mag)
+        plt.plot(spec[0], d_mag, color=get_trace(0))
         plt.grid()
         plt.xlabel("Frequency, hertz")
         plt.ylabel("Channel amplitude, " + self.__lst_cl_sgs[0].str_eu)
@@ -1951,7 +1954,8 @@ class ClSigFeatures:
     def plt_eventtimes(self, idx_eventtimes=0, idx=0):
         """
         Plot a signal and overlay event data in timebase format.
-        Parameter
+
+        Parameters
         ---------
         idx_eventtimes : integer
             Index of signal eventtimes. Defaults to 0 (first signal)
@@ -1971,7 +1975,7 @@ class ClSigFeatures:
 
         # Put up the the plot time
         plt.figure()
-        plt.plot(self.__lst_cl_sgs[idx].d_time, self.__lst_cl_sgs[idx].np_d_sig)
+        plt.plot(self.__lst_cl_sgs[idx].d_time, self.__lst_cl_sgs[idx].np_d_sig, color=get_trace(0))
         plt.plot(np_d_eventtimes,
                  self.__lst_cl_sgs[idx].np_d_sig[self.__lst_cl_sgs[idx_eventtimes].idx_events], "ok")
         plt.grid(True)
@@ -2001,11 +2005,24 @@ class ClSigFeatures:
         return [plot_handle, self.np_d_eventtimes(idx=idx_eventtimes)]
 
     # Plotting method for the eventtimes, interpreted as RPM
-    def plt_rpm(self):
-        """Plot rpm data in time.
+    def plt_rpm(self, idx_eventtimes=0, idx=0, d_events_per_rev=1.0):
+        """
+        Plot rpm data in timebase format.
 
-        Return values:
+        Parameters
+        ---------
+        idx_eventtimes : integer
+            Index of signal eventtimes. Defaults to 0 (first signal)
+        idx : integer
+            Index of signal to be plotted. Defaults to 0 (first signal)
+        d_events_per_rev : double
+            Number of events per revolution. It must be a real value to for hunting tooth gear
+            combinations. Defaults to 1
+
+        Returns
+        -------
         list: [handle to the plot, np array of RPM values]
+
         """
 
         # Put up the the plot time
@@ -2013,16 +2030,37 @@ class ClSigFeatures:
 
         ax2 = ax1.twinx()
 
-        ax1.plot(self.__lst_cl_sgs[0].d_time, self.np_d_sig)
-        ax2.plot(self.np_d_eventtimes, self.__np_d_rpm, "ok")
+        # Local variables  to simplify code; update RPM trend
+        np_d_eventtimes = self.np_d_eventtimes(idx=idx_eventtimes)
+        self.d_est_rpm(d_events_per_rev=d_events_per_rev, idx_eventtimes=idx_eventtimes)
+        [d_xlim_start, d_xlim_end] = self.__get_x_limit_events(idx_eventtimes=idx_eventtimes, idx=idx)
+
+        lns1 = ax1.plot(self.__lst_cl_sgs[idx].d_time, self.np_d_sig, color=get_trace(0), label='Signal')
+        lns2 = ax2.plot(np_d_eventtimes, self.__np_d_rpm, color=get_trace(1), label='RPM', marker='.', ms=20)
+        plt.grid(True)
         ax1.set_xlabel('Time, seconds')
+        plt.xlim([d_xlim_start, d_xlim_end])
+        plt.xticks(np.linspace(d_xlim_start,
+                               d_xlim_end,
+                               self.__lst_cl_sgs[idx].i_x_divisions_tb))
+        plt.gca().xaxis.set_major_formatter(FormatStrFormatter('%.2f'))
         ax1.set_ylabel('Amplitude, ' + self.__lst_cl_sgs[0].str_eu)
         ax2.set_ylabel('Event speed, RPM')
-        plt.legend(['as-acquired', 'RPM'])
+        ax2.set_ylim([0, round(1.05*np.max(self.__np_d_rpm))])
+
+        # Aggregate the plot handles and labels
+        lns = lns1 + lns2
+        labs = [l.get_label() for l in lns]
+        ax2.legend(lns, labs)
+
         plt.title(self.__str_plt_support_title_meta(str_plot_type='RPM vs. time', idx=0))
+
+        # Save off the handle
+        plot_handle = plt.gcf()
+
+        # show the plot
         plt.show()
 
-        plot_handle = plt.gcf()
         return [plot_handle, self.__np_d_rpm]
 
     # Plotting method, nX plots.
@@ -2071,7 +2109,6 @@ class ClSigFeatures:
 
                 # Synthesize the nx vector for each revolution
                 for idx, idx_active in enumerate(idx_events[0:-1]):
-
                     # Use the eventtimes from the first signal to calculate the nx vectors
                     # for this signal
                     self.__lst_cl_sgs[idx_ch].calc_nx(np_d_eventtimes=np_d_eventtimes)
@@ -2102,11 +2139,11 @@ class ClSigFeatures:
         if not isinstance(axs, (list, tuple, np.ndarray)):
             axs = [axs]
 
-        # Step through the channels
+        # Step through the channels and plot out the signals
         for idx_ch, _ in enumerate(self.__lst_cl_sgs):
-            axs[idx_ch].plot(self.__lst_cl_sgs[idx_ch].d_time_plot, self.get_np_d_sig(idx=idx_ch))
+            axs[idx_ch].plot(self.__lst_cl_sgs[idx_ch].d_time_plot, self.get_np_d_sig(idx=idx_ch), color=get_trace(0))
             if b_overlay:
-                axs[idx_ch].plot(self.__lst_cl_sgs[idx_ch].d_time_plot, lst_nx[idx_ch])
+                axs[idx_ch].plot(self.__lst_cl_sgs[idx_ch].d_time_plot, lst_nx[idx_ch], color=get_trace(1))
 
             axs[idx_ch].plot(self.np_d_eventtimes(idx=idx_event_source),
                              lst_nx[idx_ch][self.__lst_cl_sgs[idx_event_source].idx_events], "ok")
@@ -2199,17 +2236,30 @@ class ClSigFeatures:
         return self.__lst_cl_sgs[idx].plt_polar(str_plot_desc=str_plot_desc_meta)
 
     # Method to estimate the RPM values
-    def d_est_rpm(self, d_events_per_rev=1):
+    def d_est_rpm(self, d_events_per_rev=1.0, idx_eventtimes=0):
         """
         Estimate the RPM from the signal using eventtimes which must have
         calculated from a previous call to the method np_d_est_triggers.
+
+        Parameters
+        ---------
+        d_events_per_rev : double
+            Number of events per revolution. It must be a real value to for hunting tooth gear
+            combinations. Defaults to 1
+        idx_eventtimes : integer
+            Index of signal eventtimes. Defaults to 0 (first signal)
+
+        Returns
+        -------
+        numpy array, double : array of RPM values
+
         """
 
         # Store the new value in the object
         self.__d_events_per_rev = d_events_per_rev
 
         # Calculate the RPM using the difference in event times
-        self.__np_d_rpm = 60. / (np.diff(self.__lst_cl_sgs[0].np_d_eventtimes) * float(d_events_per_rev))
+        self.__np_d_rpm = 60. / (np.diff(self.__lst_cl_sgs[idx_eventtimes].np_d_eventtimes) * d_events_per_rev)
 
         # To keep the lengths the same, append the last sample
         self.__np_d_rpm = np.append(

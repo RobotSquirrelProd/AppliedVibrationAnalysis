@@ -248,18 +248,34 @@ class TestClSig(TestCase):
         self.assertEqual(idx_new, 1, msg='Failed to return correct index')
         class_test_sig_features.plt_sigs()
 
-        # Signal feature class, second signal manual y-limits
-        class_test_sig_features.ylim_tb(ylim_tb_in=[0.0, 16.0], idx=0)
-        class_test_sig_features.str_plot_desc = 'test_plt_sigs | CLSigFeatures | 2nd Point, y-limits'
+        # Signal feature class, second signal manual y-limits, new data
+        class_test_sig_features = appvib.ClSigFeatures(self.np_test_trigger_ph, self.d_fs_test_trigger_ph)
+        class_test_sig_features.ylim_tb(ylim_tb_in=[-16.0, 16.0], idx=0)
+        idx_new = class_test_sig_features.idx_add_sig(self.np_test_trigger_ph_ch2, self.d_fs_test_trigger_ph,
+                                                      str_point_name='CH2')
+        class_test_sig_features.ylim_tb(ylim_tb_in=[-16.0, 16.0], idx=1)
+        class_test_sig_features.str_plot_desc = 'test_plt_sigs | CLSigFeatures | New data, y-limits'
         class_test_sig_features.plt_sigs()
 
     def test_plt_spec(self):
         # Signal feature class check of plotting on instantiation
         class_test_sig_features = appvib.ClSigFeatures(self.np_test, self.d_fs)
+        class_test_sig_features.str_plot_desc = 'test_plt_spec | CLSigFeatures | Defaults'
         class_test_sig_features.plt_spec()
 
         # Add peak label
         class_test_sig_features.b_spec_peak = True
+        class_test_sig_features.str_plot_desc = 'test_plt_spec | CLSigFeatures | Defaults w/ Peak Label'
+        class_test_sig_features.plt_spec()
+
+        # Signal feature class, second signal manual y-limits, new data
+        class_test_sig_features = appvib.ClSigFeatures(self.np_test_trigger, self.d_fs_test_trigger)
+        class_test_sig_features.ylim_tb(ylim_tb_in=[-16.0, 16.0], idx=0)
+        idx_new = class_test_sig_features.idx_add_sig(self.np_test_trigger_ch2, self.d_fs_test_trigger,
+                                                      str_point_name='CH2')
+        class_test_sig_features.ylim_tb(ylim_tb_in=[-16.0, 16.0], idx=1)
+        class_test_sig_features.b_spec_peak = True
+        class_test_sig_features.str_plot_desc = 'test_plt_spec | CLSigFeatures | New data, y-limits'
         class_test_sig_features.plt_spec()
 
     def test_np_d_est_triggers(self):
@@ -332,7 +348,26 @@ class TestClSig(TestCase):
         class_test_plt_eventtimes.idx_add_sig(np_d_sig=self.np_test_plt_eventtimes_ch2,
                                               d_fs=self.d_fs_test_plt_eventtimes, str_point_name='CX2')
         class_test_plt_eventtimes.str_plot_desc = 'plt_eventtimes test (second channel)'
+        class_test_plt_eventtimes.ylim_tb(ylim_tb_in=[-16.0, 16.0], idx=0)
         class_test_plt_eventtimes.plt_eventtimes(idx_eventtimes=0, idx=1)
+
+    def test_plt_rpm(self):
+        # Signal feature class test, rising signal with threshold of 0.5
+        class_test_plt_rpm = appvib.ClSigFeatures(self.np_test_plt_eventtimes, self.d_fs_test_plt_eventtimes)
+        class_test_plt_rpm.np_d_est_triggers(np_d_sig=self.np_test_plt_eventtimes,
+                                             i_direction=self.i_direction_test_plt_eventtimes_rising,
+                                             d_threshold=self.d_threshold_test_plt_eventtimes,
+                                             d_hysteresis=self.d_hysteresis_test_plt_eventtimes,
+                                             b_verbose=False)
+        class_test_plt_rpm.str_plot_desc = 'test_plt_rpm | Single Channel'
+        class_test_plt_rpm.str_point_name_set(str_point_name='CX1', idx=0)
+        d_est_freq = 1. / (np.mean(np.diff(class_test_plt_rpm.np_d_eventtimes())))
+        self.assertAlmostEqual(d_est_freq, self.d_freq_law_test_plt_eventtimes, 5)
+
+        # check the plot for a single channel
+        lst_plot = class_test_plt_rpm.plt_rpm()
+        np_d_rpm = lst_plot[1]
+        self.assertAlmostEqual(np.mean(np_d_rpm), self.d_freq_law_test_plt_eventtimes*60., 3)
 
     def test_nX_est(self):
 
