@@ -21,7 +21,7 @@ def get_plot_setup_rows():
 
 
     """
-    return 20
+    return 18
 
 
 def get_plot_setup_row_sig():
@@ -1904,8 +1904,24 @@ class ClSigFeatures:
 
         # Step through the channels
         for idx_ch, _ in enumerate(self.__lst_cl_sgs):
-            # Main signal pane
+
+            # Offset on a channel-by-channel basis
             i_row_offset = (idx_ch * get_plot_setup_rows())
+
+            # Header pane, starting with the description
+            axs_desc = plt.subplot2grid((i_rows, i_cols), (i_row_offset, 0),
+                                        colspan=int(i_cols/4), rowspan=1)
+            axs_desc.axis('off')
+            axs_desc.text(0, 1, 'Description:', horizontalalignment='right', fontweight='bold')
+            axs_desc.text(0, 1, ' ' + self.__str_plot_desc, horizontalalignment='left', fontweight='bold')
+
+            # Machine description
+            axs_mach = plt.subplot2grid((i_rows, i_cols), (i_row_offset+1, 0),
+                                        colspan=int(i_cols/4), rowspan=1)
+            axs_mach.axis('off')
+            axs_mach.text(0, 1, 'Machine:', horizontalalignment='right', fontweight='bold')
+
+            # Main signal pane
             axs_sig = plt.subplot2grid((i_rows, i_cols), (get_plot_setup_row_sig() + i_row_offset, 0),
                                        colspan=i_cols, rowspan=get_plot_setup_row_sig_span())
             axs_sig.plot(self.__lst_cl_sgs[idx_ch].d_time_plot, self.get_np_d_sig(idx=idx_ch),
@@ -1926,7 +1942,6 @@ class ClSigFeatures:
             axs_sig.set_yticks(np.linspace(self.__lst_cl_sgs[idx_ch].ylim_tb[0],
                                            self.__lst_cl_sgs[idx_ch].ylim_tb[1],
                                            self.__lst_cl_sgs[idx_ch].i_y_divisions_tb))
-            axs_sig.set_title(self.__str_plt_support_title_meta(str_plot_type='Timebase', idx=idx_ch))
             axs_sig.legend(['as-acquired', self.str_filt_sg_desc_short(idx=idx_ch),
                             self.str_filt_butter_desc_short(idx=idx_ch)])
 
