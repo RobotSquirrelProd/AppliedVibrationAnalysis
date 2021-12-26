@@ -65,7 +65,7 @@ def get_font_plots():
     Global function to provide common fonts across multiple plots
 
     @return:
-        string : fontname
+        string : font name
 
     """
     return 'Garamond'
@@ -143,7 +143,13 @@ class ClSig(abc.ABC):
     @property
     @abc.abstractmethod
     def str_point_name(self):
-        """Point name signal"""
+        """Point name for the signal"""
+        pass
+
+    @property
+    @abc.abstractmethod
+    def str_machine_name(self):
+        """Machine name"""
         pass
 
     @property
@@ -171,7 +177,7 @@ class ClSigReal(ClSig):
 
     """
 
-    def __init__(self, np_sig, d_fs, str_eu='volts', str_point_name='CH1',
+    def __init__(self, np_sig, d_fs, str_eu='volts', str_point_name='CH1', str_machine_name='Machine',
                  dt_timestamp=datetime.fromisoformat('1990-01-01T00:00:00-00:00')):
         """
         Parameters
@@ -184,6 +190,8 @@ class ClSigReal(ClSig):
             Engineering units. Defaults to 'volts'
         str_point_name : string
             Signal point name
+        str_machine_name : string
+            Machine train name
         dt_timestamp : datetime
             Signal timestamp in datetime stamp. This is the timestamp when the first sample was acquired.
             Defaults to 1-Jan-1970 UTC Timezone
@@ -199,6 +207,7 @@ class ClSigReal(ClSig):
         self.__b_is_stale_fs = True
         self.__str_eu = str_eu
         self.__str_point_name = str_point_name
+        self.__str_machine_name = str_machine_name
         self.__dt_timestamp = dt_timestamp
         self.__str_timedate_format = "%m/%d/%Y, %H:%M:%S.%f"
 
@@ -338,6 +347,14 @@ class ClSigReal(ClSig):
     @str_point_name.setter
     def str_point_name(self, str_point_name):
         self.__str_point_name = str_point_name
+
+    @property
+    def str_machine_name(self):
+        return self.__str_machine_name
+
+    @str_machine_name.setter
+    def str_machine_name(self, str_machine_name):
+        self.__str_machine_name = str_machine_name
 
     @property
     def b_complex(self):
@@ -1011,15 +1028,32 @@ class ClSigReal(ClSig):
         return str_dt_timestamp
 
     # Call the method to plot the apht plot
-    def plt_apht(self, str_plot_apht_desc_in=None):
+    def plt_apht(self, str_plot_apht_desc=None, b_verbose=False):
+
+        """
+        Plot out the vector data (amplitude and phase) in trend format
+
+        Parameters
+        ----------
+        str_plot_apht_desc : string
+            Signal metadata description for plot title. Defaults to None which uses the
+            plot description as-found in the object.
+        b_verbose : boolean
+            Print the intermediate steps (default: False). Useful for stepping through the
+            method to troubleshoot or understand it better.
+
+        Returns:
+        --------
+        handle to the plot
+        """
 
         # Create plot title from class attributes
-        str_meta = str_plot_apht_desc_in
-        if str_plot_apht_desc_in is None:
+        str_meta = str_plot_apht_desc
+        if str_plot_apht_desc is None:
             str_meta = self.str_plot_desc + '\n' + 'apht' + ' | ' + self.str_point_name + \
                        ' | ' + self.__str_format_dt
 
-        return self.__class_sig_comp.plt_apht(str_plot_apht_desc=str_meta)
+        return self.__class_sig_comp.plt_apht(str_plot_apht_desc=str_meta, b_verbose=b_verbose)
 
     # Call polar plotting method.
     def plt_polar(self, str_plot_desc=None):
@@ -1041,7 +1075,7 @@ class ClSigComp(ClSig):
     """Class for storing, plotting, and manipulating complex-valued
        signals"""
 
-    def __init__(self, np_sig, d_fs, str_eu='volts', str_point_name='CH1',
+    def __init__(self, np_sig, d_fs, str_eu='volts', str_point_name='CH1', str_machine_name='Machine',
                  dt_timestamp=datetime.fromisoformat('1990-01-01T00:00:00-00:00')):
 
         """
@@ -1055,6 +1089,8 @@ class ClSigComp(ClSig):
             Engineering units. Defaults to 'volts'
         str_point_name : string
             Signal point name
+        str_machine_name : string
+            Machine train name
         dt_timestamp : datetime
             Signal timestamp in datetime stamp. This is the timestamp when the first sample was acquired.
             Defaults to 1-Jan-1970 UTC Timezone
@@ -1069,6 +1105,7 @@ class ClSigComp(ClSig):
         self.__d_fs = d_fs
         self.__i_ns = self.__get_num_samples()
         self.str_point_name = str_point_name
+        self.str_machine_name = str_machine_name
         self.dt_timestamp = dt_timestamp
         self.__str_timedate_format = "%m/%d/%Y, %H:%M:%S"
 
@@ -1121,6 +1158,14 @@ class ClSigComp(ClSig):
         self.__str_point_name = str_point_name
 
     @property
+    def str_machine_name(self):
+        return self.__str_machine_name
+
+    @str_machine_name.setter
+    def str_machine_name(self, str_machine_name):
+        self.__str_machine_name = str_machine_name
+
+    @property
     def i_ns(self):
         self.__i_ns = self.__get_num_samples()
         return self.__i_ns
@@ -1162,7 +1207,7 @@ class ClSigCompUneven(ClSig):
 
     """
 
-    def __init__(self, np_sig, np_d_time, str_eu='volts', str_point_name='CH1',
+    def __init__(self, np_sig, np_d_time, str_eu='volts', str_point_name='CH1', str_machine_name='Machine',
                  dt_timestamp=datetime.fromisoformat('1990-01-01T00:00:00-00:00')):
 
         """
@@ -1176,6 +1221,8 @@ class ClSigCompUneven(ClSig):
             Engineering units. Defaults to 'volts'
         str_point_name : string
             Signal point name
+        str_machine_name : string
+            Machine train name
         dt_timestamp : datetime
             Signal timestamp in datetime stamp. This is the timestamp when the first sample was acquired.
             Defaults to 1-Jan-1970 UTC Timezone
@@ -1192,6 +1239,7 @@ class ClSigCompUneven(ClSig):
         self.__i_ns = self.__get_num_samples()
         self.__str_eu = str_eu
         self.str_point_name = str_point_name
+        self.str_machine_name = str_machine_name
         self.dt_timestamp = dt_timestamp
         self.__str_timedate_format = "%m/%d/%Y, %H:%M:%S.%f"
 
@@ -1297,6 +1345,14 @@ class ClSigCompUneven(ClSig):
         self.__str_point_name = str_point_name
 
     @property
+    def str_machine_name(self):
+        return self.__str_machine_name
+
+    @str_machine_name.setter
+    def str_machine_name(self, str_machine_name):
+        self.__str_machine_name = str_machine_name
+
+    @property
     def str_plot_desc(self):
         return self.__str_plot_desc
 
@@ -1327,7 +1383,7 @@ class ClSigCompUneven(ClSig):
         return str_dt_timestamp
 
     # Plotting method, apht plots.
-    def plt_apht(self, str_plot_apht_desc=None):
+    def plt_apht(self, str_plot_apht_desc=None, b_verbose=False):
         """
 
         Plot out amplitude in phase in apht format
@@ -1336,6 +1392,9 @@ class ClSigCompUneven(ClSig):
         ----------
         str_plot_apht_desc : string
             Signal metadata description for plot title. Defaults to ''
+        b_verbose : boolean
+            Print the intermediate steps (default: False). Useful for stepping through the
+            method to troubleshoot or understand it better.
 
         Return values:
         handle to the plot
@@ -1451,7 +1510,7 @@ class ClSigFeatures:
         -------
     """
 
-    def __init__(self, np_d_sig, d_fs, str_point_name='CH1',
+    def __init__(self, np_d_sig, d_fs, str_point_name='CH1', str_machine_name='Machine',
                  dt_timestamp=datetime.fromisoformat('1990-01-01T00:00:00-00:00')):
         """
         Parameters
@@ -1462,6 +1521,8 @@ class ClSigFeatures:
             Describes the sampling frequency in samples/second (hertz).
         str_point_name : string
             Signal point name
+        str_machine_name : string
+            Machine train name
         dt_timestamp : datetime
             Signal timestamp in datetime stamp. This is the timestamp when the first sample was acquired.
             Defaults to 1-Jan-1970 UTC Timezone.
@@ -1471,12 +1532,13 @@ class ClSigFeatures:
         self.__lst_b_active = []
 
         # Instantiate and save common signal features to this class
-        self.idx_add_sig(np_d_sig, d_fs=d_fs, str_point_name=str_point_name, dt_timestamp=dt_timestamp)
+        self.idx_add_sig(np_d_sig, d_fs=d_fs, str_point_name=str_point_name, str_machine_name=str_machine_name,
+                         dt_timestamp=dt_timestamp)
         self.__np_d_rpm = np.zeros_like(self.__lst_cl_sgs[0].np_d_sig)
 
         # Attributes related to file save/read behavior
         self.__str_file = ''
-        self.__i_header_rows = 5
+        self.__i_header_rows = 10
 
         self.__d_thresh = np.NaN
         self.__d_events_per_rev = np.NaN
@@ -1508,7 +1570,7 @@ class ClSigFeatures:
         self.__lst_cl_sgs[idx].np_d_sig = np_d_sig
         self.__lst_b_active[idx] = True
 
-    def idx_add_sig(self, np_d_sig, d_fs, str_point_name,
+    def idx_add_sig(self, np_d_sig, d_fs, str_point_name, str_machine_name='Machine',
                     dt_timestamp=datetime.fromisoformat('1990-01-01T00:00:00-00:00')):
         """Add another signal to this object.
         returns index to the newly added signal.
@@ -1521,6 +1583,8 @@ class ClSigFeatures:
             Sampling frequency, hertz
         str_point_name : string
             Signal point name
+        str_machine_name : string
+            Machine train name
         dt_timestamp : datetime
             Signal timestamp in datetime stamp. This is the timestamp when the first sample was acquired.
             Defaults to 1-Jan-1970 UTC Timezone
@@ -1552,6 +1616,7 @@ class ClSigFeatures:
 
         # add signal meta data
         self.__lst_cl_sgs[idx_class].str_point_name = str_point_name
+        self.__lst_cl_sgs[idx_class].str_machine_name = str_machine_name
 
         # Mark this one as active
         self.__lst_b_active.append(True)
@@ -1783,6 +1848,37 @@ class ClSigFeatures:
         """
         self.__lst_cl_sgs[idx].str_point_name = str_point_name
 
+    def str_machine_name(self, idx=0):
+        """
+        Return machine name
+
+        Parameter
+        ---------
+        idx : integer
+            Index of signal to pull description. Defaults to 0 (first signal)
+
+        Returns
+        -------
+        str_machine_name : string
+            Machine name string
+
+        """
+        return self.__lst_cl_sgs[idx].str_machine_name
+
+    def str_machine_name_set(self, str_machine_name, idx=0):
+        """
+        Set machine point name
+
+        Parameter
+        ---------
+        str_machine_name : string
+            Machine name string
+        idx : integer
+            Index of signal to pull description. Defaults to 0 (first signal)
+
+        """
+        self.__lst_cl_sgs[idx].str_machine_name = str_machine_name
+
     def dt_timestamp(self, idx=0):
         """
         Signal date and time
@@ -1884,10 +1980,18 @@ class ClSigFeatures:
         return str_meta
 
     # Plotting method, time domain signals.
-    def plt_sigs(self):
-        """Plot out the data in this signal feature class in the time domain
+    def plt_sigs(self, b_verbose=False):
+        """
+        Plot out the data in this signal feature class in the time domain
 
-        Return values:
+        Parameters
+        ----------
+        b_verbose : boolean
+            Print the intermediate steps (default: False). Useful for stepping through the
+            method to troubleshoot or understand it better.
+
+        Returns:
+        --------
         handle to the plot
         """
 
@@ -1905,6 +2009,10 @@ class ClSigFeatures:
         # Step through the channels
         for idx_ch, _ in enumerate(self.__lst_cl_sgs):
 
+            # Verbose documentation
+            if b_verbose:
+                print('idx_ch: ' + '%1.0f' % idx_ch)
+
             # Offset on a channel-by-channel basis
             i_row_offset = (idx_ch * get_plot_setup_rows())
 
@@ -1920,6 +2028,7 @@ class ClSigFeatures:
                                         colspan=int(i_cols/4), rowspan=1)
             axs_mach.axis('off')
             axs_mach.text(0, 1, 'Machine:', horizontalalignment='right', fontweight='bold')
+            axs_mach.text(0, 1, ' ' + self.str_machine_name(idx_ch), horizontalalignment='left', fontweight='bold')
 
             # Main signal pane
             axs_sig = plt.subplot2grid((i_rows, i_cols), (get_plot_setup_row_sig() + i_row_offset, 0),
@@ -2379,6 +2488,7 @@ class ClSigFeatures:
         str_fs = 'Sampling Frequency (Hz)'
         str_delta_t = 'Delta Time (seconds)'
         str_units = 'Sequence'
+        str_machine_name = 'Machine'
         for idx, class_signal in enumerate(self.__lst_cl_sgs):
             str_header = str_header + "," + class_signal.str_point_name
             str_fs = str_fs + "," + '%0.6f' % class_signal.d_fs
@@ -2387,17 +2497,26 @@ class ClSigFeatures:
                                                          self.__lst_cl_sgs[idx].d_time[0])
 
             str_units = str_units + "," + class_signal.str_eu
+            str_machine_name = str_machine_name + "," + class_signal.str_machine_name
 
         str_header = str_header + '\n'
         str_datetime = str_datetime + '\n'
         str_fs = str_fs + '\n'
         str_delta_t = str_delta_t + '\n'
         str_units = str_units + '\n'
+        str_machine_name = str_machine_name + '\n'
+
+        # Write the header
         file_data.write(str_header)
         file_data.write(str_datetime)
         file_data.write(str_fs)
         file_data.write(str_delta_t)
         file_data.write(str_units)
+        file_data.write(str_machine_name)
+        file_data.write('\n')
+        file_data.write('\n')
+        file_data.write('\n')
+        file_data.write('\n')
 
         for idx_line in range(0, self.i_ns):
 
@@ -2434,6 +2553,8 @@ class ClSigFeatures:
                 numpy array, datetime : vector with date and timestamps
                 numpy array, double : vector with signal sampling rates
                 numpy array, double : vector with delta time interval for each signal
+                list, string :  list with engineering units descriptions
+                list, string : machine name
 
         """
 
@@ -2448,6 +2569,8 @@ class ClSigFeatures:
         csv_dt = next(csv_reader)
         csv_fs = next(csv_reader)
         csv_delta_t = next(csv_reader)
+        csv_units = next(csv_reader)
+        csv_machine_name = next(csv_reader)
         file_handle.close()
 
         # Parse the header information
@@ -2463,4 +2586,4 @@ class ClSigFeatures:
                              skiprows=self.__i_header_rows, names=csv_header[0:5])
 
         # Return the data
-        return [df_sig, np_dt_timestamps, d_fs, d_delta_t]
+        return [df_sig, np_dt_timestamps, d_fs, d_delta_t, csv_units, csv_machine_name]

@@ -89,6 +89,7 @@ class TestClSig(TestCase):
         self.str_eu_vel = "ips"
         self.str_point_name = 'CH1 Test'
         self.str_point_name_ch2 = 'CH2 Test'
+        self.str_machine_name = '7"  x 10" Mini Lathe | item number 93212 | serial no. 01504'
 
         # Test data set 000 : This one caused the nx_est to fail
         self.str_filename_000 = 'test_appvib_data_000.csv'
@@ -115,10 +116,36 @@ class TestClSig(TestCase):
         class_test_real = appvib.ClSigReal(self.np_test, self.d_fs)
         self.assertFalse(class_test_real.b_complex)
 
+        # Are point names stored correctly in the real-valued object?
+        class_test_real.str_point_name = self.str_point_name
+        self.assertEqual(class_test_real.str_point_name, self.str_point_name)
+        class_test_real = appvib.ClSigReal(self.np_test, self.d_fs, str_point_name=self.str_point_name)
+        self.assertEqual(class_test_real.str_point_name, self.str_point_name)
+
+        # Are machine names stored correctly in the real-valued object?
+        class_test_real.str_machine_name = self.str_machine_name
+        self.assertEqual(class_test_real.str_machine_name, self.str_machine_name)
+        class_test_real = appvib.ClSigReal(self.np_test, self.d_fs, str_point_name=self.str_point_name,
+                                           str_machine_name=self.str_machine_name)
+        self.assertEqual(class_test_real.str_machine_name, self.str_machine_name)
+
         # Is the complex-valued class setting the flags correctly?
         class_test_comp = appvib.ClSigComp(self.np_test_comp, self.d_fs)
         self.assertTrue(class_test_comp.b_complex)
         self.assertFalse(class_test_real.b_complex)
+
+        # Are point names stored correctly in the complex-valued object?
+        class_test_comp.str_point_name = self.str_point_name
+        self.assertEqual(class_test_comp.str_point_name, self.str_point_name)
+        class_test_comp = appvib.ClSigComp(self.np_test, self.d_fs, str_point_name=self.str_point_name)
+        self.assertEqual(class_test_comp.str_point_name, self.str_point_name)
+
+        # Are machine names stored correctly in the complex-valued object?
+        class_test_comp.str_machine_name = self.str_machine_name
+        self.assertEqual(class_test_comp.str_machine_name, self.str_machine_name)
+        class_test_comp = appvib.ClSigComp(self.np_test, self.d_fs, str_point_name=self.str_point_name,
+                                           str_machine_name=self.str_machine_name)
+        self.assertEqual(class_test_comp.str_machine_name, self.str_machine_name)
 
         # Is the signal feature class setting flags correctly?
         class_test_sig_features = appvib.ClSigFeatures(self.np_test, self.d_fs)
@@ -144,6 +171,20 @@ class TestClSig(TestCase):
         class_test_sig_features = appvib.ClSigFeatures(self.np_test, self.d_fs)
         self.assertAlmostEqual(self.np_test_comp[0], class_test_comp.np_d_sig[0], 12)
         self.assertAlmostEqual(self.np_test[0], class_test_sig_features.np_d_sig[0], 12)
+
+        # Are point names stored correctly in the signal feature object?
+        class_test_sig_features.str_point_name_set(str_point_name=self.str_point_name, idx=0)
+        self.assertEqual(class_test_sig_features.str_point_name(), self.str_point_name)
+        class_test_sig_features = appvib.ClSigFeatures(self.np_test, self.d_fs, str_point_name=self.str_point_name,
+                                                       str_machine_name="Test")
+        self.assertEqual(class_test_sig_features.str_point_name(), self.str_point_name)
+
+        # Are machine names stored correctly in the signal feature object?
+        class_test_sig_features.str_machine_name_set(str_machine_name=self.str_machine_name, idx=0)
+        self.assertEqual(class_test_sig_features.str_machine_name(0), self.str_machine_name)
+        class_test_sig_features = appvib.ClSigFeatures(self.np_test, self.d_fs, str_point_name=self.str_point_name,
+                                                       str_machine_name=self.str_machine_name)
+        self.assertEqual(class_test_sig_features.str_machine_name(), self.str_machine_name)
 
         # Signal feature class, second signal
         idx_new = class_test_sig_features.idx_add_sig(self.np_test_ch2, self.d_fs, str_point_name='CH2')
@@ -240,6 +281,7 @@ class TestClSig(TestCase):
         # Signal feature class check of plotting on instantiation
         class_test_sig_features = appvib.ClSigFeatures(self.np_test, self.d_fs)
         class_test_sig_features.str_plot_desc = 'test_plt_sigs | CLSigFeatures | Defaults'
+        class_test_sig_features.str_machine_name_set('Harness')
         class_test_sig_features.plt_sigs()
 
         # Signal feature class, second signal auto y-limits
@@ -367,7 +409,7 @@ class TestClSig(TestCase):
         # check the plot for a single channel
         lst_plot = class_test_plt_rpm.plt_rpm()
         np_d_rpm = lst_plot[1]
-        self.assertAlmostEqual(np.mean(np_d_rpm), self.d_freq_law_test_plt_eventtimes*60., 3)
+        self.assertAlmostEqual(np.mean(np_d_rpm), self.d_freq_law_test_plt_eventtimes*60.0, 3)
 
     def test_nX_est(self):
 
@@ -382,7 +424,7 @@ class TestClSig(TestCase):
                                           b_verbose=False)
         self.assertAlmostEqual(np.abs(np_d_nx[0]), self.d_test_trigger_amp, 2)
         class_test_real.str_plot_desc = 'test_plt_apht | ClSigReal | Initial call'
-        class_test_real.plt_apht()
+        class_test_real.plt_apht(b_verbose=True)
         class_test_real.str_plot_desc = 'test_plt_apht | ClSigReal | Test call'
         class_test_real.ylim_apht_mag = [-0.1, 1.1]
         class_test_real.plt_apht()
