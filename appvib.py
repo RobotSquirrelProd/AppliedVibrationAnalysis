@@ -12,13 +12,60 @@ from dateutil import tz
 import abc as abc
 
 
+def get_plot_setup_rows():
+    """
+    Global function to provide common number of grid rows
+
+    @return:
+        integer : number of rows
+
+
+    """
+    return 20
+
+
+def get_plot_setup_row_sig():
+    """
+    Global function to provide common starting point for rectilinear time-based plot data
+
+    @return:
+        integer : row at which to start plotting signal data
+
+
+    """
+    return 6
+
+
+def get_plot_setup_row_sig_span():
+    """
+    Global function to provide common row span for rectilinear time-based plot data
+
+    @return:
+        integer : row span for plotting signal data
+
+
+    """
+    return 12
+
+
+def get_plot_setup_cols():
+    """
+    Global function to provide common number of grid columns
+
+    @return:
+        integer : number of columns
+
+
+    """
+    return 4
+
+
 def get_font_plots():
     """
     Global function to provide common fonts across multiple plots
 
     @return:
         string : fontname
-
 
     """
     return 'Garamond'
@@ -1852,39 +1899,36 @@ class ClSigFeatures:
 
         # Figure with subplots
         plt.rcParams["font.family"] = get_font_plots()
-        fig, axs = plt.subplots(i_plots)
-
-        # A single plot returns handle to the axis which isn't iterable. Rather than branch to support
-        # this behavior, cast the single axis object to a list with one element
-        if not isinstance(axs, (list, tuple, np.ndarray)):
-            axs = [axs]
+        i_rows = get_plot_setup_rows() * i_plots
+        i_cols = get_plot_setup_cols()
 
         # Step through the channels
         for idx_ch, _ in enumerate(self.__lst_cl_sgs):
-            axs[idx_ch].plot(self.__lst_cl_sgs[idx_ch].d_time_plot, self.get_np_d_sig(idx=idx_ch),
-                             color=get_trace(0), linewidth=3.5)
-            axs[idx_ch].plot(self.__lst_cl_sgs[idx_ch].d_time_plot, self.__lst_cl_sgs[idx_ch].np_d_sig_filt_sg,
-                             color=get_trace(1), linewidth=2.5)
-            axs[idx_ch].plot(self.__lst_cl_sgs[idx_ch].d_time_plot, self.__lst_cl_sgs[idx_ch].np_d_sig_filt_butter,
-                             color=get_trace(2), linewidth=1.5)
-            axs[idx_ch].grid()
-            axs[idx_ch].set_xlabel("Time, " + self.__lst_cl_sgs[idx_ch].str_eu_x)
-            axs[idx_ch].set_xlim(self.__lst_cl_sgs[idx_ch].xlim_tb)
-            axs[idx_ch].set_xticks(np.linspace(self.__lst_cl_sgs[idx_ch].xlim_tb[0],
-                                               self.__lst_cl_sgs[idx_ch].xlim_tb[1],
-                                               self.__lst_cl_sgs[idx_ch].i_x_divisions_tb))
-            axs[idx_ch].xaxis.set_major_formatter(FormatStrFormatter('%.2f'))
-            axs[idx_ch].set_ylabel("Channel output, " + self.__lst_cl_sgs[idx_ch].str_eu)
-            axs[idx_ch].set_ylim(self.__lst_cl_sgs[idx_ch].ylim_tb)
-            axs[idx_ch].set_yticks(np.linspace(self.__lst_cl_sgs[idx_ch].ylim_tb[0],
-                                               self.__lst_cl_sgs[idx_ch].ylim_tb[1],
-                                               self.__lst_cl_sgs[idx_ch].i_y_divisions_tb))
-            axs[idx_ch].set_title(self.__str_plt_support_title_meta(str_plot_type='Timebase', idx=idx_ch))
-            axs[idx_ch].legend(['as-acquired', self.str_filt_sg_desc_short(idx=idx_ch),
-                                self.str_filt_butter_desc_short(idx=idx_ch)])
-
-        # Set the layout
-        plt.tight_layout()
+            # Main signal pane
+            i_row_offset = (idx_ch * get_plot_setup_rows())
+            axs_sig = plt.subplot2grid((i_rows, i_cols), (get_plot_setup_row_sig() + i_row_offset, 0),
+                                       colspan=i_cols, rowspan=get_plot_setup_row_sig_span())
+            axs_sig.plot(self.__lst_cl_sgs[idx_ch].d_time_plot, self.get_np_d_sig(idx=idx_ch),
+                         color=get_trace(0), linewidth=3.5)
+            axs_sig.plot(self.__lst_cl_sgs[idx_ch].d_time_plot, self.__lst_cl_sgs[idx_ch].np_d_sig_filt_sg,
+                         color=get_trace(1), linewidth=2.5)
+            axs_sig.plot(self.__lst_cl_sgs[idx_ch].d_time_plot, self.__lst_cl_sgs[idx_ch].np_d_sig_filt_butter,
+                         color=get_trace(2), linewidth=1.5)
+            axs_sig.grid()
+            axs_sig.set_xlabel("Time, " + self.__lst_cl_sgs[idx_ch].str_eu_x)
+            axs_sig.set_xlim(self.__lst_cl_sgs[idx_ch].xlim_tb)
+            axs_sig.set_xticks(np.linspace(self.__lst_cl_sgs[idx_ch].xlim_tb[0],
+                                           self.__lst_cl_sgs[idx_ch].xlim_tb[1],
+                                           self.__lst_cl_sgs[idx_ch].i_x_divisions_tb))
+            axs_sig.xaxis.set_major_formatter(FormatStrFormatter('%.2f'))
+            axs_sig.set_ylabel("Channel output, " + self.__lst_cl_sgs[idx_ch].str_eu)
+            axs_sig.set_ylim(self.__lst_cl_sgs[idx_ch].ylim_tb)
+            axs_sig.set_yticks(np.linspace(self.__lst_cl_sgs[idx_ch].ylim_tb[0],
+                                           self.__lst_cl_sgs[idx_ch].ylim_tb[1],
+                                           self.__lst_cl_sgs[idx_ch].i_y_divisions_tb))
+            axs_sig.set_title(self.__str_plt_support_title_meta(str_plot_type='Timebase', idx=idx_ch))
+            axs_sig.legend(['as-acquired', self.str_filt_sg_desc_short(idx=idx_ch),
+                            self.str_filt_butter_desc_short(idx=idx_ch)])
 
         # Save off the handle to the plot
         plot_handle = plt.gcf()
@@ -2070,7 +2114,7 @@ class ClSigFeatures:
         plt.gca().xaxis.set_major_formatter(FormatStrFormatter('%.2f'))
         ax1.set_ylabel('Amplitude, ' + self.__lst_cl_sgs[0].str_eu)
         ax2.set_ylabel('Event speed, RPM')
-        ax2.set_ylim([0, round(1.05*np.max(self.__np_d_rpm))])
+        ax2.set_ylim([0, round(1.05 * np.max(self.__np_d_rpm))])
 
         # Aggregate the plot handles and labels
         lns = lns1 + lns2
