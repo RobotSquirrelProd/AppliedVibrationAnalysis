@@ -57,7 +57,7 @@ def get_plot_setup_cols():
 
 
     """
-    return 4
+    return 8
 
 
 def get_font_plots():
@@ -158,6 +158,65 @@ def set_plot_header_machine(i_rows, i_cols, i_row_offset, str_machine_name):
     axs_mach.text(0, 1, 'Machine:', horizontalalignment='right', verticalalignment='top',
                   fontweight='bold')
     axs_mach.text(0, 1, ' ' + str_machine_name, horizontalalignment='left', verticalalignment='top',
+                  fontweight='bold')
+
+
+def set_plot_sparkline(i_rows, i_cols, i_row_offset, np_cl_spark):
+    """
+    Global function that creates the description field for the sparklines
+
+     Parameters
+     ----------
+         i_rows : integer
+             Number of rows in the grid
+         i_cols : integer
+             Number of columns in the grid
+         i_row_offset : integer
+            Number of rows to skip; useful for multi-pane plots
+        np_cl_spark : numpy array, ClSigCompUneven
+            Array with signals to be plotted in the sparklines
+
+    Returns:
+
+        axes_desc : handle to description axis
+
+    """
+
+    # Header pane, sparklines
+    i_col_offset = int(get_plot_setup_cols()/2)
+
+    for idx_spk in range(get_plot_setup_row_sig()-1):
+        # Sparkline
+        axs_spk1 = plt.subplot2grid((i_rows, i_cols), (i_row_offset + idx_spk, i_col_offset),
+                                    colspan=i_col_offset-1, rowspan=1)
+        axs_spk1.plot(np_cl_spark[idx_spk].np_d_time, np_cl_spark[idx_spk].np_d_sig, 'k', linewidth=0.5)
+        axs_spk1.axis('off')
+
+
+def set_plot_spark_desc(i_rows, i_cols, i_row_offset, str_spark_desc):
+    """
+    Global function that creates the description field for the sparklines
+
+     Parameters
+     ----------
+         i_rows : integer
+             Number of rows in the grid
+         i_cols : integer
+             Number of columns in the grid
+         i_row_offset : integer
+            Number of rows to skip; useful for multi-pane plots
+        str_spark_desc : string
+            Description string
+
+    Returns:
+
+        axes_desc : handle to description axis
+
+    """
+    # Header pane, starting with the description
+    axs_desc = plt.subplot2grid((i_rows, i_cols), (i_row_offset, get_plot_setup_cols()-1), colspan=1, rowspan=1)
+    axs_desc.axis('off')
+    axs_desc.text(0, 1, ' ' + str_spark_desc, horizontalalignment='left', verticalalignment='top',
                   fontweight='bold')
 
 
@@ -276,7 +335,7 @@ class ClSigReal(ClSig):
         self.__d_time_min = 0.0
         np_x = np.linspace(0, 127, 128)
         np_y = np.random.rand(np.size(np_x))
-        self.__np_sparklines = np.full((1, 5), fill_value=[ClSigCompUneven(np_y, np_x)])
+        self.__np_sparklines = np.full((1, get_plot_setup_row_sig()-1), fill_value=[ClSigCompUneven(np_y, np_x)])
 
         # Timebase plot attributes. Some/many are derived from the signal
         # itself so they need to be in this object, even though other
@@ -2094,12 +2153,12 @@ class ClSigFeatures:
             # Header pane, sparklines
             i_col_offset = 2
             for idx_spk in range(5):
-                print(idx_spk)
-                axs_spk1 = plt.subplot2grid((i_rows, i_cols), (i_row_offset+idx_spk, i_col_offset),
-                                            colspan=2, rowspan=1)
-                cl_spark = self.__lst_cl_sgs[idx_ch].np_sparklines[0]
-                axs_spk1.plot(cl_spark[0].np_d_time, cl_spark[0].np_d_sig, 'k', linewidth=0.5)
-                axs_spk1.axis('off')
+
+                # Sparkline
+                set_plot_sparkline(i_rows, i_cols, i_row_offset, self.__lst_cl_sgs[idx_ch].np_sparklines[0])
+
+                # Description
+                set_plot_spark_desc(i_rows, i_cols, i_row_offset+idx_spk, 'Test')
 
             # Main signal pane
             axs_sig = plt.subplot2grid((i_rows, i_cols), (get_plot_setup_row_sig() + i_row_offset, 0),
