@@ -126,9 +126,9 @@ def set_plot_header_desc(i_rows, i_cols, i_row_offset, str_plot_desc):
     # Header pane, starting with the description
     axs_desc = plt.subplot2grid((i_rows, i_cols), (i_row_offset, 0), colspan=int(i_cols / 4), rowspan=1)
     axs_desc.axis('off')
-    axs_desc.text(0, 1, 'Description:', horizontalalignment='right', verticalalignment='bottom',
+    axs_desc.text(0, 1, 'Description:', horizontalalignment='right', verticalalignment='top',
                   fontweight='bold')
-    axs_desc.text(0, 1, ' ' + str_plot_desc, horizontalalignment='left', verticalalignment='bottom',
+    axs_desc.text(0, 1, ' ' + str_plot_desc, horizontalalignment='left', verticalalignment='top',
                   fontweight='bold')
 
 
@@ -155,9 +155,9 @@ def set_plot_header_machine(i_rows, i_cols, i_row_offset, str_machine_name):
     # Machine description
     axs_mach = plt.subplot2grid((i_rows, i_cols), (i_row_offset, 0), colspan=int(i_cols / 4), rowspan=1)
     axs_mach.axis('off')
-    axs_mach.text(0, 1, 'Machine:', horizontalalignment='right', verticalalignment='bottom',
+    axs_mach.text(0, 1, 'Machine:', horizontalalignment='right', verticalalignment='top',
                   fontweight='bold')
-    axs_mach.text(0, 1, ' ' + str_machine_name, horizontalalignment='left', verticalalignment='bottom',
+    axs_mach.text(0, 1, ' ' + str_machine_name, horizontalalignment='left', verticalalignment='top',
                   fontweight='bold')
 
 
@@ -274,6 +274,9 @@ class ClSigReal(ClSig):
         self.__d_time = np.array([0, 1])
         self.__d_time_max = 0.0
         self.__d_time_min = 0.0
+        np_x = np.linspace(0, 127, 128)
+        np_y = np.random.rand(np.size(np_x))
+        self.__np_sparklines = np.full((1, 5), fill_value=[ClSigCompUneven(np_y, np_x)])
 
         # Timebase plot attributes. Some/many are derived from the signal
         # itself so they need to be in this object, even though other
@@ -286,7 +289,7 @@ class ClSigReal(ClSig):
         self.__str_eu_x = 'seconds'
         self.__str_plot_desc = ' '
 
-        # Setup the s-g array and filtering parameters
+        # Set up the s-g array and filtering parameters
         self.__np_d_sig_filt_sg = np_sig
         self.__i_win_len = 31
         self.__i_poly_order = 1
@@ -294,7 +297,7 @@ class ClSigReal(ClSig):
         self.__str_filt_sg_desc_short = 'No S-G Filter'
         self.__b_is_stale_filt_sg = True
 
-        # Setup the butterworth FIR filtered signal vector and parameters
+        # Set up the butterworth FIR filtered signal vector and parameters
         self.__np_d_sig_filt_butter = np_sig
         self.__i_poles = 1
         self.__d_wn = 0.
@@ -1055,6 +1058,14 @@ class ClSigReal(ClSig):
         return self.__np_d_nx
 
     @property
+    def np_sparklines(self):
+        return self.__np_sparklines
+
+    @np_sparklines.setter
+    def np_sparklines(self, np_sparklines):
+        self.__np_sparklines = np_sparklines
+
+    @property
     def str_plot_desc(self):
         return self.__str_plot_desc
 
@@ -1275,7 +1286,7 @@ class ClSigCompUneven(ClSig):
         np_sig : numpy array, double
             Vector with real-valued signal of interest
         np_d_time : numpy array, double
-            Time stamp for each sample, assumed to be seconds
+            Time stamp for each sample, assumed to be seconds from the dt_timestamp value
         str_eu : string
             Engineering units. Defaults to 'volts'
         str_point_name : string
@@ -2079,6 +2090,16 @@ class ClSigFeatures:
             # Header pane, starting with the description
             set_plot_header_desc(i_rows, i_cols, i_row_offset, self.__str_plot_desc)
             set_plot_header_machine(i_rows, i_cols, i_row_offset+1, self.str_machine_name(idx=idx_ch))
+
+            # Header pane, sparklines
+            i_col_offset = 2
+            for idx_spk in range(5):
+                print(idx_spk)
+                axs_spk1 = plt.subplot2grid((i_rows, i_cols), (i_row_offset+idx_spk, i_col_offset),
+                                            colspan=2, rowspan=1)
+                cl_spark = self.__lst_cl_sgs[idx_ch].np_sparklines[0]
+                axs_spk1.plot(cl_spark[0].np_d_time, cl_spark[0].np_d_sig, 'k', linewidth=0.5)
+                axs_spk1.axis('off')
 
             # Main signal pane
             axs_sig = plt.subplot2grid((i_rows, i_cols), (get_plot_setup_row_sig() + i_row_offset, 0),
