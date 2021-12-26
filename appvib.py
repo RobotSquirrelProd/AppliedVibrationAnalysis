@@ -45,7 +45,7 @@ def get_plot_setup_row_sig_span():
 
 
     """
-    return 12
+    return 10
 
 
 def get_plot_setup_cols():
@@ -101,6 +101,64 @@ def get_trace(i_trace):
         case _:
             # Charcoal
             return "#1a1a1aff"
+
+
+def set_plot_header_desc(i_rows, i_cols, i_row_offset, str_plot_desc):
+    """
+    Global function that creates the description field and value in the header
+
+     Parameters
+     ----------
+         i_rows : integer
+             Number of rows in the grid
+         i_cols : integer
+             Number of columns in the grid
+         i_row_offset : integer
+            Number of rows to skip; useful for multi-pane plots
+        str_plot_desc : string
+            Description string
+
+    Returns:
+
+        axes_desc : handle to description axis
+
+    """
+    # Header pane, starting with the description
+    axs_desc = plt.subplot2grid((i_rows, i_cols), (i_row_offset, 0), colspan=int(i_cols / 4), rowspan=1)
+    axs_desc.axis('off')
+    axs_desc.text(0, 1, 'Description:', horizontalalignment='right', verticalalignment='bottom',
+                  fontweight='bold')
+    axs_desc.text(0, 1, ' ' + str_plot_desc, horizontalalignment='left', verticalalignment='bottom',
+                  fontweight='bold')
+
+
+def set_plot_header_machine(i_rows, i_cols, i_row_offset, str_machine_name):
+    """
+    Global function that creates the description field and value in the header
+
+     Parameters
+     ----------
+         i_rows : integer
+             Number of rows in the grid
+         i_cols : integer
+             Number of columns in the grid
+         i_row_offset : integer
+            Number of rows to skip; useful for multi-pane plots
+        str_machine_name : string
+            Machine name string
+
+    Returns:
+
+        axes_desc : handle to machine name axis
+
+    """
+    # Machine description
+    axs_mach = plt.subplot2grid((i_rows, i_cols), (i_row_offset, 0), colspan=int(i_cols / 4), rowspan=1)
+    axs_mach.axis('off')
+    axs_mach.text(0, 1, 'Machine:', horizontalalignment='right', verticalalignment='bottom',
+                  fontweight='bold')
+    axs_mach.text(0, 1, ' ' + str_machine_name, horizontalalignment='left', verticalalignment='bottom',
+                  fontweight='bold')
 
 
 class ClSig(abc.ABC):
@@ -1042,9 +1100,10 @@ class ClSigReal(ClSig):
             Print the intermediate steps (default: False). Useful for stepping through the
             method to troubleshoot or understand it better.
 
-        Returns:
-        --------
+        Returns
+        -------
         handle to the plot
+
         """
 
         # Create plot title from class attributes
@@ -1990,9 +2049,10 @@ class ClSigFeatures:
             Print the intermediate steps (default: False). Useful for stepping through the
             method to troubleshoot or understand it better.
 
-        Returns:
-        --------
-        handle to the plot
+        Returns
+        -------
+        plot_handle : handle to the plot
+
         """
 
         # How many plots, assuming 1 is given?
@@ -2017,18 +2077,8 @@ class ClSigFeatures:
             i_row_offset = (idx_ch * get_plot_setup_rows())
 
             # Header pane, starting with the description
-            axs_desc = plt.subplot2grid((i_rows, i_cols), (i_row_offset, 0),
-                                        colspan=int(i_cols/4), rowspan=1)
-            axs_desc.axis('off')
-            axs_desc.text(0, 1, 'Description:', horizontalalignment='right', fontweight='bold')
-            axs_desc.text(0, 1, ' ' + self.__str_plot_desc, horizontalalignment='left', fontweight='bold')
-
-            # Machine description
-            axs_mach = plt.subplot2grid((i_rows, i_cols), (i_row_offset+1, 0),
-                                        colspan=int(i_cols/4), rowspan=1)
-            axs_mach.axis('off')
-            axs_mach.text(0, 1, 'Machine:', horizontalalignment='right', fontweight='bold')
-            axs_mach.text(0, 1, ' ' + self.str_machine_name(idx_ch), horizontalalignment='left', fontweight='bold')
+            set_plot_header_desc(i_rows, i_cols, i_row_offset, self.__str_plot_desc)
+            set_plot_header_machine(i_rows, i_cols, i_row_offset+1, self.str_machine_name(idx=idx_ch))
 
             # Main signal pane
             axs_sig = plt.subplot2grid((i_rows, i_cols), (get_plot_setup_row_sig() + i_row_offset, 0),
