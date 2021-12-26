@@ -12,6 +12,18 @@ from dateutil import tz
 import abc as abc
 
 
+def get_font_plots():
+    """
+    Global function to provide common fonts across multiple plots
+
+    @return:
+        string : fontname
+
+
+    """
+    return 'Garamond'
+
+
 def get_trace(i_trace):
     """
      Global function that returns trace colors
@@ -1292,6 +1304,7 @@ class ClSigCompUneven(ClSig):
                                    ' | ' + self.__str_format_dt
 
         # Figure with subplots
+        plt.rcParams["font.family"] = get_font_plots()
         fig, axs = plt.subplots(2)
 
         # Plot the phase
@@ -1341,6 +1354,7 @@ class ClSigCompUneven(ClSig):
             self.__str_plot_desc = str_plot_polar_desc
 
         # Figure with subplots
+        plt.rcParams["font.family"] = get_font_plots()
         fig, ax = plt.subplots(subplot_kw={'projection': 'polar'})
 
         # Polar plot
@@ -1837,6 +1851,7 @@ class ClSigFeatures:
                 i_plots += 1
 
         # Figure with subplots
+        plt.rcParams["font.family"] = get_font_plots()
         fig, axs = plt.subplots(i_plots)
 
         # A single plot returns handle to the axis which isn't iterable. Rather than branch to support
@@ -1888,9 +1903,16 @@ class ClSigFeatures:
         list : [handle to the plot, frequency labels, complex-spectral values]
 
         """
+
+        # Get the spectral data
         spec = self.__lst_cl_sgs[0].d_fft_real()
         d_mag = np.abs(spec[1])
+
+        # Open the plot
+        plt.rcParams["font.family"] = get_font_plots()
         plt.figure()
+
+        # Plot the spectrum
         plt.plot(spec[0], d_mag, color=get_trace(0))
         plt.grid()
         plt.xlabel("Frequency, hertz")
@@ -1974,6 +1996,7 @@ class ClSigFeatures:
         [d_xlim_start, d_xlim_end] = self.__get_x_limit_events(idx_eventtimes=idx_eventtimes, idx=idx)
 
         # Put up the the plot time
+        plt.rcParams["font.family"] = get_font_plots()
         plt.figure()
         plt.plot(self.__lst_cl_sgs[idx].d_time, self.__lst_cl_sgs[idx].np_d_sig, color=get_trace(0))
         plt.plot(np_d_eventtimes,
@@ -2026,6 +2049,7 @@ class ClSigFeatures:
         """
 
         # Put up the the plot time
+        plt.rcParams["font.family"] = get_font_plots()
         fig, ax1 = plt.subplots()
 
         ax2 = ax1.twinx()
@@ -2132,6 +2156,7 @@ class ClSigFeatures:
                 i_plots += 1
 
         # Figure with subplots
+        plt.rcParams["font.family"] = get_font_plots()
         fig, axs = plt.subplots(i_plots)
 
         # A single plot returns handle to the axis which isn't iterable. Rather than branch to support
