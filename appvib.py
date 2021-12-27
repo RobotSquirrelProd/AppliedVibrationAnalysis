@@ -58,7 +58,7 @@ def get_plot_setup_row_sig():
 
 
     """
-    return 6
+    return 5
 
 
 def get_plot_setup_row_sig_span():
@@ -128,6 +128,11 @@ def get_trac_color(i_trace):
             return "#1a1a1aff"
 
 
+def get_text_trunc(str_data):
+    """Truncate text string"""
+    return (str_data[:35] + '...') if len(str_data) > 35 else str_data
+
+
 def set_plot_header_desc(i_rows, i_cols, i_row_offset, str_plot_desc):
     """
     Global function that creates the description field and value in the header
@@ -153,7 +158,7 @@ def set_plot_header_desc(i_rows, i_cols, i_row_offset, str_plot_desc):
     axs_desc.axis('off')
     axs_desc.text(0, 1, 'Description:', horizontalalignment='right', verticalalignment='top',
                   fontweight='bold')
-    axs_desc.text(0, 1, ' ' + str_plot_desc, horizontalalignment='left', verticalalignment='top',
+    axs_desc.text(0, 1, ' ' + get_text_trunc(str_plot_desc), horizontalalignment='left', verticalalignment='top',
                   fontweight='bold')
 
 
@@ -182,7 +187,7 @@ def set_plot_header_machine(i_rows, i_cols, i_row_offset, str_machine_name):
     axs_mach.axis('off')
     axs_mach.text(0, 1, 'Machine:', horizontalalignment='right', verticalalignment='top',
                   fontweight='bold')
-    axs_mach.text(0, 1, ' ' + str_machine_name, horizontalalignment='left', verticalalignment='top',
+    axs_mach.text(0, 1, ' ' + get_text_trunc(str_machine_name), horizontalalignment='left', verticalalignment='top',
                   fontweight='bold')
 
 
@@ -202,6 +207,9 @@ def draw_multi_color_text(x, y, lst_text, str_delim=', ', b_newline = False, **k
             List of string
         str_delim : string
             Delimiter to be used
+        b_newline : boolean
+            Set to true to force a newline at the end of each data.
+            Defaults to False.
 
     """
 
@@ -216,7 +224,7 @@ def draw_multi_color_text(x, y, lst_text, str_delim=', ', b_newline = False, **k
         text.draw(fig.canvas.get_renderer())
         ex = text.get_window_extent()
         d_ex_width = ex.width
-        t = transforms.offset_copy(text._transform, x=2 * d_ex_width, units='dots')
+        t = transforms.offset_copy(text._transform, x=1 * d_ex_width, units='dots')
 
         # Punctuation
         if idx_str < (i_items - 1):
@@ -224,9 +232,9 @@ def draw_multi_color_text(x, y, lst_text, str_delim=', ', b_newline = False, **k
             text.draw(fig.canvas.get_renderer())
             ex = text.get_window_extent()
             if b_newline:
-                t = transforms.offset_copy(text._transform, x=-2 * d_ex_width, y=-2.05 * ex.height, units='dots')
+                t = transforms.offset_copy(text._transform, x=-1 * d_ex_width, y=-1 * ex.height, units='dots')
             else:
-                t = transforms.offset_copy(text._transform, x=2 * ex.width, units='dots')
+                t = transforms.offset_copy(text._transform, x=1 * ex.width, units='dots')
 
 
 def set_plot_header_point(i_rows, i_cols, i_row_offset, lst_str_point_name):
@@ -314,13 +322,15 @@ def set_plot_sparkline(i_rows, i_cols, i_row_offset, np_cl_spark):
 
     # Header pane, sparklines
     i_col_offset = int(get_plot_setup_cols() / 2)
-
-    for idx_spk in range(get_plot_setup_row_sig() - 1):
+    for idx_spk in range(get_plot_setup_row_sig()):
         # Sparkline
         axs_spk1 = plt.subplot2grid((i_rows, i_cols), (i_row_offset + idx_spk, i_col_offset),
                                     colspan=i_col_offset - 1, rowspan=1)
         axs_spk1.plot(np_cl_spark[idx_spk].np_d_time, np_cl_spark[idx_spk].np_d_sig, 'k', linewidth=0.5)
         axs_spk1.axis('off')
+
+        # Description
+        set_plot_spark_desc(i_rows, i_cols, i_row_offset + idx_spk, np_cl_spark[idx_spk].str_point_name)
 
 
 def set_plot_spark_desc(i_rows, i_cols, i_row_offset, str_spark_desc):
@@ -346,7 +356,7 @@ def set_plot_spark_desc(i_rows, i_cols, i_row_offset, str_spark_desc):
     # Header pane, starting with the description
     axs_desc = plt.subplot2grid((i_rows, i_cols), (i_row_offset, get_plot_setup_cols() - 1), colspan=1, rowspan=1)
     axs_desc.axis('off')
-    axs_desc.text(0, 1, ' ' + str_spark_desc, horizontalalignment='left', verticalalignment='top',
+    axs_desc.text(-0.20, 1, ' ' + str_spark_desc, horizontalalignment='left', verticalalignment='top',
                   fontweight='bold')
 
 
@@ -464,8 +474,11 @@ class ClSigReal(ClSig):
         self.__d_time_max = 0.0
         self.__d_time_min = 0.0
         np_x = np.linspace(0, 127, 128)
-        np_y = np.random.rand(np.size(np_x))
-        self.__np_sparklines = np.full((1, get_plot_setup_row_sig() - 1), fill_value=[ClSigCompUneven(np_y, np_x)])
+        self.__np_sparklines = np.array([], dtype=ClSigCompUneven)
+        for idx_spark in range(get_plot_setup_row_sig()):
+            self.__np_sparklines = np.append(self.__np_sparklines,
+                                             [ClSigCompUneven(np.random.rand(np.size(np_x)), np_x)])
+            self.__np_sparklines[idx_spark].str_point_name = 'Sparkline ' + '%0.0f' % idx_spark
 
         # Timebase plot attributes. Some/many are derived from the signal
         # itself so they need to be in this object, even though other
@@ -2234,7 +2247,7 @@ class ClSigFeatures:
         return str_meta
 
     # Plotting method, time domain signals.
-    def plt_sigs(self, b_verbose=False):
+    def plt_sigs(self, b_verbose=False, b_plot_sg=False, b_plot_filt=False):
         """
         Plot out the data in this signal feature class in the time domain
 
@@ -2243,6 +2256,10 @@ class ClSigFeatures:
         b_verbose : boolean
             Print the intermediate steps (default: False). Useful for stepping through the
             method to troubleshoot or understand it better.
+        b_plot_sg : boolean
+            Set to True to overlay the Savitsky-Golay filtered signal. Defaults to false
+        b_plot_filt : boolean
+            Set to True to overlay the FIR filtered signal. Defaults to false
 
         Returns
         -------
@@ -2274,30 +2291,41 @@ class ClSigFeatures:
             # Header pane, starting with the description
             set_plot_header_desc(i_rows, i_cols, i_row_offset, self.__str_plot_desc)
             set_plot_header_machine(i_rows, i_cols, i_row_offset + 1, self.str_machine_name(idx=idx_ch))
-            set_plot_header_point(i_rows, i_cols, i_row_offset + 2, [self.str_point_name(idx=idx_ch),
-                                                                     self.str_filt_sg_desc_short(idx=idx_ch),
-                                                                     self.str_filt_butter_desc_short(idx=idx_ch)])
-            set_plot_header_date(i_rows, i_cols, i_row_offset + 3, [self.dt_timestamp(idx_ch),
-                                 self.dt_timestamp(idx_ch), self.dt_timestamp(idx_ch)])
+            lst_points = [self.str_point_name(idx=idx_ch)]
+            lst_dates = [self.dt_timestamp(idx_ch)]
+
+            # Set up the point and date lists based on the selected traces
+            if b_plot_sg:
+                lst_points.append(self.str_filt_sg_desc_short(idx=idx_ch))
+                lst_dates.append(self.dt_timestamp(idx_ch))
+            if b_plot_filt:
+                lst_points.append(self.str_filt_butter_desc_short(idx=idx_ch))
+                lst_dates.append(self.dt_timestamp(idx_ch))
+
+            # Add the point and date information to the header
+            set_plot_header_point(i_rows, i_cols, i_row_offset + 2, lst_points)
+            set_plot_header_date(i_rows, i_cols, i_row_offset + 3, lst_dates)
 
             # Header pane, sparklines
-            i_col_offset = 2
-            for idx_spk in range(5):
-                # Sparkline
-                set_plot_sparkline(i_rows, i_cols, i_row_offset, self.__lst_cl_sgs[idx_ch].np_sparklines[0])
+            set_plot_sparkline(i_rows, i_cols, i_row_offset, self.__lst_cl_sgs[idx_ch].np_sparklines)
 
-                # Description
-                set_plot_spark_desc(i_rows, i_cols, i_row_offset + idx_spk, 'Test')
-
-            # Main signal pane
+            # Main signal pane, beginning with the signal
             axs_sig = plt.subplot2grid((i_rows, i_cols), (get_plot_setup_row_sig() + i_row_offset, 0),
                                        colspan=i_cols, rowspan=get_plot_setup_row_sig_span())
             axs_sig.plot(self.__lst_cl_sgs[idx_ch].d_time_plot, self.get_np_d_sig(idx=idx_ch),
                          color=get_trac_color(0), linewidth=3.5)
-            axs_sig.plot(self.__lst_cl_sgs[idx_ch].d_time_plot, self.__lst_cl_sgs[idx_ch].np_d_sig_filt_sg,
-                         color=get_trac_color(1), linewidth=2.5)
-            axs_sig.plot(self.__lst_cl_sgs[idx_ch].d_time_plot, self.__lst_cl_sgs[idx_ch].np_d_sig_filt_butter,
-                         color=get_trac_color(2), linewidth=1.5)
+
+            # If requested, add the S-G filtered signal
+            if b_plot_sg:
+                axs_sig.plot(self.__lst_cl_sgs[idx_ch].d_time_plot, self.__lst_cl_sgs[idx_ch].np_d_sig_filt_sg,
+                             color=get_trac_color(1), linewidth=2.5)
+
+            # If requested, add the FIR filtered signal
+            if b_plot_filt:
+                axs_sig.plot(self.__lst_cl_sgs[idx_ch].d_time_plot, self.__lst_cl_sgs[idx_ch].np_d_sig_filt_butter,
+                             color=get_trac_color(2), linewidth=1.5)
+
+            # Grid, labels, ticks, and other plot features
             axs_sig.grid()
             axs_sig.set_xlabel("Time, " + self.__lst_cl_sgs[idx_ch].str_eu_x)
             axs_sig.set_xlim(self.__lst_cl_sgs[idx_ch].xlim_tb)

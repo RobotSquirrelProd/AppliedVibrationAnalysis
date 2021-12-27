@@ -299,6 +299,15 @@ class TestClSig(TestCase):
         class_test_sig_features.str_plot_desc = 'test_plt_sigs | CLSigFeatures | New data, y-limits'
         class_test_sig_features.plt_sigs()
 
+        class_test_sig_features.str_plot_desc = 'test_plt_sigs | CLSigFeatures | SG Filtered'
+        class_test_sig_features.plt_sigs(b_plot_sg=True)
+
+        class_test_sig_features.str_plot_desc = 'test_plt_sigs | CLSigFeatures | FIR Filtered'
+        class_test_sig_features.plt_sigs(b_plot_filt=True)
+
+        class_test_sig_features.str_plot_desc = 'test_plt_sigs | CLSigFeatures | All Filtered'
+        class_test_sig_features.plt_sigs(b_plot_sg=True, b_plot_filt=True)
+
     def test_plt_spec(self):
         # Signal feature class check of plotting on instantiation
         class_test_sig_features = appvib.ClSigFeatures(self.np_test, self.d_fs)
