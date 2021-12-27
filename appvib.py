@@ -844,7 +844,7 @@ class ClSigReal(ClSig):
         """
 
         # Does the filter need to applied?
-        if self.__b_is_stale_filt_sg:
+        if self.__b_is_stale_filt_butter:
 
             # This is a guess of the filter corner, useful for general vibration
             # analysis of physical displacements.
@@ -2289,20 +2289,24 @@ class ClSigFeatures:
             i_row_offset = (idx_ch * get_plot_setup_rows())
 
             # Main signal pane, beginning with the signal
+            idx_trace = 0
             axs_sig = plt.subplot2grid((i_rows, i_cols), (get_plot_setup_row_sig() + i_row_offset, 0),
                                        colspan=i_cols, rowspan=get_plot_setup_row_sig_span())
             axs_sig.plot(self.__lst_cl_sgs[idx_ch].d_time_plot, self.get_np_d_sig(idx=idx_ch),
-                         color=get_trac_color(0), linewidth=3.5)
+                         color=get_trac_color(idx_trace), linewidth=3.5)
+            idx_trace = idx_trace + 1
 
             # If requested, add the S-G filtered signal
             if b_plot_sg:
                 axs_sig.plot(self.__lst_cl_sgs[idx_ch].d_time_plot, self.__lst_cl_sgs[idx_ch].np_d_sig_filt_sg,
-                             color=get_trac_color(1), linewidth=2.5)
+                             color=get_trac_color(idx_trace), linewidth=2.5)
+                idx_trace = idx_trace + 1
 
             # If requested, add the FIR filtered signal
             if b_plot_filt:
                 axs_sig.plot(self.__lst_cl_sgs[idx_ch].d_time_plot, self.__lst_cl_sgs[idx_ch].np_d_sig_filt_butter,
-                             color=get_trac_color(2), linewidth=1.5)
+                             color=get_trac_color(idx_trace), linewidth=1.5)
+                idx_trace = idx_trace + 1
 
             # Grid, labels, ticks, and other plot features
             axs_sig.grid()
