@@ -2288,27 +2288,6 @@ class ClSigFeatures:
             # Offset on a channel-by-channel basis
             i_row_offset = (idx_ch * get_plot_setup_rows())
 
-            # Header pane, starting with the description
-            set_plot_header_desc(i_rows, i_cols, i_row_offset, self.__str_plot_desc)
-            set_plot_header_machine(i_rows, i_cols, i_row_offset + 1, self.str_machine_name(idx=idx_ch))
-            lst_points = [self.str_point_name(idx=idx_ch)]
-            lst_dates = [self.dt_timestamp(idx_ch)]
-
-            # Set up the point and date lists based on the selected traces
-            if b_plot_sg:
-                lst_points.append(self.str_filt_sg_desc_short(idx=idx_ch))
-                lst_dates.append(self.dt_timestamp(idx_ch))
-            if b_plot_filt:
-                lst_points.append(self.str_filt_butter_desc_short(idx=idx_ch))
-                lst_dates.append(self.dt_timestamp(idx_ch))
-
-            # Add the point and date information to the header
-            set_plot_header_point(i_rows, i_cols, i_row_offset + 2, lst_points)
-            set_plot_header_date(i_rows, i_cols, i_row_offset + 3, lst_dates)
-
-            # Header pane, sparklines
-            set_plot_sparkline(i_rows, i_cols, i_row_offset, self.__lst_cl_sgs[idx_ch].np_sparklines)
-
             # Main signal pane, beginning with the signal
             axs_sig = plt.subplot2grid((i_rows, i_cols), (get_plot_setup_row_sig() + i_row_offset, 0),
                                        colspan=i_cols, rowspan=get_plot_setup_row_sig_span())
@@ -2338,6 +2317,28 @@ class ClSigFeatures:
             axs_sig.set_yticks(np.linspace(self.__lst_cl_sgs[idx_ch].ylim_tb[0],
                                            self.__lst_cl_sgs[idx_ch].ylim_tb[1],
                                            self.__lst_cl_sgs[idx_ch].i_y_divisions_tb))
+
+            # After the plots and signal have been plotted (forcing re-calculation of extracted
+            # features) create the header, starting with the description
+            set_plot_header_desc(i_rows, i_cols, i_row_offset, self.__str_plot_desc)
+            set_plot_header_machine(i_rows, i_cols, i_row_offset + 1, self.str_machine_name(idx=idx_ch))
+            lst_points = [self.str_point_name(idx=idx_ch)]
+            lst_dates = [self.dt_timestamp(idx_ch)]
+
+            # Set up the point and date lists based on the selected traces
+            if b_plot_sg:
+                lst_points.append(self.str_filt_sg_desc_short(idx=idx_ch))
+                lst_dates.append(self.dt_timestamp(idx_ch))
+            if b_plot_filt:
+                lst_points.append(self.str_filt_butter_desc_short(idx=idx_ch))
+                lst_dates.append(self.dt_timestamp(idx_ch))
+
+            # Add the point and date information to the header
+            set_plot_header_point(i_rows, i_cols, i_row_offset + 2, lst_points)
+            set_plot_header_date(i_rows, i_cols, i_row_offset + 3, lst_dates)
+
+            # Header pane, sparklines
+            set_plot_sparkline(i_rows, i_cols, i_row_offset, self.__lst_cl_sgs[idx_ch].np_sparklines)
 
         # Save off the handle to the plot
         plot_handle = plt.gcf()
