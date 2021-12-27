@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 from matplotlib.ticker import FormatStrFormatter
+from matplotlib import transforms
 import math
 import numpy as np
 import csv
@@ -10,6 +11,30 @@ from scipy.interpolate import interp1d
 from datetime import datetime
 from dateutil import tz
 import abc as abc
+
+
+def get_dt_str(dt_timestamp):
+    """
+    Method to format date and time for plots, files, etc.
+
+    Parameters
+    ----------
+    dt_timestamp : datetime
+        Datetime for conversion
+
+    Returns
+    -------
+    str_dt_timestamp : string
+        Formatted date-time string
+
+    """
+    # Convert from UTC to local time and then to string
+    dt_timestamp_working = dt_timestamp
+    dt_timestamp_working = dt_timestamp_working.replace(tzinfo=tz.tzutc())
+    dt_local = dt_timestamp_working.astimezone(tz.tzlocal())
+    str_dt_timestamp = dt_local.isoformat(sep=' ', timespec='milliseconds')
+
+    return str_dt_timestamp
 
 
 def get_plot_setup_rows():
@@ -71,7 +96,7 @@ def get_font_plots():
     return 'Garamond'
 
 
-def get_trace(i_trace):
+def get_trac_color(i_trace):
     """
      Global function that returns trace colors
 
@@ -161,6 +186,111 @@ def set_plot_header_machine(i_rows, i_cols, i_row_offset, str_machine_name):
                   fontweight='bold')
 
 
+def draw_multi_color_text(x, y, lst_text, str_delim=', ', b_newline = False, **kw):
+    """
+    Draw a list of strings in color order of the plot traces. Inspired by
+    a post on SO: https://stackoverflow.com/questions/9169052/partial-coloring-of-text-in-matplotlib
+
+    Parameters
+    ----------
+
+        x : double
+            Horizontal location of text
+        y : double
+            Vertical location of text
+        lst_text : list, string
+            List of string
+        str_delim : string
+            Delimiter to be used
+
+    """
+
+    t = plt.gca().transData
+    fig = plt.gcf()
+    i_items = len(lst_text)
+
+    for idx_str, str_label in enumerate(lst_text):
+
+        # Draw the text
+        text = plt.text(x, y, str_label, color=get_trac_color(idx_str), transform=t, **kw)
+        text.draw(fig.canvas.get_renderer())
+        ex = text.get_window_extent()
+        d_ex_width = ex.width
+        t = transforms.offset_copy(text._transform, x=2 * d_ex_width, units='dots')
+
+        # Punctuation
+        if idx_str < (i_items - 1):
+            text = plt.text(x, y, str_delim, color='black', transform=t, **kw)
+            text.draw(fig.canvas.get_renderer())
+            ex = text.get_window_extent()
+            if b_newline:
+                t = transforms.offset_copy(text._transform, x=-2 * d_ex_width, y=-2.05 * ex.height, units='dots')
+            else:
+                t = transforms.offset_copy(text._transform, x=2 * ex.width, units='dots')
+
+
+def set_plot_header_point(i_rows, i_cols, i_row_offset, lst_str_point_name):
+    """
+    Global function that creates the point name field and value in the header
+
+     Parameters
+     ----------
+         i_rows : integer
+             Number of rows in the grid
+         i_cols : integer
+             Number of columns in the grid
+         i_row_offset : integer
+            Number of rows to skip; useful for multi-pane plots
+        lst_str_point_name : list, string
+            Lit of point name strings, assumed to be in order of plotted traces
+
+    Returns:
+
+        axes_desc : handle to point name axis
+
+    """
+    # Point name
+    axs_point = plt.subplot2grid((i_rows, i_cols), (i_row_offset, 0), colspan=int(i_cols / 4), rowspan=1)
+    axs_point.axis('off')
+    axs_point.text(0, 1, 'Point(s):', horizontalalignment='right', verticalalignment='top',
+                   fontweight='bold')
+    lst_str_point_name[0] = " " + lst_str_point_name[0]
+    draw_multi_color_text(0, 1, lst_str_point_name, horizontalalignment='left', verticalalignment='top',
+                          fontweight='bold')
+
+
+def set_plot_header_date(i_rows, i_cols, i_row_offset, lst_dt_timestamp):
+    """
+    Global function that creates the date field and value in the header
+
+     Parameters
+     ----------
+         i_rows : integer
+             Number of rows in the grid
+         i_cols : integer
+             Number of columns in the grid
+         i_row_offset : integer
+            Number of rows to skip; useful for multi-pane plots
+        lst_dt_timestamp : list, datetime
+            Lit of timestamps, assumed to be in order of plotted traces
+
+    Returns:
+
+        axes_desc : handle to timestamp name axis
+
+    """
+    # Date value
+    axs_date = plt.subplot2grid((i_rows, i_cols), (i_row_offset, 0), colspan=int(i_cols / 4), rowspan=1)
+    axs_date.axis('off')
+    axs_date.text(0, 1, 'Date(s):', horizontalalignment='right', verticalalignment='top',
+                  fontweight='bold')
+    lst_str_timestamp = list(map(lambda x: get_dt_str(x), lst_dt_timestamp))
+    lst_str_timestamp = list(map(lambda x: ' ' + x, lst_str_timestamp))
+    draw_multi_color_text(0, 1, lst_str_timestamp, str_delim=', ', b_newline=True, horizontalalignment='left',
+                          verticalalignment='top',
+                          fontweight='bold')
+
+
 def set_plot_sparkline(i_rows, i_cols, i_row_offset, np_cl_spark):
     """
     Global function that creates the description field for the sparklines
@@ -183,12 +313,12 @@ def set_plot_sparkline(i_rows, i_cols, i_row_offset, np_cl_spark):
     """
 
     # Header pane, sparklines
-    i_col_offset = int(get_plot_setup_cols()/2)
+    i_col_offset = int(get_plot_setup_cols() / 2)
 
-    for idx_spk in range(get_plot_setup_row_sig()-1):
+    for idx_spk in range(get_plot_setup_row_sig() - 1):
         # Sparkline
         axs_spk1 = plt.subplot2grid((i_rows, i_cols), (i_row_offset + idx_spk, i_col_offset),
-                                    colspan=i_col_offset-1, rowspan=1)
+                                    colspan=i_col_offset - 1, rowspan=1)
         axs_spk1.plot(np_cl_spark[idx_spk].np_d_time, np_cl_spark[idx_spk].np_d_sig, 'k', linewidth=0.5)
         axs_spk1.axis('off')
 
@@ -214,7 +344,7 @@ def set_plot_spark_desc(i_rows, i_cols, i_row_offset, str_spark_desc):
 
     """
     # Header pane, starting with the description
-    axs_desc = plt.subplot2grid((i_rows, i_cols), (i_row_offset, get_plot_setup_cols()-1), colspan=1, rowspan=1)
+    axs_desc = plt.subplot2grid((i_rows, i_cols), (i_row_offset, get_plot_setup_cols() - 1), colspan=1, rowspan=1)
     axs_desc.axis('off')
     axs_desc.text(0, 1, ' ' + str_spark_desc, horizontalalignment='left', verticalalignment='top',
                   fontweight='bold')
@@ -335,7 +465,7 @@ class ClSigReal(ClSig):
         self.__d_time_min = 0.0
         np_x = np.linspace(0, 127, 128)
         np_y = np.random.rand(np.size(np_x))
-        self.__np_sparklines = np.full((1, get_plot_setup_row_sig()-1), fill_value=[ClSigCompUneven(np_y, np_x)])
+        self.__np_sparklines = np.full((1, get_plot_setup_row_sig() - 1), fill_value=[ClSigCompUneven(np_y, np_x)])
 
         # Timebase plot attributes. Some/many are derived from the signal
         # itself so they need to be in this object, even though other
@@ -1543,7 +1673,7 @@ class ClSigCompUneven(ClSig):
         fig, axs = plt.subplots(2)
 
         # Plot the phase
-        axs[0].plot(self.__np_d_time, np.rad2deg(np.angle(self.__np_d_sig)), color=get_trace(0))
+        axs[0].plot(self.__np_d_time, np.rad2deg(np.angle(self.__np_d_sig)), color=get_trac_color(0))
         axs[0].grid()
         axs[0].set_xlabel("Time, seconds")
         axs[0].set_ylabel("Phase, degrees")
@@ -1551,7 +1681,7 @@ class ClSigCompUneven(ClSig):
         axs[0].set_title(self.__str_plot_desc)
 
         # Plot the magnitude
-        axs[1].plot(self.__np_d_time, np.abs(self.__np_d_sig), color=get_trace(0))
+        axs[1].plot(self.__np_d_time, np.abs(self.__np_d_sig), color=get_trac_color(0))
         axs[1].grid()
         axs[1].set_xlabel("Time, seconds")
         axs[1].set_ylabel("Magnitude, " + self.str_eu)
@@ -1593,7 +1723,7 @@ class ClSigCompUneven(ClSig):
         fig, ax = plt.subplots(subplot_kw={'projection': 'polar'})
 
         # Polar plot
-        ax.plot(np.angle(self.__np_d_sig), np.abs(self.__np_d_sig), color=get_trace(0))
+        ax.plot(np.angle(self.__np_d_sig), np.abs(self.__np_d_sig), color=get_trac_color(0))
         ax.set_rmax(np.max(self.ylim_mag))
         d_tick_radial = np.round(np.max(self.ylim_mag) / 4.0, decimals=1)
         ax.set_rticks([d_tick_radial, d_tick_radial * 2.0, d_tick_radial * 3.0, d_tick_radial * 4.0])
@@ -2077,12 +2207,7 @@ class ClSigFeatures:
 
         """
         # Convert from UTC to local time and then to string
-        dt_timestamp_working = self.dt_timestamp(idx=idx)
-        dt_timestamp_working = dt_timestamp_working.replace(tzinfo=tz.tzutc())
-        dt_local = dt_timestamp_working.astimezone(tz.tzlocal())
-        str_dt_timestamp = dt_local.isoformat(sep=' ', timespec='milliseconds')
-
-        return str_dt_timestamp
+        return get_dt_str(self.dt_timestamp(idx=idx))
 
     def __str_plt_support_title_meta(self, str_plot_type='timebase', idx=0):
         """
@@ -2148,27 +2273,31 @@ class ClSigFeatures:
 
             # Header pane, starting with the description
             set_plot_header_desc(i_rows, i_cols, i_row_offset, self.__str_plot_desc)
-            set_plot_header_machine(i_rows, i_cols, i_row_offset+1, self.str_machine_name(idx=idx_ch))
+            set_plot_header_machine(i_rows, i_cols, i_row_offset + 1, self.str_machine_name(idx=idx_ch))
+            set_plot_header_point(i_rows, i_cols, i_row_offset + 2, [self.str_point_name(idx=idx_ch),
+                                                                     self.str_filt_sg_desc_short(idx=idx_ch),
+                                                                     self.str_filt_butter_desc_short(idx=idx_ch)])
+            set_plot_header_date(i_rows, i_cols, i_row_offset + 3, [self.dt_timestamp(idx_ch),
+                                 self.dt_timestamp(idx_ch), self.dt_timestamp(idx_ch)])
 
             # Header pane, sparklines
             i_col_offset = 2
             for idx_spk in range(5):
-
                 # Sparkline
                 set_plot_sparkline(i_rows, i_cols, i_row_offset, self.__lst_cl_sgs[idx_ch].np_sparklines[0])
 
                 # Description
-                set_plot_spark_desc(i_rows, i_cols, i_row_offset+idx_spk, 'Test')
+                set_plot_spark_desc(i_rows, i_cols, i_row_offset + idx_spk, 'Test')
 
             # Main signal pane
             axs_sig = plt.subplot2grid((i_rows, i_cols), (get_plot_setup_row_sig() + i_row_offset, 0),
                                        colspan=i_cols, rowspan=get_plot_setup_row_sig_span())
             axs_sig.plot(self.__lst_cl_sgs[idx_ch].d_time_plot, self.get_np_d_sig(idx=idx_ch),
-                         color=get_trace(0), linewidth=3.5)
+                         color=get_trac_color(0), linewidth=3.5)
             axs_sig.plot(self.__lst_cl_sgs[idx_ch].d_time_plot, self.__lst_cl_sgs[idx_ch].np_d_sig_filt_sg,
-                         color=get_trace(1), linewidth=2.5)
+                         color=get_trac_color(1), linewidth=2.5)
             axs_sig.plot(self.__lst_cl_sgs[idx_ch].d_time_plot, self.__lst_cl_sgs[idx_ch].np_d_sig_filt_butter,
-                         color=get_trace(2), linewidth=1.5)
+                         color=get_trac_color(2), linewidth=1.5)
             axs_sig.grid()
             axs_sig.set_xlabel("Time, " + self.__lst_cl_sgs[idx_ch].str_eu_x)
             axs_sig.set_xlim(self.__lst_cl_sgs[idx_ch].xlim_tb)
@@ -2181,8 +2310,6 @@ class ClSigFeatures:
             axs_sig.set_yticks(np.linspace(self.__lst_cl_sgs[idx_ch].ylim_tb[0],
                                            self.__lst_cl_sgs[idx_ch].ylim_tb[1],
                                            self.__lst_cl_sgs[idx_ch].i_y_divisions_tb))
-            axs_sig.legend(['as-acquired', self.str_filt_sg_desc_short(idx=idx_ch),
-                            self.str_filt_butter_desc_short(idx=idx_ch)])
 
         # Save off the handle to the plot
         plot_handle = plt.gcf()
@@ -2211,7 +2338,7 @@ class ClSigFeatures:
         plt.figure()
 
         # Plot the spectrum
-        plt.plot(spec[0], d_mag, color=get_trace(0))
+        plt.plot(spec[0], d_mag, color=get_trac_color(0))
         plt.grid()
         plt.xlabel("Frequency, hertz")
         plt.ylabel("Channel amplitude, " + self.__lst_cl_sgs[0].str_eu)
@@ -2296,7 +2423,7 @@ class ClSigFeatures:
         # Put up the the plot time
         plt.rcParams["font.family"] = get_font_plots()
         plt.figure()
-        plt.plot(self.__lst_cl_sgs[idx].d_time, self.__lst_cl_sgs[idx].np_d_sig, color=get_trace(0))
+        plt.plot(self.__lst_cl_sgs[idx].d_time, self.__lst_cl_sgs[idx].np_d_sig, color=get_trac_color(0))
         plt.plot(np_d_eventtimes,
                  self.__lst_cl_sgs[idx].np_d_sig[self.__lst_cl_sgs[idx_eventtimes].idx_events], "ok")
         plt.grid(True)
@@ -2357,8 +2484,8 @@ class ClSigFeatures:
         self.d_est_rpm(d_events_per_rev=d_events_per_rev, idx_eventtimes=idx_eventtimes)
         [d_xlim_start, d_xlim_end] = self.__get_x_limit_events(idx_eventtimes=idx_eventtimes, idx=idx)
 
-        lns1 = ax1.plot(self.__lst_cl_sgs[idx].d_time, self.np_d_sig, color=get_trace(0), label='Signal')
-        lns2 = ax2.plot(np_d_eventtimes, self.__np_d_rpm, color=get_trace(1), label='RPM', marker='.', ms=20)
+        lns1 = ax1.plot(self.__lst_cl_sgs[idx].d_time, self.np_d_sig, color=get_trac_color(0), label='Signal')
+        lns2 = ax2.plot(np_d_eventtimes, self.__np_d_rpm, color=get_trac_color(1), label='RPM', marker='.', ms=20)
         plt.grid(True)
         ax1.set_xlabel('Time, seconds')
         plt.xlim([d_xlim_start, d_xlim_end])
@@ -2464,9 +2591,10 @@ class ClSigFeatures:
 
         # Step through the channels and plot out the signals
         for idx_ch, _ in enumerate(self.__lst_cl_sgs):
-            axs[idx_ch].plot(self.__lst_cl_sgs[idx_ch].d_time_plot, self.get_np_d_sig(idx=idx_ch), color=get_trace(0))
+            axs[idx_ch].plot(self.__lst_cl_sgs[idx_ch].d_time_plot, self.get_np_d_sig(idx=idx_ch), color=get_trac_color(
+                0))
             if b_overlay:
-                axs[idx_ch].plot(self.__lst_cl_sgs[idx_ch].d_time_plot, lst_nx[idx_ch], color=get_trace(1))
+                axs[idx_ch].plot(self.__lst_cl_sgs[idx_ch].d_time_plot, lst_nx[idx_ch], color=get_trac_color(1))
 
             axs[idx_ch].plot(self.np_d_eventtimes(idx=idx_event_source),
                              lst_nx[idx_ch][self.__lst_cl_sgs[idx_event_source].idx_events], "ok")
