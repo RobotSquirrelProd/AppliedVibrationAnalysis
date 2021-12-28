@@ -56,12 +56,19 @@ class ClassPlotSupport:
 
         Return
         ------
+        list
             double : number rounded off
-
+            string : format string
         """
         d_exp = np.log10(abs(d_num))
         i_round = int(round(d_exp, 0)) - 1
-        return round(d_num, -i_round)
+
+        if i_round <= 0:
+            str_format = '%0.' + '%0.0f' % -i_round + 'f'
+        else:
+            str_format = '%' + '%0.0f' % i_round + '.0f'
+
+        return [round(d_num, -i_round), str_format]
 
     @staticmethod
     def get_plot_setup_rows():
@@ -108,7 +115,7 @@ class ClassPlotSupport:
         return 10
 
     @staticmethod
-    def set_plot_setup_sig_axis(ax, x_limit_sig=[0.0, 1.0], y_limit_sig=[0.0, 1.0]):
+    def set_plot_setup_sig_axis(ax, x_limit_sig=np.array([0.0, 1.0]), y_limit_sig=np.array([0.0, 1.0])):
         """Set up the signal plotting axis
 
         Parameters
@@ -121,6 +128,10 @@ class ClassPlotSupport:
             y-axis minimum and maximum values
 
         """
+
+        # grid features
+        i_xaxis_minor = 5
+
         # from: https://stackoverflow.com/questions/925024/how-can-i-remove-the-top-and-right-axis-in-matplotlib
 
         # Hide the right and top spines
@@ -134,18 +145,16 @@ class ClassPlotSupport:
 
         # x-axis grid and labels
         d_spacing = (max(x_limit_sig) - min(x_limit_sig))/5.0
-        d_spacing_rounded = ClassPlotSupport.get_plot_round(d_spacing)
+        lst_round = ClassPlotSupport.get_plot_round(d_spacing)
+        d_spacing_rounded = lst_round[0]
+        str_format = lst_round[1]
         ax.xaxis.set_major_locator(MultipleLocator(d_spacing_rounded))
-        ax.xaxis.set_minor_locator(AutoMinorLocator(5))
-        # ax.xaxis.set_major_formatter('{x:.0f}')
+        ax.xaxis.set_minor_locator(AutoMinorLocator(i_xaxis_minor))
 
         # Remove horizontal axis tick marks
         for tick in ax.xaxis.get_major_ticks():
-        #    tick.tick1line.set_visible(False)
             # Left bottom tick marker
             tick.tick1line.set_visible(False)
-        #    tick.label1.set_visible(False)
-        #    tick.label2.set_visible(False)
 
         for tick in ax.xaxis.get_minor_ticks():
             # Left bottom tick marker
@@ -155,11 +164,27 @@ class ClassPlotSupport:
         ticks_loc = ax.get_xticks().tolist()
         ax.xaxis.set_major_locator(mticker.FixedLocator(ticks_loc))
         # TO DO: this should not be fixed. Needs to be based on magnitude of value
-        label_format = '{:,.1f}'
-        lst_labels = [label_format.format(x) for x in ticks_loc]
+        lst_labels = [str_format % x for x in ticks_loc]
         for idx in range(2, len(lst_labels)):
             lst_labels[idx] = ' '
         ax.set_xticklabels(lst_labels)
+
+        # X-axis label
+        i_rows = ClassPlotSupport.get_plot_setup_rows()
+        i_cols = ClassPlotSupport.get_plot_setup_cols()
+        axs_desc = plt.subplot2grid((i_rows, i_cols), (i_rows-1, i_cols-1),
+                                    colspan=1, rowspan=1)
+        axs_desc.axis('off')
+
+        str_suffix = 'sec'
+        d_spacing_rounded_minor = d_spacing_rounded/float(i_xaxis_minor)
+        if d_spacing_rounded_minor < 1.0:
+            d_spacing_rounded_minor = d_spacing_rounded_minor * 1000
+            str_suffix = 'ms'
+        str_xaxis_description = ('Horizontal: ' + str_format % d_spacing_rounded_minor +
+                                 ' ' + str_suffix + '/division')
+        axs_desc.text(1, 0, str_xaxis_description, horizontalalignment='right', verticalalignment='bottom',
+                      fontweight='bold')
 
         return
 
@@ -2497,7 +2522,6 @@ class ClSigFeatures(ClassPlotSupport):
                 idx_trace = idx_trace + 1
 
             # Grid, labels, ticks, and other plot features
-            axs_sig.set_xlabel("Time, " + self.__lst_cl_sgs[idx_ch].str_eu_x)
             axs_sig.set_xlim(self.__lst_cl_sgs[idx_ch].xlim_tb)
             axs_sig.set_xticks(np.linspace(self.__lst_cl_sgs[idx_ch].xlim_tb[0],
                                            self.__lst_cl_sgs[idx_ch].xlim_tb[1],
