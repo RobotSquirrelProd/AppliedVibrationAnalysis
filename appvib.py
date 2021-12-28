@@ -115,7 +115,8 @@ class ClassPlotSupport:
         return 10
 
     @staticmethod
-    def set_plot_setup_sig_axis(ax, x_limit_sig=np.array([0.0, 1.0]), y_limit_sig=np.array([0.0, 1.0])):
+    def set_plot_setup_sig_axis(ax, x_limit_sig=np.array([0.0, 1.0]), y_limit_sig=np.array([0.0, 1.0]),
+                                str_eu='volts', str_yaxis_desc='Amplitude'):
         """Set up the signal plotting axis
 
         Parameters
@@ -126,6 +127,10 @@ class ClassPlotSupport:
             x-axis minimum and maximum values
         y_limit_sig : list, double
             y-axis minimum and maximum values
+        str_eu : string
+            y-axis units
+        str_yaxis_desc : string
+            y-axis description
 
         """
 
@@ -136,6 +141,7 @@ class ClassPlotSupport:
 
         # Hide the right and top spines
         ax.spines['right'].set_visible(False)
+        ax.spines['left'].set_visible(False)
         ax.spines['top'].set_visible(False)
         ax.spines['bottom'].set_visible(False)
 
@@ -144,7 +150,7 @@ class ClassPlotSupport:
         ax.grid(True, which='minor', color="#666666ff", lw=0.25, ls=':')
 
         # x-axis grid and labels
-        d_spacing = (max(x_limit_sig) - min(x_limit_sig))/5.0
+        d_spacing = (max(x_limit_sig) - min(x_limit_sig)) / 5.0
         lst_round = ClassPlotSupport.get_plot_round(d_spacing)
         d_spacing_rounded = lst_round[0]
         str_format = lst_round[1]
@@ -169,22 +175,54 @@ class ClassPlotSupport:
             lst_labels[idx] = ' '
         ax.set_xticklabels(lst_labels)
 
-        # X-axis label
-        i_rows = ClassPlotSupport.get_plot_setup_rows()
-        i_cols = ClassPlotSupport.get_plot_setup_cols()
-        axs_desc = plt.subplot2grid((i_rows, i_cols), (i_rows-1, i_cols-1),
-                                    colspan=1, rowspan=1)
-        axs_desc.axis('off')
+        # Spacing is not quite right with ticks removed
+        ax.tick_params(axis='x', pad=-2)
 
+        # X-axis label
         str_suffix = 'sec'
-        d_spacing_rounded_minor = d_spacing_rounded/float(i_xaxis_minor)
+        d_spacing_rounded_minor = d_spacing_rounded / float(i_xaxis_minor)
         if d_spacing_rounded_minor < 1.0:
             d_spacing_rounded_minor = d_spacing_rounded_minor * 1000
             str_suffix = 'ms'
         str_xaxis_description = ('Horizontal: ' + str_format % d_spacing_rounded_minor +
                                  ' ' + str_suffix + '/division')
-        axs_desc.text(1, 0, str_xaxis_description, horizontalalignment='right', verticalalignment='bottom',
-                      fontweight='bold')
+        ax.text(1, -0.1, str_xaxis_description, horizontalalignment='right', verticalalignment='top',
+                fontweight='bold', transform=ax.transAxes)
+
+        # y-axis grid and labels.
+        d_mid_span = (max(y_limit_sig) - min(y_limit_sig)) / 2.0
+        d_spacing = 1.1 * d_mid_span
+        d_mid_point = min(y_limit_sig) + d_mid_span
+
+        # Set up the spacing and number format for the major axis
+        lst_round = ClassPlotSupport.get_plot_round(d_spacing)
+        d_spacing_rounded = lst_round[0]
+        str_format = lst_round[1]
+        ax.yaxis.set_major_locator(MultipleLocator(d_spacing_rounded))
+        ax.yaxis.set_minor_locator(AutoMinorLocator(i_xaxis_minor))
+
+        # Remove vertical axis tick marks
+        for tick in ax.yaxis.get_major_ticks():
+            # Left/bottom tick marker
+            tick.tick1line.set_visible(False)
+
+        for tick in ax.yaxis.get_minor_ticks():
+            # Left/bottom tick marker
+            tick.tick1line.set_visible(False)
+
+        # Spacing is not quite right with ticks removed
+        ax.tick_params(axis='y', pad=-2)
+
+        # Y-axis label
+        d_spacing_rounded_minor = d_spacing_rounded / float(i_xaxis_minor)
+        str_yaxis_description = ('Vertical: ' + str_format % d_spacing_rounded_minor +
+                                 ' ' + str_eu + '/division')
+        ax.text(0, -0.1, str_yaxis_description, horizontalalignment='center', verticalalignment='top',
+                fontweight='bold', transform=ax.transAxes)
+        str_yaxis_desc
+        ax.text(0, 1.09, str_yaxis_desc, horizontalalignment='center', verticalalignment='top',
+                fontweight='bold', transform=ax.transAxes)
+
 
         return
 
@@ -476,7 +514,7 @@ class ClassPlotSupport:
                                                  np_cl_spark[idx_spk].str_point_name)
 
         # Add the time labels to this last sparkline
-        idx_spk = ClassPlotSupport.get_plot_setup_row_sparklines()-1
+        idx_spk = ClassPlotSupport.get_plot_setup_row_sparklines() - 1
         axs_spk1 = plt.subplot2grid((i_rows, i_cols), (i_row_offset + idx_spk + 1, i_col_offset),
                                     colspan=i_col_offset - 1, rowspan=1)
         axs_spk1.axis('off')
@@ -2527,13 +2565,14 @@ class ClSigFeatures(ClassPlotSupport):
                                            self.__lst_cl_sgs[idx_ch].xlim_tb[1],
                                            self.__lst_cl_sgs[idx_ch].i_x_divisions_tb))
             axs_sig.xaxis.set_major_formatter(FormatStrFormatter('%.2f'))
-            axs_sig.set_ylabel("Channel output, " + self.__lst_cl_sgs[idx_ch].str_eu)
             axs_sig.set_ylim(self.__lst_cl_sgs[idx_ch].ylim_tb)
             axs_sig.set_yticks(np.linspace(self.__lst_cl_sgs[idx_ch].ylim_tb[0],
                                            self.__lst_cl_sgs[idx_ch].ylim_tb[1],
                                            self.__lst_cl_sgs[idx_ch].i_y_divisions_tb))
             ClassPlotSupport.set_plot_setup_sig_axis(axs_sig, self.__lst_cl_sgs[idx_ch].xlim_tb,
-                                                     self.__lst_cl_sgs[idx_ch].ylim_tb)
+                                                     self.__lst_cl_sgs[idx_ch].ylim_tb,
+                                                     self.__lst_cl_sgs[idx_ch].str_eu,
+                                                     "Channel output, " + self.__lst_cl_sgs[idx_ch].str_eu)
 
             # After the plots and signal have been plotted (forcing re-calculation of extracted
             # features) create the header, starting with the description
