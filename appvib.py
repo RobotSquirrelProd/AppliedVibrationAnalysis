@@ -2,6 +2,8 @@ import matplotlib.pyplot as plt
 from matplotlib.ticker import FormatStrFormatter
 from matplotlib import transforms
 from matplotlib.artist import Artist
+from matplotlib.ticker import (MultipleLocator, AutoMinorLocator)
+import matplotlib.ticker as mticker
 import math
 import numpy as np
 import csv
@@ -40,6 +42,26 @@ class ClassPlotSupport:
         str_dt_timestamp = dt_local.isoformat(sep=' ', timespec='milliseconds')
 
         return str_dt_timestamp
+
+    @staticmethod
+    def get_plot_round(d_num):
+        """
+        Why another round function? Indeed, this one is designed to give a reasonable
+        look to the grid lines. This function is mocked up in RoundingTest.ipynb
+
+        Parameters
+        ----------
+        d_num : double
+            Number to be rounded
+
+        Return
+        ------
+            double : number rounded off
+
+        """
+        d_exp = np.log10(abs(d_num))
+        i_round = int(round(d_exp, 0)) - 1
+        return round(d_num, -i_round)
 
     @staticmethod
     def get_plot_setup_rows():
@@ -86,14 +108,17 @@ class ClassPlotSupport:
         return 10
 
     @staticmethod
-    def set_plot_setup_sig_axis(ax):
+    def set_plot_setup_sig_axis(ax, x_limit_sig=[0.0, 1.0], y_limit_sig=[0.0, 1.0]):
         """Set up the signal plotting axis
 
         Parameters
         ----------
         ax : matplotlib axes object
             Axis object for the signal plotting area
-
+        x_limit_sig : list, double
+            x-axis minimum and maximum values
+        y_limit_sig : list, double
+            y-axis minimum and maximum values
 
         """
         # from: https://stackoverflow.com/questions/925024/how-can-i-remove-the-top-and-right-axis-in-matplotlib
@@ -104,14 +129,37 @@ class ClassPlotSupport:
         ax.spines['bottom'].set_visible(False)
 
         # Set up the grid
-        ax.grid(True)
+        ax.grid(True, which='major', color="#666666ff", lw=0.5)
+        ax.grid(True, which='minor', color="#666666ff", lw=0.25, ls=':')
+
+        # x-axis grid and labels
+        d_spacing = (max(x_limit_sig) - min(x_limit_sig))/5.0
+        d_spacing_rounded = ClassPlotSupport.get_plot_round(d_spacing)
+        ax.xaxis.set_major_locator(MultipleLocator(d_spacing_rounded))
+        ax.xaxis.set_minor_locator(AutoMinorLocator(5))
+        # ax.xaxis.set_major_formatter('{x:.0f}')
 
         # Remove horizontal axis tick marks
         for tick in ax.xaxis.get_major_ticks():
+        #    tick.tick1line.set_visible(False)
+            # Left bottom tick marker
             tick.tick1line.set_visible(False)
-            tick.tick2line.set_visible(False)
-            tick.label1.set_visible(False)
-            tick.label2.set_visible(False)
+        #    tick.label1.set_visible(False)
+        #    tick.label2.set_visible(False)
+
+        for tick in ax.xaxis.get_minor_ticks():
+            # Left bottom tick marker
+            tick.tick1line.set_visible(False)
+
+        # Set the x-ticks, just labelling the first point
+        ticks_loc = ax.get_xticks().tolist()
+        ax.xaxis.set_major_locator(mticker.FixedLocator(ticks_loc))
+        # TO DO: this should not be fixed. Needs to be based on magnitude of value
+        label_format = '{:,.1f}'
+        lst_labels = [label_format.format(x) for x in ticks_loc]
+        for idx in range(2, len(lst_labels)):
+            lst_labels[idx] = ' '
+        ax.set_xticklabels(lst_labels)
 
         return
 
@@ -2460,7 +2508,8 @@ class ClSigFeatures(ClassPlotSupport):
             axs_sig.set_yticks(np.linspace(self.__lst_cl_sgs[idx_ch].ylim_tb[0],
                                            self.__lst_cl_sgs[idx_ch].ylim_tb[1],
                                            self.__lst_cl_sgs[idx_ch].i_y_divisions_tb))
-            ClassPlotSupport.set_plot_setup_sig_axis(axs_sig)
+            ClassPlotSupport.set_plot_setup_sig_axis(axs_sig, self.__lst_cl_sgs[idx_ch].xlim_tb,
+                                                     self.__lst_cl_sgs[idx_ch].ylim_tb)
 
             # After the plots and signal have been plotted (forcing re-calculation of extracted
             # features) create the header, starting with the description
