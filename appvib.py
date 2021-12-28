@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 from matplotlib.ticker import FormatStrFormatter
 from matplotlib import transforms
+from matplotlib.artist import Artist
 import math
 import numpy as np
 import csv
@@ -8,7 +9,8 @@ import pandas as pd
 import scipy.signal as sig
 from scipy.fft import rfft, rfftfreq
 from scipy.interpolate import interp1d
-from datetime import datetime
+from scipy.signal import hilbert
+from datetime import datetime, timedelta
 from dateutil import tz
 import abc as abc
 
@@ -61,7 +63,15 @@ class ClassPlotSupport:
 
 
         """
-        return 5
+        return 5 + ClassPlotSupport.get_plot_setup_rows_header_buffer()
+
+    @staticmethod
+    def get_plot_setup_row_sparklines():
+        return ClassPlotSupport.get_plot_setup_row_sig() - + ClassPlotSupport.get_plot_setup_rows_header_buffer()
+
+    @staticmethod
+    def get_plot_setup_rows_header_buffer():
+        return 1
 
     @staticmethod
     def get_plot_setup_row_sig_span():
@@ -268,7 +278,8 @@ class ClassPlotSupport:
         axs_point.text(0, 1, 'Point(s):', horizontalalignment='right', verticalalignment='top',
                        fontweight='bold')
         lst_str_point_name[0] = " " + lst_str_point_name[0]
-        ClassPlotSupport.draw_multi_color_text(0, 1, lst_str_point_name, horizontalalignment='left', verticalalignment='top',
+        ClassPlotSupport.draw_multi_color_text(0, 1, lst_str_point_name, horizontalalignment='left',
+                                               verticalalignment='top',
                                                fontweight='bold')
 
     @staticmethod
@@ -305,7 +316,7 @@ class ClassPlotSupport:
                                                fontweight='bold')
 
     @staticmethod
-    def set_plot_sparkline(i_rows, i_cols, i_row_offset, np_cl_spark):
+    def set_plot_sparkline(i_rows, i_cols, i_row_offset, np_cl_spark, dt_timestamp_start, dt_timestamp_end):
         """
         Global function that creates the description field for the sparklines
 
@@ -319,6 +330,10 @@ class ClassPlotSupport:
                 Number of rows to skip; useful for multi-pane plots
             np_cl_spark : numpy array, ClSigCompUneven
                 Array with signals to be plotted in the sparklines
+            dt_timestamp_start : datetime
+                Begining date and time value for the sparklines
+            dt_timestamp_end : datetime
+                Ending date and time value for the sparklines
 
         Returns:
 
@@ -328,15 +343,36 @@ class ClassPlotSupport:
 
         # Header pane, sparklines
         i_col_offset = int(ClassPlotSupport.get_plot_setup_cols() / 2)
-        for idx_spk in range(ClassPlotSupport.get_plot_setup_row_sig()):
+        idx_spk = None
+        axs_spk1 = None
+        d_max_time = None
+        for idx_spk in range(ClassPlotSupport.get_plot_setup_row_sparklines()):
             # Sparkline
             axs_spk1 = plt.subplot2grid((i_rows, i_cols), (i_row_offset + idx_spk, i_col_offset),
                                         colspan=i_col_offset - 1, rowspan=1)
-            axs_spk1.plot(np_cl_spark[idx_spk].np_d_time, np_cl_spark[idx_spk].np_d_sig, 'k', linewidth=0.5)
+            ln_full = axs_spk1.plot(np_cl_spark[idx_spk].np_d_time, np_cl_spark[idx_spk].np_d_sig, 'k', linewidth=0.5)
             axs_spk1.axis('off')
+            axs_spk1.axvline(c='black', lw=0.25)
+            d_max_time = np.max(np_cl_spark[idx_spk].np_d_time)
+            axs_spk1.axvline(x=d_max_time, c='black', lw=0.25)
+            Artist.remove(ln_full[0])
+            axs_spk1.plot(np_cl_spark[idx_spk].np_d_time, 0.9 * np_cl_spark[idx_spk].np_d_sig,
+                          'k', linewidth=0.35)
 
             # Description
-            ClassPlotSupport.set_plot_spark_desc(i_rows, i_cols, i_row_offset + idx_spk, np_cl_spark[idx_spk].str_point_name)
+            ClassPlotSupport.set_plot_spark_desc(i_rows, i_cols, i_row_offset + idx_spk,
+                                                 np_cl_spark[idx_spk].str_point_name)
+
+        # Add the time labels to this last sparkline
+        if idx_spk is not None:
+            axs_spk1 = plt.subplot2grid((i_rows, i_cols), (i_row_offset + idx_spk+1, i_col_offset),
+                                        colspan=i_col_offset - 1, rowspan=1)
+            axs_spk1.axis('off')
+            d_min_time = np.min(np_cl_spark[idx_spk].np_d_time)
+            axs_spk1.text(0, 0, ClassPlotSupport.get_dt_str(dt_timestamp_start),
+                          horizontalalignment='center', verticalalignment='bottom', fontsize='small')
+            axs_spk1.text(1, 0, ClassPlotSupport.get_dt_str(dt_timestamp_end),
+                          horizontalalignment='center', verticalalignment='bottom', fontsize='small')
 
     @staticmethod
     def set_plot_spark_desc(i_rows, i_cols, i_row_offset, str_spark_desc):
@@ -360,11 +396,41 @@ class ClassPlotSupport:
 
         """
         # Header pane, starting with the description
-        axs_desc = plt.subplot2grid((i_rows, i_cols), (i_row_offset, ClassPlotSupport.get_plot_setup_cols() - 1), colspan=1,
-                                    rowspan=1)
+        axs_desc = plt.subplot2grid((i_rows, i_cols), (i_row_offset, ClassPlotSupport.get_plot_setup_cols() - 1),
+                                    colspan=1, rowspan=1)
         axs_desc.axis('off')
         axs_desc.text(-0.20, 1, ' ' + str_spark_desc, horizontalalignment='left', verticalalignment='top',
                       fontweight='bold')
+
+
+class ClSignalFeaturesEst:
+    """This class has mostly static methods used to estimate signal features"""
+
+    @staticmethod
+    def est_amplitude(np_d_sig=np.array([1., 2., 3.])):
+        """
+        This method estimates the signal envelope (peak values) by analytic signals
+
+        Parameters
+        ----------
+        np_d_sig : numpy array
+            Vector with the signal of interest. Assumed to be real-valued.
+
+        Return
+        ------
+
+        np_d_amp : numpy array, double
+            Vector with signal envelope
+
+        """
+
+        np_d_analytic = hilbert(np_d_sig)
+        return np.abs(np_d_analytic)
+
+    @staticmethod
+    def est_pk():
+        """TO DO: Derive and implement peak detector function"""
+        return True
 
 
 class ClSig(abc.ABC):
@@ -427,7 +493,7 @@ class ClSig(abc.ABC):
         pass
 
 
-class ClSigReal(ClSig):
+class ClSigReal(ClSig, ClSignalFeaturesEst):
     """
     Class for storing, plotting, and manipulating real-valued signals
 
@@ -482,14 +548,15 @@ class ClSigReal(ClSig):
         self.__d_time_min = 0.0
         np_x = np.linspace(0, 127, 128)
         self.__np_sparklines = np.array([], dtype=ClSigCompUneven)
-        for idx_spark in range(ClassPlotSupport.get_plot_setup_row_sig()):
+        for idx_spark in range(ClassPlotSupport.get_plot_setup_row_sparklines()):
             self.__np_sparklines = np.append(self.__np_sparklines,
                                              [ClSigCompUneven(np.random.rand(np.size(np_x)), np_x)])
             self.__np_sparklines[idx_spark].str_point_name = 'Sparkline ' + '%0.0f' % idx_spark
+        self.__b_is_stale_sparkline = True
 
         # Timebase plot attributes. Some/many are derived from the signal
-        # itself so they need to be in this object, even though other
-        # object could be generating the plot.
+        # itself, and they need to be in this object, even though other
+        # objects could be generating the plot.
         self.__d_time_plot = self.__d_time
         self.__ylim_tb = [0]
         self.set_ylim_tb(self.__ylim_tb)
@@ -584,7 +651,7 @@ class ClSigReal(ClSig):
         Parameters
         ----------
         b_state : boolean
-            Set to True to re-calculate all functions dependant on either signal values or
+            Set to True to re-calculate all functions dependent on either signal values or
             sampling frequency.
 
         """
@@ -593,6 +660,7 @@ class ClSigReal(ClSig):
             self.__b_is_stale_filt_sg = True
             self.__b_is_stale_filt_butter = True
             self.__b_is_stale_eventtimes = True
+            self.__b_is_stale_sparkline = True
 
     @property
     def str_eu(self):
@@ -1268,10 +1336,28 @@ class ClSigReal(ClSig):
 
     @property
     def np_sparklines(self):
+        # If the signal has been updated, but not the sparklines,
+        # this variable will be set to True and the method estimates
+        # sparklines for just the signal itself
+        if self.__b_is_stale_sparkline:
+            # First sparkline is the pk-pk value
+            np_d_pk = ClSignalFeaturesEst.est_amplitude(self.np_d_sig)
+            np_d_pkpk = 2.0 * np_d_pk
+            d_pkpk_max = np.max(np_d_pkpk)
+            str_point_spark = '%0.2f' % d_pkpk_max + ' ' + self.str_eu + ' pp'
+            self.__np_sparklines[0] = ClSigCompUneven(np_d_pkpk, self.d_time, str_eu=self.str_eu,
+                                                      str_point_name=str_point_spark,
+                                                      str_machine_name=self.str_machine_name,
+                                                      dt_timestamp=self.dt_timestamp)
+
         return self.__np_sparklines
 
     @np_sparklines.setter
     def np_sparklines(self, np_sparklines):
+        # New data, sparkline is updated and does not further processing
+        self.__b_is_stale_sparkline = False
+
+        # Return the value
         self.__np_sparklines = np_sparklines
 
     @property
@@ -1691,6 +1777,9 @@ class ClSigCompUneven(ClSig):
         # Figure with subplots
         plt.rcParams["font.family"] = ClassPlotSupport.get_font_plots()
         fig, axs = plt.subplots(2)
+
+        if b_verbose:
+            print(np.angle(self.__np_d_sig))
 
         # Plot the phase
         axs[0].plot(self.__np_d_time, np.rad2deg(np.angle(self.__np_d_sig)), color=ClassPlotSupport.get_trac_color(0))
@@ -2301,8 +2390,9 @@ class ClSigFeatures(ClassPlotSupport):
 
             # Main signal pane, beginning with the signal
             idx_trace = 0
-            axs_sig = plt.subplot2grid((i_rows, i_cols), (ClassPlotSupport.get_plot_setup_row_sig() + i_row_offset, 0),
-                                       colspan=i_cols, rowspan=ClassPlotSupport.get_plot_setup_row_sig_span())
+            i_row = (ClassPlotSupport.get_plot_setup_row_sig() + i_row_offset)
+            axs_sig = plt.subplot2grid((i_rows, i_cols), (i_row, 0), colspan=i_cols,
+                                       rowspan=ClassPlotSupport.get_plot_setup_row_sig_span())
             axs_sig.plot(self.__lst_cl_sgs[idx_ch].d_time_plot, self.get_np_d_sig(idx=idx_ch),
                          color=ClassPlotSupport.get_trac_color(idx_trace), linewidth=3.5)
             idx_trace = idx_trace + 1
@@ -2336,7 +2426,8 @@ class ClSigFeatures(ClassPlotSupport):
             # After the plots and signal have been plotted (forcing re-calculation of extracted
             # features) create the header, starting with the description
             ClassPlotSupport.set_plot_header_desc(i_rows, i_cols, i_row_offset, self.__str_plot_desc)
-            ClassPlotSupport.set_plot_header_machine(i_rows, i_cols, i_row_offset + 1, self.str_machine_name(idx=idx_ch))
+            ClassPlotSupport.set_plot_header_machine(i_rows, i_cols, i_row_offset + 1,
+                                                     self.str_machine_name(idx=idx_ch))
             lst_points = [self.str_point_name(idx=idx_ch)]
             lst_dates = [self.dt_timestamp(idx_ch)]
 
@@ -2353,7 +2444,11 @@ class ClSigFeatures(ClassPlotSupport):
             ClassPlotSupport.set_plot_header_date(i_rows, i_cols, i_row_offset + 3, lst_dates)
 
             # Header pane, sparklines
-            ClassPlotSupport.set_plot_sparkline(i_rows, i_cols, i_row_offset, self.__lst_cl_sgs[idx_ch].np_sparklines)
+            d_offset = self.__lst_cl_sgs[idx_ch].d_time_plot[-1] - self.__lst_cl_sgs[idx_ch].d_time_plot[0]
+            dt_timestamp_end = (self.dt_timestamp(idx=idx_ch) + timedelta(seconds = d_offset))
+            ClassPlotSupport.set_plot_sparkline(i_rows, i_cols, i_row_offset,
+                                                self.__lst_cl_sgs[idx_ch].np_sparklines,
+                                                self.dt_timestamp(idx=idx_ch), dt_timestamp_end)
 
         # Save off the handle to the plot
         plot_handle = plt.gcf()
@@ -2467,7 +2562,8 @@ class ClSigFeatures(ClassPlotSupport):
         # Put up the the plot time
         plt.rcParams["font.family"] = ClassPlotSupport.get_font_plots()
         plt.figure()
-        plt.plot(self.__lst_cl_sgs[idx].d_time, self.__lst_cl_sgs[idx].np_d_sig, color=ClassPlotSupport.get_trac_color(0))
+        plt.plot(self.__lst_cl_sgs[idx].d_time, self.__lst_cl_sgs[idx].np_d_sig,
+                 color=ClassPlotSupport.get_trac_color(0))
         plt.plot(np_d_eventtimes,
                  self.__lst_cl_sgs[idx].np_d_sig[self.__lst_cl_sgs[idx_eventtimes].idx_events], "ok")
         plt.grid(True)
@@ -2530,7 +2626,8 @@ class ClSigFeatures(ClassPlotSupport):
 
         lns1 = ax1.plot(self.__lst_cl_sgs[idx].d_time, self.np_d_sig, color=ClassPlotSupport.get_trac_color(0),
                         label='Signal')
-        lns2 = ax2.plot(np_d_eventtimes, self.__np_d_rpm, color=ClassPlotSupport.get_trac_color(1), label='RPM', marker='.',
+        lns2 = ax2.plot(np_d_eventtimes, self.__np_d_rpm, color=ClassPlotSupport.get_trac_color(1), label='RPM',
+                        marker='.',
                         ms=20)
         plt.grid(True)
         ax1.set_xlabel('Time, seconds')
