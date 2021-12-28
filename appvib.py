@@ -86,6 +86,36 @@ class ClassPlotSupport:
         return 10
 
     @staticmethod
+    def set_plot_setup_sig_axis(ax):
+        """Set up the signal plotting axis
+
+        Parameters
+        ----------
+        ax : matplotlib axes object
+            Axis object for the signal plotting area
+
+
+        """
+        # from: https://stackoverflow.com/questions/925024/how-can-i-remove-the-top-and-right-axis-in-matplotlib
+
+        # Hide the right and top spines
+        ax.spines['right'].set_visible(False)
+        ax.spines['top'].set_visible(False)
+        ax.spines['bottom'].set_visible(False)
+
+        # Set up the grid
+        ax.grid(True)
+
+        # Remove horizontal axis tick marks
+        for tick in ax.xaxis.get_major_ticks():
+            tick.tick1line.set_visible(False)
+            tick.tick2line.set_visible(False)
+            tick.label1.set_visible(False)
+            tick.label2.set_visible(False)
+
+        return
+
+    @staticmethod
     def get_plot_setup_cols():
         """
         Global function to provide common number of grid columns
@@ -316,7 +346,8 @@ class ClassPlotSupport:
                                                fontweight='bold')
 
     @staticmethod
-    def set_plot_sparkline(i_rows, i_cols, i_row_offset, np_cl_spark, dt_timestamp_start, dt_timestamp_end):
+    def set_plot_sparkline(i_rows, i_cols, i_row_offset, np_cl_spark,
+                           dt_timestamp_start, dt_timestamp_end, dt_timestamp_mark):
         """
         Global function that creates the description field for the sparklines
 
@@ -334,6 +365,8 @@ class ClassPlotSupport:
                 Begining date and time value for the sparklines
             dt_timestamp_end : datetime
                 Ending date and time value for the sparklines
+            dt_timestamp_mark : datetime
+                Date and time to place marker
 
         Returns:
 
@@ -343,9 +376,6 @@ class ClassPlotSupport:
 
         # Header pane, sparklines
         i_col_offset = int(ClassPlotSupport.get_plot_setup_cols() / 2)
-        idx_spk = None
-        axs_spk1 = None
-        d_max_time = None
         for idx_spk in range(ClassPlotSupport.get_plot_setup_row_sparklines()):
             # Sparkline
             axs_spk1 = plt.subplot2grid((i_rows, i_cols), (i_row_offset + idx_spk, i_col_offset),
@@ -359,20 +389,29 @@ class ClassPlotSupport:
             axs_spk1.plot(np_cl_spark[idx_spk].np_d_time, 0.9 * np_cl_spark[idx_spk].np_d_sig,
                           'k', linewidth=0.35)
 
+            # Add the marker, colored to match the first trace on the plot
+            dt_time_series = np.array([dt_timestamp_start + timedelta(seconds=dt_iter)
+                                       for dt_iter in np_cl_spark[idx_spk].np_d_time])
+            idx_marker = abs(dt_time_series - dt_timestamp_mark).argmin()
+            d_x = np_cl_spark[idx_spk].np_d_time[idx_marker]
+            d_y = 0.9 * np_cl_spark[idx_spk].np_d_sig[idx_marker]
+            axs_spk1.plot(d_x, d_y,
+                          '.', color=ClassPlotSupport.get_trac_color(0), ms=3)
+
             # Description
             ClassPlotSupport.set_plot_spark_desc(i_rows, i_cols, i_row_offset + idx_spk,
                                                  np_cl_spark[idx_spk].str_point_name)
 
         # Add the time labels to this last sparkline
-        if idx_spk is not None:
-            axs_spk1 = plt.subplot2grid((i_rows, i_cols), (i_row_offset + idx_spk+1, i_col_offset),
-                                        colspan=i_col_offset - 1, rowspan=1)
-            axs_spk1.axis('off')
-            d_min_time = np.min(np_cl_spark[idx_spk].np_d_time)
-            axs_spk1.text(0, 0, ClassPlotSupport.get_dt_str(dt_timestamp_start),
-                          horizontalalignment='center', verticalalignment='bottom', fontsize='small')
-            axs_spk1.text(1, 0, ClassPlotSupport.get_dt_str(dt_timestamp_end),
-                          horizontalalignment='center', verticalalignment='bottom', fontsize='small')
+        idx_spk = ClassPlotSupport.get_plot_setup_row_sparklines()-1
+        axs_spk1 = plt.subplot2grid((i_rows, i_cols), (i_row_offset + idx_spk + 1, i_col_offset),
+                                    colspan=i_col_offset - 1, rowspan=1)
+        axs_spk1.axis('off')
+        d_min_time = np.min(np_cl_spark[idx_spk].np_d_time)
+        axs_spk1.text(0, 0, ClassPlotSupport.get_dt_str(dt_timestamp_start),
+                      horizontalalignment='center', verticalalignment='bottom', fontsize='small')
+        axs_spk1.text(1, 0, ClassPlotSupport.get_dt_str(dt_timestamp_end),
+                      horizontalalignment='center', verticalalignment='bottom', fontsize='small')
 
     @staticmethod
     def set_plot_spark_desc(i_rows, i_cols, i_row_offset, str_spark_desc):
@@ -2410,7 +2449,6 @@ class ClSigFeatures(ClassPlotSupport):
                 idx_trace = idx_trace + 1
 
             # Grid, labels, ticks, and other plot features
-            axs_sig.grid()
             axs_sig.set_xlabel("Time, " + self.__lst_cl_sgs[idx_ch].str_eu_x)
             axs_sig.set_xlim(self.__lst_cl_sgs[idx_ch].xlim_tb)
             axs_sig.set_xticks(np.linspace(self.__lst_cl_sgs[idx_ch].xlim_tb[0],
@@ -2422,6 +2460,7 @@ class ClSigFeatures(ClassPlotSupport):
             axs_sig.set_yticks(np.linspace(self.__lst_cl_sgs[idx_ch].ylim_tb[0],
                                            self.__lst_cl_sgs[idx_ch].ylim_tb[1],
                                            self.__lst_cl_sgs[idx_ch].i_y_divisions_tb))
+            ClassPlotSupport.set_plot_setup_sig_axis(axs_sig)
 
             # After the plots and signal have been plotted (forcing re-calculation of extracted
             # features) create the header, starting with the description
@@ -2445,10 +2484,11 @@ class ClSigFeatures(ClassPlotSupport):
 
             # Header pane, sparklines
             d_offset = self.__lst_cl_sgs[idx_ch].d_time_plot[-1] - self.__lst_cl_sgs[idx_ch].d_time_plot[0]
-            dt_timestamp_end = (self.dt_timestamp(idx=idx_ch) + timedelta(seconds = d_offset))
+            dt_timestamp_end = (self.dt_timestamp(idx=idx_ch) + timedelta(seconds=d_offset))
             ClassPlotSupport.set_plot_sparkline(i_rows, i_cols, i_row_offset,
                                                 self.__lst_cl_sgs[idx_ch].np_sparklines,
-                                                self.dt_timestamp(idx=idx_ch), dt_timestamp_end)
+                                                self.dt_timestamp(idx=idx_ch), dt_timestamp_end,
+                                                self.dt_timestamp(idx=idx_ch))
 
         # Save off the handle to the plot
         plot_handle = plt.gcf()
