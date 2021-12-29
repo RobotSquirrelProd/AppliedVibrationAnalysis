@@ -151,8 +151,8 @@ class ClassPlotSupport:
 
         # x-axis grid and labels
         d_spacing = (max(x_limit_sig) - min(x_limit_sig)) / 5.0
-        lst_round = ClassPlotSupport.get_plot_round(d_spacing/float(i_xaxis_minor))
-        d_spacing_rounded = lst_round[0]*5.0
+        lst_round = ClassPlotSupport.get_plot_round(d_spacing / float(i_xaxis_minor))
+        d_spacing_rounded = lst_round[0] * 5.0
         str_format = lst_round[1]
         ax.xaxis.set_major_locator(MultipleLocator(d_spacing_rounded))
         ax.xaxis.set_minor_locator(AutoMinorLocator(i_xaxis_minor))
@@ -169,7 +169,6 @@ class ClassPlotSupport:
         # Set the x-ticks, just labelling the first point
         ticks_loc = ax.get_xticks().tolist()
         ax.xaxis.set_major_locator(mticker.FixedLocator(ticks_loc))
-        # TO DO: this should not be fixed. Needs to be based on magnitude of value
         lst_labels = [str_format % x for x in ticks_loc]
         for idx in range(2, len(lst_labels)):
             lst_labels[idx] = ' '
@@ -221,7 +220,6 @@ class ClassPlotSupport:
                 fontweight='bold', transform=ax.transAxes)
         ax.text(0, 1.09, str_yaxis_desc, horizontalalignment='center', verticalalignment='top',
                 fontweight='bold', transform=ax.transAxes)
-
 
         return
 
@@ -499,12 +497,14 @@ class ClassPlotSupport:
             np_d_y = 0.9 * np_cl_spark[idx_spk].np_d_sig
             axs_spk1.plot(np_cl_spark[idx_spk].np_d_time, np_d_y,
                           'k', linewidth=0.35)
-            d_ylim_min = 0.9*np.min(np_d_y)
-            d_ylim_max = 1.1*np.max(np_d_y)
+            d_ylim_min = 0.9 * np.min(np_d_y)
+            d_ylim_max = 1.1 * np.max(np_d_y)
             # Very small signal show up with numerical noise, this is an attempt
             # to get the scaling large enough to show significant changes in trends,
             # but not show numerical noise
-            if abs(d_ylim_max-d_ylim_min) < 0.5:
+            # TODO: Ideally the scaling would be set to optimize feature detection,
+            #  something like the 45 degrees suggested by Tufte
+            if abs(d_ylim_max - d_ylim_min) < 0.5:
                 d_ylim_min = d_ylim_min - 0.5
                 d_ylim_max = d_ylim_max + 0.5
             axs_spk1.set_ylim([d_ylim_min, d_ylim_max])
@@ -587,7 +587,7 @@ class ClSignalFeaturesEst:
 
     @staticmethod
     def np_d_est_pk():
-        """TO DO: Derive and implement peak detector function"""
+        """TODO: Derive and implement peak detector function"""
         return True
 
     @staticmethod
@@ -628,13 +628,13 @@ class ClSignalFeaturesEst:
 
             # One value for the signal, replicated for the length of the signal
             d_rms = np.sqrt(np_d_sig.dot(np_d_sig) / np_d_sig.size)
-            np_d_rms = np_d_rms*d_rms
+            np_d_rms = np_d_rms * d_rms
 
         else:
 
             # Rolling rms value
-            xc = np.cumsum(abs(np_d_sig)**2)
-            np_d_rms_rolling = np.sqrt((xc[i_kernel:] - xc[:-i_kernel])/i_kernel)
+            xc = np.cumsum(abs(np_d_sig) ** 2)
+            np_d_rms_rolling = np.sqrt((xc[i_kernel:] - xc[:-i_kernel]) / i_kernel)
 
             # It takes i_kernel samples to accumulate the RMS value
             np_d_rms[i_kernel:i_ns] = np_d_rms_rolling
@@ -689,7 +689,7 @@ class ClSignalFeaturesEst:
             # Rolling average
             np_d_avg_kernel = np.cumsum(np_d_sig, dtype=float)
             np_d_avg_kernel[i_kernel:] = np_d_avg_kernel[i_kernel:] - np_d_avg_kernel[:-i_kernel]
-            np_d_avg_kernel = np_d_avg_kernel[i_kernel:]/float(i_kernel)
+            np_d_avg_kernel = np_d_avg_kernel[i_kernel:] / float(i_kernel)
 
             # It takes i_kernel samples to accumulate the mean value
             np_d_avg[i_kernel:i_ns] = np_d_avg_kernel
@@ -1196,7 +1196,7 @@ class ClSigReal(ClSig, ClSignalFeaturesEst):
 
             # This is a guess of the filter corner, useful for general vibration
             # analysis of physical displacements.
-            # TO DO: This needs to be own method, should not be setting this here
+            # TODO: This needs to be own method, should not be setting this here
             if self.d_fs < 300:
                 self.__d_wn = self.d_fs / 8.
             else:
@@ -1404,7 +1404,7 @@ class ClSigReal(ClSig, ClSignalFeaturesEst):
                 print('d_threshold: ' + '%0.4f' % self.__d_threshold)
 
         # Validate attributes
-        assert(np.min(np_d_sig) < self.d_threshold < np.max(np_d_sig)), \
+        assert (np.min(np_d_sig) < self.d_threshold < np.max(np_d_sig)), \
             'Threshold is outside signal range'
 
         # Run the calculation if stale data is present
@@ -1569,7 +1569,7 @@ class ClSigReal(ClSig, ClSignalFeaturesEst):
         self.__d_events_per_rev = d_events_per_rev
 
         # Validate internal attributes
-        assert(len(self.np_d_eventtimes) > 1), 'Not enough trigger events to estimate RPM'
+        assert (len(self.np_d_eventtimes) > 1), 'Not enough trigger events to estimate RPM'
 
         # Calculate the RPM using the difference in event times
         self.__np_d_rpm = 60. / (np.diff(self.np_d_eventtimes) * d_events_per_rev)
@@ -1692,7 +1692,7 @@ class ClSigReal(ClSig, ClSignalFeaturesEst):
             np_d_pkpk = 2.0 * np_d_pk
             d_pkpk_mean = np.mean(np_d_pkpk)
             lst_fmt = ClassPlotSupport.get_plot_round(d_pkpk_mean)
-            str_point_spark = lst_fmt[1]  % d_pkpk_mean + ' ' + self.str_eu + ' pp'
+            str_point_spark = lst_fmt[1] % d_pkpk_mean + ' ' + self.str_eu + ' pp'
             self.__np_sparklines[0] = ClSigCompUneven(np_d_pkpk, self.d_time, str_eu=self.str_eu,
                                                       str_point_name=str_point_spark,
                                                       str_machine_name=self.str_machine_name,
@@ -1729,8 +1729,17 @@ class ClSigReal(ClSig, ClSignalFeaturesEst):
                                                       dt_timestamp=self.dt_timestamp)
 
             # Fifth is rpm. Sparklines look wierd if the lines start at different spots
-            np_d_spark_rpm = np.insert(self.np_d_rpm, 0, self.np_d_rpm[0])
-            np_d_spark_eventtimes = np.insert(self.np_d_eventtimes, 0, self.d_time[0])
+            np_d_spark_rpm = np.array([-10., -10.])
+            # There is a bit of a catch 22 with this sparkline. RPM values can only be estimated
+            # if the threshold and hysteresis are set correctly. The analyst often needs
+            # to see the signal to set the values. Using a try-catch structure that allows
+            # a sparkline to be plotted so the signal can also be plotted.
+            try:
+                np_d_spark_eventtimes = np.insert(self.np_d_eventtimes, 0, self.d_time[0])
+                np_d_spark_rpm = np.insert(self.np_d_rpm, 0, self.np_d_rpm[0])
+            except:
+                np_d_spark_eventtimes = np.array([self.d_time[0], self.d_time[-1]])
+
             d_mean_rpm = np.mean(np_d_spark_rpm)
             lst_fmt = ClassPlotSupport.get_plot_round(d_mean_rpm)
             str_point_spark = lst_fmt[1] % d_mean_rpm + ' RPM'
@@ -1738,7 +1747,6 @@ class ClSigReal(ClSig, ClSignalFeaturesEst):
                                                       str_point_name=str_point_spark,
                                                       str_machine_name=self.str_machine_name,
                                                       dt_timestamp=self.dt_timestamp)
-
 
         return self.__np_sparklines
 
@@ -2350,7 +2358,7 @@ class ClSigFeatures(ClassPlotSupport):
             Defaults to 1-Jan-1970 UTC Timezone
         """
 
-        # TO DO: try/catch might be a better option here
+        # TODO: try/catch might be a better option here
         # This is an implicit dataframe structure so all signals need to be the same length.
         # Does the incoming signal have the same number of samples as the ones already present? The
         # reason this restriction is enforced is that there a number of ways to interpolate or pad
@@ -3038,7 +3046,8 @@ class ClSigFeatures(ClassPlotSupport):
 
         lns1 = ax1.plot(self.__lst_cl_sgs[idx].d_time, self.np_d_sig, color=ClassPlotSupport.get_trac_color(0),
                         label='Signal')
-        lns2 = ax2.plot(np_d_eventtimes, self.__lst_cl_sgs[idx].np_d_rpm, color=ClassPlotSupport.get_trac_color(1), label='RPM',
+        lns2 = ax2.plot(np_d_eventtimes, self.__lst_cl_sgs[idx].np_d_rpm, color=ClassPlotSupport.get_trac_color(1),
+                        label='RPM',
                         marker='.',
                         ms=20)
         plt.grid(True)
@@ -3265,7 +3274,7 @@ class ClSigFeatures(ClassPlotSupport):
         file_data = open(self.__str_file, 'w+')
 
         # Construct the header, self.__i_header_rows must be updated
-        # TO DO: convert to a linked list, this implementation is clunky
+        # TODO: convert to a linked list, this implementation is clunky
         str_header = 'X'
         str_datetime = 'Date and Time'
         str_fs = 'Sampling Frequency (Hz)'
