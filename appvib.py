@@ -496,8 +496,18 @@ class ClassPlotSupport:
             d_max_time = np.max(np_cl_spark[idx_spk].np_d_time)
             axs_spk1.axvline(x=d_max_time, c='black', lw=0.25)
             Artist.remove(ln_full[0])
-            axs_spk1.plot(np_cl_spark[idx_spk].np_d_time, 0.9 * np_cl_spark[idx_spk].np_d_sig,
+            np_d_y = 0.9 * np_cl_spark[idx_spk].np_d_sig
+            axs_spk1.plot(np_cl_spark[idx_spk].np_d_time, np_d_y,
                           'k', linewidth=0.35)
+            d_ylim_min = 0.9*np.min(np_d_y)
+            d_ylim_max = 1.1*np.max(np_d_y)
+            # Very small signal show up with numerical noise, this is an attempt
+            # to get the scaling large enough to show significant changes in trends,
+            # but not show numerical noise
+            if abs(d_ylim_max-d_ylim_min) < 0.5:
+                d_ylim_min = d_ylim_min - 0.5
+                d_ylim_max = d_ylim_max + 0.5
+            axs_spk1.set_ylim([d_ylim_min, d_ylim_max])
 
             # Add the marker, colored to match the first trace on the plot
             dt_time_series = np.array([dt_timestamp_start + timedelta(seconds=dt_iter)
@@ -555,7 +565,7 @@ class ClSignalFeaturesEst:
     """This class has mostly static methods used to estimate signal features"""
 
     @staticmethod
-    def est_amplitude(np_d_sig=np.array([1., 2., 3.])):
+    def np_d_est_amplitude(np_d_sig=np.array([1., 2., 3.])):
         """
         This method estimates the signal envelope (peak values) by analytic signals
 
@@ -575,16 +585,13 @@ class ClSignalFeaturesEst:
         np_d_analytic = hilbert(np_d_sig)
         return np.abs(np_d_analytic)
 
-        np_d_analytic = hilbert(np_d_sig)
-        return np.abs(np_d_analytic)
-
     @staticmethod
-    def est_pk():
+    def np_d_est_pk():
         """TO DO: Derive and implement peak detector function"""
         return True
 
     @staticmethod
-    def est_rms(np_d_sig=np.array([1., 2., 3.]), i_break=128, i_kernel=200):
+    def np_d_est_rms(np_d_sig=np.array([1., 2., 3.]), i_break=128, i_kernel=200):
         """
         This method estimates the root-mean square (RMS) value of a signal. For
         signal with less than i_break samples a single RMS value is calculated.
@@ -622,15 +629,70 @@ class ClSignalFeaturesEst:
 
         else:
 
-            # Rolling average
+            # Rolling rms value
             xc = np.cumsum(abs(np_d_sig)**2)
             np_d_rms_rolling = np.sqrt((xc[i_kernel:] - xc[:-i_kernel])/i_kernel)
 
             # It takes i_kernel samples to accumulate the RMS value
-            np_d_rms[(i_kernel-1):(i_ns-1)] = np_d_rms_rolling
-            np_d_rms[0:(i_kernel-1)] = np.mean(np_d_rms_rolling)
+            np_d_rms[i_kernel:i_ns] = np_d_rms_rolling
+            np_d_rms[0:i_kernel] = np.mean(np_d_rms_rolling)
 
         return np_d_rms
+
+    @staticmethod
+    def np_d_est_mean(np_d_sig=np.array([1., 2., 3.]), i_break=500, i_kernel=1200):
+        """
+        This method estimates the signal average value. For a
+        signal with less than i_break samples a single mean value is calculated.
+        For signals with more than i_break samples a rolling mean is calculated
+        where i_kernel defines the kernel sample count.
+
+        Parameters
+        ----------
+        np_d_sig : numpy array
+            Vector with the signal of interest. Assumed to be real-valued.
+        i_break : integer
+            Signal with samples less than i_break have a single mean value
+            calculated. Samples with more than i_break samples have a rolling
+            mean calculate where the kernel length is defined by i_kernel
+        i_kernel : integer
+            Number of samples in the rolling mean kernel
+
+        Return
+        ------
+        np_d_amp : numpy array, double
+            Vector with rms
+
+
+        """
+
+        # If the signal is short, a single mean value is calculated for the entire signal.
+        # for longer signals, a rolling mean is needed
+        np_d_avg = np.ones_like(np_d_sig)
+        i_ns = len(np_d_sig)
+
+        # If the signal is the same length as i_kernel, avoid recursion
+        if i_ns == i_kernel:
+            i_break = i_ns + 10
+
+        # Process the signal
+        if len(np_d_sig) < i_break:
+
+            # One value for the signal, replicated for the length of the signal
+            np_d_avg = np_d_avg * np.mean(np_d_sig)
+
+        else:
+
+            # Rolling average
+            np_d_avg_kernel = np.cumsum(np_d_sig, dtype=float)
+            np_d_avg_kernel[i_kernel:] = np_d_avg_kernel[i_kernel:] - np_d_avg_kernel[:-i_kernel]
+            np_d_avg_kernel = np_d_avg_kernel[i_kernel:]/float(i_kernel)
+
+            # It takes i_kernel samples to accumulate the mean value
+            np_d_avg[i_kernel:i_ns] = np_d_avg_kernel
+            np_d_avg[0:i_kernel] = np.mean(np_d_avg_kernel)
+
+        return np_d_avg
 
 
 class ClSig(abc.ABC):
@@ -707,12 +769,12 @@ class ClSigReal(ClSig, ClSignalFeaturesEst):
 
     """
 
-    def __init__(self, np_sig, d_fs, str_eu='volts', str_point_name='CH1', str_machine_name='Machine',
+    def __init__(self, np_d_sig, d_fs, str_eu='volts', str_point_name='CH1', str_machine_name='Machine',
                  dt_timestamp=datetime.fromisoformat('1990-01-01T00:00:00-00:00')):
         """
         Parameters
         ----------
-        np_sig : numpy array
+        np_d_sig : numpy array
             Vector with real-valued signal of interest
         d_fs : double
             Sampling frequency, hertz
@@ -729,10 +791,12 @@ class ClSigReal(ClSig, ClSignalFeaturesEst):
         # Parent class
         super(ClSigReal, self).__init__()
 
+        # Store the signal and set the data status flags using the setter method.
+        self.np_d_sig = np_d_sig
+
         # Signal metadata
         self.__b_complex = False
-        self.np_d_sig = np_sig
-        self.__np_d_nx = np.zeros_like(np_sig)
+        self.__np_d_nx = np.zeros_like(np_d_sig)
         self.__d_fs = d_fs
         self.__b_is_stale_fs = True
         self.__str_eu = str_eu
@@ -766,7 +830,7 @@ class ClSigReal(ClSig, ClSignalFeaturesEst):
         self.__str_plot_desc = ' '
 
         # Set up the s-g array and filtering parameters
-        self.__np_d_sig_filt_sg = np_sig
+        self.__np_d_sig_filt_sg = np_d_sig
         self.__i_win_len = 31
         self.__i_poly_order = 1
         self.__str_filt_sg_desc = 'No Savitsky-Golay filtering'
@@ -774,7 +838,7 @@ class ClSigReal(ClSig, ClSignalFeaturesEst):
         self.__b_is_stale_filt_sg = True
 
         # Set up the butterworth FIR filtered signal vector and parameters
-        self.__np_d_sig_filt_butter = np_sig
+        self.__np_d_sig_filt_butter = np_d_sig
         self.__i_poles = 1
         self.__d_wn = 0.
         self.__str_filt_butter_desc = 'No Butterworth filtering'
@@ -788,9 +852,14 @@ class ClSigReal(ClSig, ClSignalFeaturesEst):
         self.__d_threshold = 0.
         self.__d_hysteresis = 0.1
         self.__i_direction = 0
-        self.__np_d_eventtimes = np.zeros_like(np_sig)
-        self.__idx_events = np.zeros_like(np_sig)
+        self.__np_d_eventtimes = np.zeros_like(np_d_sig)
+        self.__idx_events = np.zeros_like(np_d_sig)
         self.__b_is_stale_eventtimes = True
+
+        # Attributes related to rpm calculation
+        self.__d_events_per_rev = np.NaN
+        self.__np_d_rpm = np.zeros_like(np_d_sig)
+        self.__b_is_stale_rpm = True
 
         # Attributes for the nX vector estimation and plotting
         self.__class_sig_comp = ClSigCompUneven([0 + 1j, 0 - 1j], 1.)
@@ -860,6 +929,7 @@ class ClSigReal(ClSig, ClSignalFeaturesEst):
             self.__b_is_stale_filt_sg = True
             self.__b_is_stale_filt_butter = True
             self.__b_is_stale_eventtimes = True
+            self.__b_is_stale_rpm = True
             self.__b_is_stale_sparkline = True
 
     @property
@@ -1302,6 +1372,7 @@ class ClSigReal(ClSig, ClSignalFeaturesEst):
             self.__i_direction = i_direction
             self.__b_is_stale_eventtimes = True
             self.__b_is_stale_nx = True
+            self.__b_is_stale_rpm = True
             if b_verbose:
                 print('i_direction: ' + '%1.0f' % self.__i_direction)
 
@@ -1310,6 +1381,7 @@ class ClSigReal(ClSig, ClSignalFeaturesEst):
             self.__d_threshold = d_threshold
             self.__b_is_stale_eventtimes = True
             self.__b_is_stale_nx = True
+            self.__b_is_stale_rpm = True
             if b_verbose:
                 print('d_threshold: ' + '%0.4f' % self.__d_threshold)
 
@@ -1318,6 +1390,7 @@ class ClSigReal(ClSig, ClSignalFeaturesEst):
             self.__d_hysteresis = d_hysteresis
             self.__b_is_stale_eventtimes = True
             self.__b_is_stale_nx = True
+            self.__b_is_stale_rpm = True
             if b_verbose:
                 print('d_threshold: ' + '%0.4f' % self.__d_threshold)
 
@@ -1425,14 +1498,70 @@ class ClSigReal(ClSig, ClSignalFeaturesEst):
             self.__b_is_stale_eventtimes = False
 
             # Since the eventtimes were calculated the nX vectors have to marked
-            # as stale
+            # as stale. The RPM values also have to be marked as stale.
             self.__b_is_stale_nx = True
+            self.__b_is_stale_rpm = True
 
-        # Create vector of indexes to closest points, needed for plotting
+        # Create vector of indexes to the nearest points, needed for plotting
         self.__idx_events = np.round(self.__np_d_eventtimes * self.d_fs, 0).astype(int)
 
         # Return the list of eventtimes.
         return self.__np_d_eventtimes
+
+    @property
+    def np_d_rpm(self):
+
+        # Is the data stale?
+        if self.__b_is_stale_rpm:
+            self.np_d_est_triggers(self.np_d_sig)
+            self.d_est_rpm()
+
+        """Estimated RPM values"""
+        return self.__np_d_rpm
+
+    @property
+    def d_events_per_rev(self):
+        """Number of events per revolution"""
+        return self.__d_events_per_rev
+
+    @d_events_per_rev.setter
+    def d_events_per_rev(self, d_events_per_rev):
+        """Update the number of events in the object"""
+        # Force a re-calculation of RPM
+        self.__b_is_stale_rpm = True
+        self.__d_events_per_rev = d_events_per_rev
+
+    # Method to estimate the RPM values
+    def d_est_rpm(self, d_events_per_rev=1.0, idx_eventtimes=0):
+        """
+        Estimate the RPM from the signal using eventtimes which must have
+        calculated from a previous call to the method np_d_est_triggers.
+
+        Parameters
+        ---------
+        d_events_per_rev : double
+            Number of events per revolution. It must be a real value to for hunting tooth gear
+            combinations. Defaults to 1
+        idx_eventtimes : integer
+            Index of signal eventtimes. Defaults to 0 (first signal)
+
+        Returns
+        -------
+        numpy array, double : array of RPM values
+
+        """
+
+        # Store the new value in the object
+        self.__d_events_per_rev = d_events_per_rev
+
+        # Calculate the RPM using the difference in event times
+        self.__np_d_rpm = 60. / (np.diff(self.np_d_eventtimes) * d_events_per_rev)
+
+        # To keep the lengths the same, append the last sample
+        self.__np_d_rpm = np.append(
+            self.__np_d_rpm, self.__np_d_rpm[len(self.__np_d_rpm) - 1])
+
+        return self.__np_d_rpm
 
     @property
     def np_d_nx(self):
@@ -1542,7 +1671,7 @@ class ClSigReal(ClSig, ClSignalFeaturesEst):
         if self.__b_is_stale_sparkline:
 
             # First sparkline is the pk-pk value
-            np_d_pk = ClSignalFeaturesEst.est_amplitude(self.np_d_sig)
+            np_d_pk = ClSignalFeaturesEst.np_d_est_amplitude(self.np_d_sig)
             np_d_pkpk = 2.0 * np_d_pk
             d_pkpk_mean = np.mean(np_d_pkpk)
             str_point_spark = '%0.2f' % d_pkpk_mean + ' ' + self.str_eu + ' pp'
@@ -1552,7 +1681,7 @@ class ClSigReal(ClSig, ClSignalFeaturesEst):
                                                       dt_timestamp=self.dt_timestamp)
 
             # Second sparkline is the rms value
-            np_d_rms = ClSignalFeaturesEst.est_rms(self.np_d_sig)
+            np_d_rms = ClSignalFeaturesEst.np_d_est_rms(self.np_d_sig)
             d_rms_avg = np.mean(np_d_rms)
             str_point_spark = '%0.2f' % d_rms_avg + ' ' + self.str_eu + ' rms'
             self.__np_sparklines[1] = ClSigCompUneven(np_d_rms, self.d_time, str_eu=self.str_eu,
@@ -1560,6 +1689,23 @@ class ClSigReal(ClSig, ClSignalFeaturesEst):
                                                       str_machine_name=self.str_machine_name,
                                                       dt_timestamp=self.dt_timestamp)
 
+            # Third sparkline is the crest value
+            np_d_crest = np.divide(np_d_pk, np_d_rms)
+            d_crest_avg = np.mean(np_d_crest)
+            str_point_spark = '%0.2f' % d_crest_avg + ' ' + self.str_eu + ' crest'
+            self.__np_sparklines[2] = ClSigCompUneven(np_d_crest, self.d_time, str_eu=self.str_eu,
+                                                      str_point_name=str_point_spark,
+                                                      str_machine_name=self.str_machine_name,
+                                                      dt_timestamp=self.dt_timestamp)
+
+            # Fourth is average
+            np_d_mean = ClSignalFeaturesEst.np_d_est_mean(self.np_d_sig)
+            d_mean_avg = np.mean(np_d_mean)
+            str_point_spark = '%0.2f' % d_mean_avg + ' ' + self.str_eu + ' mean'
+            self.__np_sparklines[3] = ClSigCompUneven(np_d_mean, self.d_time, str_eu=self.str_eu,
+                                                      str_point_name=str_point_spark,
+                                                      str_machine_name=self.str_machine_name,
+                                                      dt_timestamp=self.dt_timestamp)
 
 
         return self.__np_sparklines
@@ -2119,14 +2265,11 @@ class ClSigFeatures(ClassPlotSupport):
         # Instantiate and save common signal features to this class
         self.idx_add_sig(np_d_sig, d_fs=d_fs, str_point_name=str_point_name, str_machine_name=str_machine_name,
                          dt_timestamp=dt_timestamp)
-        self.__np_d_rpm = np.zeros_like(self.__lst_cl_sgs[0].np_d_sig)
 
         # Attributes related to file save/read behavior
         self.__str_file = ''
         self.__i_header_rows = 10
 
-        self.__d_thresh = np.NaN
-        self.__d_events_per_rev = np.NaN
         self.str_plot_desc = 'Test Data'
         self.b_spec_peak = False
 
@@ -2365,11 +2508,6 @@ class ClSigFeatures(ClassPlotSupport):
 
         return self.__lst_cl_sgs[idx].calc_nx(np_d_sig,
                                               np_d_eventtimes=np_d_eventtimes, b_verbose=b_verbose)
-
-    @property
-    def np_d_rpm(self):
-        """Estimated RPM values"""
-        return self.__np_d_rpm
 
     def str_eu(self, idx=0):
         """
@@ -2828,7 +2966,7 @@ class ClSigFeatures(ClassPlotSupport):
 
         """
 
-        # Put up the the plot time
+        # Put up the plot, timebase is the foundation
         plt.rcParams["font.family"] = ClassPlotSupport.get_font_plots()
         fig, ax1 = plt.subplots()
 
@@ -2836,12 +2974,12 @@ class ClSigFeatures(ClassPlotSupport):
 
         # Local variables  to simplify code; update RPM trend
         np_d_eventtimes = self.np_d_eventtimes(idx=idx_eventtimes)
-        self.d_est_rpm(d_events_per_rev=d_events_per_rev, idx_eventtimes=idx_eventtimes)
+        self.__lst_cl_sgs[idx].d_est_rpm(d_events_per_rev=d_events_per_rev, idx_eventtimes=idx_eventtimes)
         [d_xlim_start, d_xlim_end] = self.__get_x_limit_events(idx_eventtimes=idx_eventtimes, idx=idx)
 
         lns1 = ax1.plot(self.__lst_cl_sgs[idx].d_time, self.np_d_sig, color=ClassPlotSupport.get_trac_color(0),
                         label='Signal')
-        lns2 = ax2.plot(np_d_eventtimes, self.__np_d_rpm, color=ClassPlotSupport.get_trac_color(1), label='RPM',
+        lns2 = ax2.plot(np_d_eventtimes, self.__lst_cl_sgs[idx].np_d_rpm, color=ClassPlotSupport.get_trac_color(1), label='RPM',
                         marker='.',
                         ms=20)
         plt.grid(True)
@@ -2853,7 +2991,7 @@ class ClSigFeatures(ClassPlotSupport):
         plt.gca().xaxis.set_major_formatter(FormatStrFormatter('%.2f'))
         ax1.set_ylabel('Amplitude, ' + self.__lst_cl_sgs[0].str_eu)
         ax2.set_ylabel('Event speed, RPM')
-        ax2.set_ylim([0, round(1.05 * np.max(self.__np_d_rpm))])
+        ax2.set_ylim([0, round(1.05 * np.max(self.__lst_cl_sgs[0].np_d_rpm))])
 
         # Aggregate the plot handles and labels
         lns = lns1 + lns2
@@ -2868,7 +3006,7 @@ class ClSigFeatures(ClassPlotSupport):
         # show the plot
         plt.show()
 
-        return [plot_handle, self.__np_d_rpm]
+        return [plot_handle, self.__lst_cl_sgs[0].np_d_rpm]
 
     # Plotting method, nX plots.
     def plt_nx(self, str_plot_desc=None, b_overlay=True):
@@ -3045,38 +3183,6 @@ class ClSigFeatures(ClassPlotSupport):
                 self.__str_plt_support_title_meta(str_plot_type='Polar Plot', idx=idx)
 
         return self.__lst_cl_sgs[idx].plt_polar(str_plot_desc=str_plot_desc_meta)
-
-    # Method to estimate the RPM values
-    def d_est_rpm(self, d_events_per_rev=1.0, idx_eventtimes=0):
-        """
-        Estimate the RPM from the signal using eventtimes which must have
-        calculated from a previous call to the method np_d_est_triggers.
-
-        Parameters
-        ---------
-        d_events_per_rev : double
-            Number of events per revolution. It must be a real value to for hunting tooth gear
-            combinations. Defaults to 1
-        idx_eventtimes : integer
-            Index of signal eventtimes. Defaults to 0 (first signal)
-
-        Returns
-        -------
-        numpy array, double : array of RPM values
-
-        """
-
-        # Store the new value in the object
-        self.__d_events_per_rev = d_events_per_rev
-
-        # Calculate the RPM using the difference in event times
-        self.__np_d_rpm = 60. / (np.diff(self.__lst_cl_sgs[idx_eventtimes].np_d_eventtimes) * d_events_per_rev)
-
-        # To keep the lengths the same, append the last sample
-        self.__np_d_rpm = np.append(
-            self.__np_d_rpm, self.__np_d_rpm[len(self.__np_d_rpm) - 1])
-
-        return self.__np_d_rpm
 
     # Save the data
     def b_save_data(self, str_data_prefix='test_class', idx_file=1):

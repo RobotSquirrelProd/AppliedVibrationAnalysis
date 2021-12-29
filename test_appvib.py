@@ -18,7 +18,7 @@ class TestClSig(TestCase):
 
         # Data set for the real-valued class. This is a sawtooth waveform. For
         # triggering on rising values it should trigger at 7.5 seconds (between
-        # sample 8 and 9). For falling it should trigger at 4.5 seconds (between
+        # sample 8 and 9). For falling edges it should trigger at 4.5 seconds (between
         # sample 5 and 6).
         self.np_test_real = np.array([1.0, 2.0, 3.0, 4.0, 3.0, 2.0, 1.0, 2.0, 3.0, 4.0, 3.0])
         self.d_fs_real = 1.0
@@ -114,16 +114,25 @@ class TestClSig(TestCase):
     def test_est_signal_features(self):
 
         # Begin with amplitude estimation
-        np_d_test = appvib.ClSignalFeaturesEst.est_amplitude(self.np_test_trigger_ph)
+        np_d_test = appvib.ClSignalFeaturesEst.np_d_est_amplitude(self.np_test_trigger_ph)
         print(float(np.mean(np_d_test)))
         self.assertAlmostEqual(float(np.mean(np_d_test)), self.d_test_trigger_amp_ph, 15)
 
         # Now for the rms estimation
-        np_d_test_rms = appvib.ClSignalFeaturesEst.est_rms(self.np_test_trigger_ph)
+        np_d_test_rms = appvib.ClSignalFeaturesEst.np_d_est_rms(self.np_test_trigger_ph)
         class_test_est = appvib.ClSigFeatures(self.np_test_trigger_ph, d_fs=self.d_fs_test_trigger_ph)
         class_test_est.ylim_tb([-1.7, 1.7], idx=0)
         class_test_est.plt_sigs()
-        self.assertAlmostEqual(float(np.mean(np_d_test_rms)), self.d_test_trigger_amp_ph/np.sqrt(2.0), 15)
+        self.assertAlmostEqual(float(np.mean(np_d_test_rms)), self.d_test_trigger_amp_ph/np.sqrt(2.0), 4)
+
+        # Mean estimation
+        d_mean = 1.1
+        np_d_mean_sig = self.np_test_trigger_ph+d_mean
+        np_d_test_est_mean = appvib.ClSignalFeaturesEst.np_d_est_mean(np_d_mean_sig)
+        class_test_est_mean = appvib.ClSigFeatures(np_d_test_est_mean, d_fs=self.d_fs_test_trigger_ph)
+        class_test_est_mean.ylim_tb([-2.7, 2.7], idx=0)
+        class_test_est_mean.plt_sigs()
+        self.assertAlmostEqual(float(np.mean(np_d_test_est_mean)), d_mean, 2)
 
     def test_b_complex(self):
         # Is the real-valued class setting the flags correctly?
