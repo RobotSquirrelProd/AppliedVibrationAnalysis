@@ -111,6 +111,20 @@ class TestClSig(TestCase):
         self.i_direction_test_001_trigger_slope = 0
         self.d_threshold_test_001 = 0.125
 
+    def test_est_signal_features(self):
+
+        # Begin with amplitude estimation
+        np_d_test = appvib.ClSignalFeaturesEst.est_amplitude(self.np_test_trigger_ph)
+        print(float(np.mean(np_d_test)))
+        self.assertAlmostEqual(float(np.mean(np_d_test)), self.d_test_trigger_amp_ph, 15)
+
+        # Now for the rms estimation
+        np_d_test_rms = appvib.ClSignalFeaturesEst.est_rms(self.np_test_trigger_ph)
+        class_test_est = appvib.ClSigFeatures(self.np_test_trigger_ph, d_fs=self.d_test_trigger_amp_ph)
+        class_test_est.ylim_tb([-1.7, 1.7], idx=0)
+        class_test_est.plt_sigs()
+        self.assertAlmostEqual(float(np.mean(np_d_test_rms)), self.d_test_trigger_amp_ph/np.sqrt(2.0), 15)
+
     def test_b_complex(self):
         # Is the real-valued class setting the flags correctly?
         class_test_real = appvib.ClSigReal(self.np_test, self.d_fs)
@@ -418,7 +432,7 @@ class TestClSig(TestCase):
         # check the plot for a single channel
         lst_plot = class_test_plt_rpm.plt_rpm()
         np_d_rpm = lst_plot[1]
-        self.assertAlmostEqual(np.mean(np_d_rpm), self.d_freq_law_test_plt_eventtimes*60.0, 3)
+        self.assertAlmostEqual(float(np.mean(np_d_rpm)), self.d_freq_law_test_plt_eventtimes*60.0, 3)
 
     def test_nX_est(self):
 
@@ -440,7 +454,7 @@ class TestClSig(TestCase):
 
         # Test base class
         class_test_uneven = appvib.ClSigCompUneven(np_d_nx, class_test_real.np_d_eventtimes, str_eu='cat whiskers',
-                                                   str_point_name='TUNA')
+                                                   str_point_name='CATFISH')
         class_test_uneven.plt_apht()
 
         # Signal feature class test for apht plots

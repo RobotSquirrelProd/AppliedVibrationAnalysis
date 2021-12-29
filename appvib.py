@@ -151,8 +151,8 @@ class ClassPlotSupport:
 
         # x-axis grid and labels
         d_spacing = (max(x_limit_sig) - min(x_limit_sig)) / 5.0
-        lst_round = ClassPlotSupport.get_plot_round(d_spacing)
-        d_spacing_rounded = lst_round[0]
+        lst_round = ClassPlotSupport.get_plot_round(d_spacing/float(i_xaxis_minor))
+        d_spacing_rounded = lst_round[0]*5.0
         str_format = lst_round[1]
         ax.xaxis.set_major_locator(MultipleLocator(d_spacing_rounded))
         ax.xaxis.set_minor_locator(AutoMinorLocator(i_xaxis_minor))
@@ -219,7 +219,6 @@ class ClassPlotSupport:
                                  ' ' + str_eu + '/division')
         ax.text(0, -0.1, str_yaxis_description, horizontalalignment='center', verticalalignment='top',
                 fontweight='bold', transform=ax.transAxes)
-        str_yaxis_desc
         ax.text(0, 1.09, str_yaxis_desc, horizontalalignment='center', verticalalignment='top',
                 fontweight='bold', transform=ax.transAxes)
 
@@ -570,9 +569,12 @@ class ClSignalFeaturesEst:
         ------
 
         np_d_amp : numpy array, double
-            Vector with signal envelope
+            Vector with signal envelope (amplitude)
 
         """
+
+        np_d_analytic = hilbert(np_d_sig)
+        return np.abs(np_d_analytic)
 
         np_d_analytic = hilbert(np_d_sig)
         return np.abs(np_d_analytic)
@@ -581,6 +583,54 @@ class ClSignalFeaturesEst:
     def est_pk():
         """TO DO: Derive and implement peak detector function"""
         return True
+
+    @staticmethod
+    def est_rms(np_d_sig=np.array([1., 2., 3.]), i_break=128, i_kernel=100):
+        """
+        This method estimates the root-mean square (RMS) value of a signal. For
+        signal with less than i_break samples a single RMS value is calculated.
+        For signals with more than i_break samples a rolling RMS is calculated
+        where i_kernel defines the kernel sample count.
+
+        Parameters
+        ----------
+        np_d_sig : numpy array
+            Vector with the signal of interest. Assumed to be real-valued.
+        i_break : integer
+            Signal with samples less than i_break have a single RMS value
+            calculated. Samples with more than i_break samples have a rolling
+            RMS calculate where the kernel length is defined by i_kernel
+        i_kernel : integer
+            Number of samples in the rolling RMS kernel
+
+        Return
+        ------
+        np_d_amp : numpy array, double
+            Vector with rms
+
+
+        """
+
+        # If the signal is short, a single RMS value is calculated for the entire signal.
+        # for longer signals, a rolling RMS is needed
+        np_d_rms = np.ones_like(np_d_sig)
+        i_ns = len(np_d_sig)
+        if len(np_d_sig) < i_break:
+
+            # One value for the signal, replicated for the length of the signal
+            d_rms = np.sqrt(np_d_sig.dot(np_d_sig) / np_d_sig.size)
+            np_d_rms = np_d_rms*d_rms
+
+        else:
+
+            # Rolling average
+            xc = np.cumsum(abs(np_d_sig)**2)
+            np_d_rms_rolling = np.sqrt((xc[i_kernel:] - xc[:-i_kernel])/i_kernel)
+
+            # It takes i_kernel samples to accumulate the RMS value
+            np_d_rms[(i_kernel-1):(i_ns-1)] = np_d_rms_rolling
+
+        return np_d_rms
 
 
 class ClSig(abc.ABC):
@@ -1490,21 +1540,34 @@ class ClSigReal(ClSig, ClSignalFeaturesEst):
         # this variable will be set to True and the method estimates
         # sparklines for just the signal itself
         if self.__b_is_stale_sparkline:
+
             # First sparkline is the pk-pk value
             np_d_pk = ClSignalFeaturesEst.est_amplitude(self.np_d_sig)
             np_d_pkpk = 2.0 * np_d_pk
-            d_pkpk_max = np.max(np_d_pkpk)
-            str_point_spark = '%0.2f' % d_pkpk_max + ' ' + self.str_eu + ' pp'
+            d_pkpk_mean = np.mean(np_d_pkpk)
+            str_point_spark = '%0.2f' % d_pkpk_mean + ' ' + self.str_eu + ' pp'
             self.__np_sparklines[0] = ClSigCompUneven(np_d_pkpk, self.d_time, str_eu=self.str_eu,
                                                       str_point_name=str_point_spark,
                                                       str_machine_name=self.str_machine_name,
                                                       dt_timestamp=self.dt_timestamp)
 
+            # Second sparkline is the rms value
+            np_d_rms = ClSignalFeaturesEst.est_rms(self.np_d_sig)
+            d_rms_avg = np.mean(np_d_rms)
+            str_point_spark = '%0.2f' % d_rms_avg + ' ' + self.str_eu + ' rms'
+            self.__np_sparklines[1] = ClSigCompUneven(np_d_rms, self.d_time, str_eu=self.str_eu,
+                                                      str_point_name=str_point_spark,
+                                                      str_machine_name=self.str_machine_name,
+                                                      dt_timestamp=self.dt_timestamp)
+
+
+
         return self.__np_sparklines
 
     @np_sparklines.setter
     def np_sparklines(self, np_sparklines):
-        # New data, sparkline is updated and does not further processing
+
+        # New data, sparkline is updated and does not require further processing
         self.__b_is_stale_sparkline = False
 
         # Return the value
