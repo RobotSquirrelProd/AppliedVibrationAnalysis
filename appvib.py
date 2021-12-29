@@ -484,7 +484,12 @@ class ClassPlotSupport:
 
         # Header pane, sparklines
         i_col_offset = int(ClassPlotSupport.get_plot_setup_cols() / 2)
-        for idx_spk in range(ClassPlotSupport.get_plot_setup_row_sparklines()):
+
+        # How many sparklines to plot?
+        i_sparklines = min([ClassPlotSupport.get_plot_setup_row_sparklines(), len(np_cl_spark)])
+
+        # Iterate through each sparkline that has data and plot it
+        for idx_spk in range(i_sparklines):
             # Sparkline
             axs_spk1 = plt.subplot2grid((i_rows, i_cols), (i_row_offset + idx_spk, i_col_offset),
                                         colspan=i_col_offset - 1, rowspan=1)
@@ -1546,7 +1551,7 @@ class ClSigReal(ClSig, ClSignalFeaturesEst):
         self.__d_events_per_rev = d_events_per_rev
 
     # Method to estimate the RPM values
-    def d_est_rpm(self, d_events_per_rev=1.0, idx_eventtimes=0):
+    def d_est_rpm(self, d_events_per_rev=1.0):
         """
         Estimate the RPM from the signal using eventtimes which must have
         calculated from a previous call to the method np_d_est_triggers.
@@ -1556,8 +1561,6 @@ class ClSigReal(ClSig, ClSignalFeaturesEst):
         d_events_per_rev : double
             Number of events per revolution. It must be a real value to for hunting tooth gear
             combinations. Defaults to 1
-        idx_eventtimes : integer
-            Index of signal eventtimes. Defaults to 0 (first signal)
 
         Returns
         -------
@@ -1737,7 +1740,7 @@ class ClSigReal(ClSig, ClSignalFeaturesEst):
             try:
                 np_d_spark_eventtimes = np.insert(self.np_d_eventtimes, 0, self.d_time[0])
                 np_d_spark_rpm = np.insert(self.np_d_rpm, 0, self.np_d_rpm[0])
-            except:
+            except AssertionError:
                 np_d_spark_eventtimes = np.array([self.d_time[0], self.d_time[-1]])
 
             d_mean_rpm = np.mean(np_d_spark_rpm)
@@ -2763,6 +2766,56 @@ class ClSigFeatures(ClassPlotSupport):
                    ' | ' + self.__str_format_dt(idx=idx)
 
         return str_meta
+
+    def d_time_plot(self, idx=0):
+        """
+        Method to access time series for trace identified by idx
+
+        Parameters
+        ----------
+        idx: integer
+           Index of signal to pull time series. Defaults to 0 (first signal)
+
+        Returns
+        -------
+        numpy array, double : NumPy array of double values representing the time in seconds
+
+        """
+        return self.__lst_cl_sgs[idx].d_time_plot
+
+    def np_sparklines(self, idx=0):
+        """
+        Method to access sparkline array for trace identified by idx
+
+        Parameters
+        ----------
+        idx: integer
+           Index of signal to pull sparklines. Defaults to 0 (first signal)
+
+        Returns
+        -------
+        numpy array, ClSigCompUneven : NumPy array of ClSigCompUneven objects used to create sparklines
+
+        """
+        return self.__lst_cl_sgs[idx].np_sparklines
+
+    def np_sparklines_update(self, np_sparklines, idx=0):
+        """
+        Method to access sparkline array for trace identified by idx
+
+        Parameters
+        ----------
+        np_sparklines : numpy array, ClSigCompUneven
+            NumPy array of ClSigCompUneven objects used to create sparklines
+        idx: integer
+           Index of signal to set sparklines. Defaults to 0 (first signal)
+
+        Returns
+        -------
+
+        """
+
+        self.__lst_cl_sgs[idx].np_sparklines = np_sparklines
 
     # Plotting method, time domain signals.
     def plt_sigs(self, b_verbose=False, b_plot_sg=False, b_plot_filt=False):

@@ -123,17 +123,26 @@ class TestClSig(TestCase):
         class_test_est = appvib.ClSigFeatures(self.np_test_trigger_ph, d_fs=self.d_fs_test_trigger_ph)
         class_test_est.ylim_tb([-1.7, 1.7], idx=0)
         class_test_est.plt_sigs()
-        self.assertAlmostEqual(float(np.mean(np_d_test_rms)), self.d_test_trigger_amp_ph/np.sqrt(2.0), 4)
+        self.assertAlmostEqual(float(np.mean(np_d_test_rms)), self.d_test_trigger_amp_ph / np.sqrt(2.0), 4)
 
         # Mean estimation
         d_mean = 1.1
-        np_d_mean_sig = self.np_test_trigger_ph+d_mean
+        np_d_mean_sig = self.np_test_trigger_ph + d_mean
         np_d_test_est_mean = appvib.ClSignalFeaturesEst.np_d_est_mean(np_d_mean_sig)
         class_test_est_mean = appvib.ClSigFeatures(np_d_mean_sig, d_fs=self.d_fs_test_trigger_ph)
         class_test_est_mean.d_threshold_update(d_mean, idx=0)
         class_test_est_mean.ylim_tb([-2.7, 2.7], idx=0)
         class_test_est_mean.plt_sigs()
         self.assertAlmostEqual(float(np.mean(np_d_test_est_mean)), d_mean, 2)
+
+        # Custom sparklines
+        np_sparklines = np.array([appvib.ClSigCompUneven(np_d_test_est_mean, class_test_est_mean.d_time_plot(0),
+                                                         str_eu='GOATS', str_point_name='Mean GOATS',
+                                                         str_machine_name=class_test_est_mean.str_machine_name(idx=0),
+                                                         dt_timestamp=class_test_est_mean.dt_timestamp(idx=0))])
+        class_test_est_mean.np_sparklines_update(np_sparklines, idx=0)
+        class_test_est_mean.str_plot_desc = 'Test of custom sparkline'
+        class_test_est_mean.plt_sigs()
 
     def test_b_complex(self):
         # Is the real-valued class setting the flags correctly?
@@ -442,7 +451,7 @@ class TestClSig(TestCase):
         # check the plot for a single channel
         lst_plot = class_test_plt_rpm.plt_rpm()
         np_d_rpm = lst_plot[1]
-        self.assertAlmostEqual(float(np.mean(np_d_rpm)), self.d_freq_law_test_plt_eventtimes*60.0, 3)
+        self.assertAlmostEqual(float(np.mean(np_d_rpm)), self.d_freq_law_test_plt_eventtimes * 60.0, 3)
 
     def test_nX_est(self):
 
