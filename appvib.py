@@ -517,7 +517,6 @@ class ClassPlotSupport:
         axs_spk1 = plt.subplot2grid((i_rows, i_cols), (i_row_offset + idx_spk + 1, i_col_offset),
                                     colspan=i_col_offset - 1, rowspan=1)
         axs_spk1.axis('off')
-        d_min_time = np.min(np_cl_spark[idx_spk].np_d_time)
         axs_spk1.text(0, 0, ClassPlotSupport.get_dt_str(dt_timestamp_start),
                       horizontalalignment='center', verticalalignment='bottom', fontsize='small')
         axs_spk1.text(1, 0, ClassPlotSupport.get_dt_str(dt_timestamp_end),
@@ -585,7 +584,7 @@ class ClSignalFeaturesEst:
         return True
 
     @staticmethod
-    def est_rms(np_d_sig=np.array([1., 2., 3.]), i_break=128, i_kernel=100):
+    def est_rms(np_d_sig=np.array([1., 2., 3.]), i_break=128, i_kernel=200):
         """
         This method estimates the root-mean square (RMS) value of a signal. For
         signal with less than i_break samples a single RMS value is calculated.
@@ -629,6 +628,7 @@ class ClSignalFeaturesEst:
 
             # It takes i_kernel samples to accumulate the RMS value
             np_d_rms[(i_kernel-1):(i_ns-1)] = np_d_rms_rolling
+            np_d_rms[0:(i_kernel-1)] = np.mean(np_d_rms_rolling)
 
         return np_d_rms
 

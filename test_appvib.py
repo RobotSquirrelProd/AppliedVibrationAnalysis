@@ -120,7 +120,7 @@ class TestClSig(TestCase):
 
         # Now for the rms estimation
         np_d_test_rms = appvib.ClSignalFeaturesEst.est_rms(self.np_test_trigger_ph)
-        class_test_est = appvib.ClSigFeatures(self.np_test_trigger_ph, d_fs=self.d_test_trigger_amp_ph)
+        class_test_est = appvib.ClSigFeatures(self.np_test_trigger_ph, d_fs=self.d_fs_test_trigger_ph)
         class_test_est.ylim_tb([-1.7, 1.7], idx=0)
         class_test_est.plt_sigs()
         self.assertAlmostEqual(float(np.mean(np_d_test_rms)), self.d_test_trigger_amp_ph/np.sqrt(2.0), 15)
