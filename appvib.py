@@ -491,7 +491,9 @@ class ClassPlotSupport:
         # Iterate through each sparkline that has data and plot it
         for idx_spk in range(i_sparklines):
             # Sparkline
-            axs_spk1 = plt.subplot2grid((i_rows, i_cols), (i_row_offset + idx_spk, i_col_offset),
+            i_row_plot = (i_row_offset + ClassPlotSupport.get_plot_setup_row_sparklines() - idx_spk - 1)
+            print(i_row_plot)
+            axs_spk1 = plt.subplot2grid((i_rows, i_cols), (i_row_plot, i_col_offset),
                                         colspan=i_col_offset - 1, rowspan=1)
             ln_full = axs_spk1.plot(np_cl_spark[idx_spk].np_d_time, np_cl_spark[idx_spk].np_d_sig, 'k', linewidth=0.5)
             axs_spk1.axis('off')
@@ -524,7 +526,7 @@ class ClassPlotSupport:
                           '.', color=ClassPlotSupport.get_trac_color(0), ms=3)
 
             # Description
-            ClassPlotSupport.set_plot_spark_desc(i_rows, i_cols, i_row_offset + idx_spk,
+            ClassPlotSupport.set_plot_spark_desc(i_rows, i_cols, i_row_plot,
                                                  np_cl_spark[idx_spk].str_point_name)
 
         # Add the time labels to this last sparkline
