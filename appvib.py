@@ -582,7 +582,7 @@ class ClSignalFeaturesEst:
 
         """
 
-        np_d_analytic = hilbert(np_d_sig)
+        np_d_analytic = hilbert(np_d_sig - np.mean(np_d_sig))
         return np.abs(np_d_analytic)
 
     @staticmethod
@@ -616,6 +616,9 @@ class ClSignalFeaturesEst:
 
 
         """
+
+        # Condition the signal
+        np_d_sig = np_d_sig - np.mean(np_d_sig)
 
         # If the signal is short, a single RMS value is calculated for the entire signal.
         # for longer signals, a rolling RMS is needed
@@ -1245,6 +1248,11 @@ class ClSigReal(ClSig, ClSignalFeaturesEst):
     def d_threshold(self):
         return self.__d_threshold
 
+    @d_threshold.setter
+    def d_threshold(self, d_threshold):
+        """Update the threshold level"""
+        self.__d_threshold = d_threshold
+
     # The value of this attribute can be read, but it should
     # not be set, outside of the estimate crossings methods, since
     # any change requires a re-calculation of the eventtimes
@@ -1366,6 +1374,7 @@ class ClSigReal(ClSig, ClSignalFeaturesEst):
             # User is possibly adding a new signal, force recalculation
             self.__b_is_stale_eventtimes = True
             self.__b_is_stale_nx = True
+            self.__b_is_stale_rpm = True
 
         if i_direction is not None:
             # User is possibly adding a new direction, force recalculation
@@ -1394,6 +1403,10 @@ class ClSigReal(ClSig, ClSignalFeaturesEst):
             if b_verbose:
                 print('d_threshold: ' + '%0.4f' % self.__d_threshold)
 
+        # Validate attributes
+        assert(np.min(np_d_sig) < self.d_threshold < np.max(np_d_sig)), \
+            'Threshold is outside signal range'
+
         # Run the calculation if stale data is present
         if self.__b_is_stale_eventtimes:
 
@@ -1411,15 +1424,16 @@ class ClSigReal(ClSig, ClSignalFeaturesEst):
                 # Define the absolute hysteretic value, rising
                 d_hysteresis_abs = self.d_threshold - self.d_hysteresis
                 if b_verbose:
+                    print('Direction is 0 (rising edge)')
                     print('d_hysteresis_abs: ' + '%0.4f' % d_hysteresis_abs)
 
-                # Loop through the signal
+                # Loop through the signal, excluding the last point
                 for idx, x in enumerate(np_d_sig[0:-1]):
 
                     # Intermediate results
                     if b_verbose:
                         print('idx: ' + '%2.f' % idx + ' | x: ' + '%0.5f' % x +
-                              ' | s-g: ' + '%0.4f' % np_d_sig[idx])
+                              ' | np_d_sig: ' + '%0.4f' % np_d_sig[idx])
 
                     # Only the sign matters so subtract this point from next to
                     # get sign of slope
@@ -1554,6 +1568,9 @@ class ClSigReal(ClSig, ClSignalFeaturesEst):
         # Store the new value in the object
         self.__d_events_per_rev = d_events_per_rev
 
+        # Validate internal attributes
+        assert(len(self.np_d_eventtimes) > 1), 'Not enough trigger events to estimate RPM'
+
         # Calculate the RPM using the difference in event times
         self.__np_d_rpm = 60. / (np.diff(self.np_d_eventtimes) * d_events_per_rev)
 
@@ -1674,7 +1691,8 @@ class ClSigReal(ClSig, ClSignalFeaturesEst):
             np_d_pk = ClSignalFeaturesEst.np_d_est_amplitude(self.np_d_sig)
             np_d_pkpk = 2.0 * np_d_pk
             d_pkpk_mean = np.mean(np_d_pkpk)
-            str_point_spark = '%0.2f' % d_pkpk_mean + ' ' + self.str_eu + ' pp'
+            lst_fmt = ClassPlotSupport.get_plot_round(d_pkpk_mean)
+            str_point_spark = lst_fmt[1]  % d_pkpk_mean + ' ' + self.str_eu + ' pp'
             self.__np_sparklines[0] = ClSigCompUneven(np_d_pkpk, self.d_time, str_eu=self.str_eu,
                                                       str_point_name=str_point_spark,
                                                       str_machine_name=self.str_machine_name,
@@ -1683,7 +1701,8 @@ class ClSigReal(ClSig, ClSignalFeaturesEst):
             # Second sparkline is the rms value
             np_d_rms = ClSignalFeaturesEst.np_d_est_rms(self.np_d_sig)
             d_rms_avg = np.mean(np_d_rms)
-            str_point_spark = '%0.2f' % d_rms_avg + ' ' + self.str_eu + ' rms'
+            lst_fmt = ClassPlotSupport.get_plot_round(d_rms_avg)
+            str_point_spark = lst_fmt[1] % d_rms_avg + ' ' + self.str_eu + ' rms'
             self.__np_sparklines[1] = ClSigCompUneven(np_d_rms, self.d_time, str_eu=self.str_eu,
                                                       str_point_name=str_point_spark,
                                                       str_machine_name=self.str_machine_name,
@@ -1692,7 +1711,8 @@ class ClSigReal(ClSig, ClSignalFeaturesEst):
             # Third sparkline is the crest value
             np_d_crest = np.divide(np_d_pk, np_d_rms)
             d_crest_avg = np.mean(np_d_crest)
-            str_point_spark = '%0.2f' % d_crest_avg + ' ' + self.str_eu + ' crest'
+            lst_fmt = ClassPlotSupport.get_plot_round(d_crest_avg)
+            str_point_spark = lst_fmt[1] % d_crest_avg + ' ' + self.str_eu + ' crest'
             self.__np_sparklines[2] = ClSigCompUneven(np_d_crest, self.d_time, str_eu=self.str_eu,
                                                       str_point_name=str_point_spark,
                                                       str_machine_name=self.str_machine_name,
@@ -1701,8 +1721,20 @@ class ClSigReal(ClSig, ClSignalFeaturesEst):
             # Fourth is average
             np_d_mean = ClSignalFeaturesEst.np_d_est_mean(self.np_d_sig)
             d_mean_avg = np.mean(np_d_mean)
-            str_point_spark = '%0.2f' % d_mean_avg + ' ' + self.str_eu + ' mean'
+            lst_fmt = ClassPlotSupport.get_plot_round(d_mean_avg)
+            str_point_spark = lst_fmt[1] % d_mean_avg + ' ' + self.str_eu + ' mean'
             self.__np_sparklines[3] = ClSigCompUneven(np_d_mean, self.d_time, str_eu=self.str_eu,
+                                                      str_point_name=str_point_spark,
+                                                      str_machine_name=self.str_machine_name,
+                                                      dt_timestamp=self.dt_timestamp)
+
+            # Fifth is rpm. Sparklines look wierd if the lines start at different spots
+            np_d_spark_rpm = np.insert(self.np_d_rpm, 0, self.np_d_rpm[0])
+            np_d_spark_eventtimes = np.insert(self.np_d_eventtimes, 0, self.d_time[0])
+            d_mean_rpm = np.mean(np_d_spark_rpm)
+            lst_fmt = ClassPlotSupport.get_plot_round(d_mean_rpm)
+            str_point_spark = lst_fmt[1] % d_mean_rpm + ' RPM'
+            self.__np_sparklines[4] = ClSigCompUneven(np_d_spark_rpm, np_d_spark_eventtimes, str_eu=self.str_eu,
                                                       str_point_name=str_point_spark,
                                                       str_machine_name=self.str_machine_name,
                                                       dt_timestamp=self.dt_timestamp)
@@ -2400,6 +2432,33 @@ class ClSigFeatures(ClassPlotSupport):
 
         """
         self.__lst_cl_sgs[idx].d_fs = d_fs_in
+
+    def d_threshold(self, idx=0):
+        """
+        Return the threshold level
+
+        Parameter
+        ---------
+        idx : integer
+            Index of signal to pull description. Defaults to 0 (first signal)
+
+        """
+        return self.__lst_cl_sgs[idx].d_threshold
+
+    def d_threshold_update(self, d_threshold, idx=0):
+        """
+        Set the threshold level
+
+        Parameters
+        ---------
+        d_threshold : double
+            Describes the trigger threshold level
+
+        idx : integer
+            Index of signal to pull description. Defaults to 0 (first signal)
+
+        """
+        self.__lst_cl_sgs[idx].d_threshold = d_threshold
 
     def str_filt_sg_desc(self, idx=0):
         """Complete Filt description of the Savitsky-Golay filter design"""

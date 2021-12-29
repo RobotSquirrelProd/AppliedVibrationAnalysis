@@ -129,7 +129,8 @@ class TestClSig(TestCase):
         d_mean = 1.1
         np_d_mean_sig = self.np_test_trigger_ph+d_mean
         np_d_test_est_mean = appvib.ClSignalFeaturesEst.np_d_est_mean(np_d_mean_sig)
-        class_test_est_mean = appvib.ClSigFeatures(np_d_test_est_mean, d_fs=self.d_fs_test_trigger_ph)
+        class_test_est_mean = appvib.ClSigFeatures(np_d_mean_sig, d_fs=self.d_fs_test_trigger_ph)
+        class_test_est_mean.d_threshold_update(d_mean, idx=0)
         class_test_est_mean.ylim_tb([-2.7, 2.7], idx=0)
         class_test_est_mean.plt_sigs()
         self.assertAlmostEqual(float(np.mean(np_d_test_est_mean)), d_mean, 2)
