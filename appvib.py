@@ -183,7 +183,8 @@ class ClassPlotSupport:
         if d_spacing_rounded_minor < 1.0:
             d_spacing_rounded_minor = d_spacing_rounded_minor * 1000
             str_suffix = 'ms'
-        str_xaxis_description = ('Horizontal: ' + str_format % d_spacing_rounded_minor +
+        lst_format_xaxis_division = ClassPlotSupport.get_plot_round(d_spacing_rounded_minor)
+        str_xaxis_description = ('Horizontal: ' + lst_format_xaxis_division[1] % d_spacing_rounded_minor +
                                  ' ' + str_suffix + '/division')
         ax.text(1, -0.1, str_xaxis_description, horizontalalignment='right', verticalalignment='top',
                 fontweight='bold', transform=ax.transAxes)
@@ -454,8 +455,7 @@ class ClassPlotSupport:
                                                fontweight='bold')
 
     @staticmethod
-    def set_plot_sparkline(i_rows, i_cols, i_row_offset, np_cl_spark,
-                           dt_timestamp_start, dt_timestamp_end, dt_timestamp_mark):
+    def set_plot_sparkline(i_rows, i_cols, i_row_offset, np_cl_spark, dt_timestamp_mark):
         """
         Global function that creates the description field for the sparklines
 
@@ -469,10 +469,6 @@ class ClassPlotSupport:
                 Number of rows to skip; useful for multi-pane plots
             np_cl_spark : numpy array, ClSigCompUneven
                 Array with signals to be plotted in the sparklines
-            dt_timestamp_start : datetime
-                Begining date and time value for the sparklines
-            dt_timestamp_end : datetime
-                Ending date and time value for the sparklines
             dt_timestamp_mark : datetime
                 Date and time to place marker
 
@@ -492,7 +488,6 @@ class ClassPlotSupport:
         for idx_spk in range(i_sparklines):
             # Sparkline
             i_row_plot = (i_row_offset + ClassPlotSupport.get_plot_setup_row_sparklines() - idx_spk - 1)
-            print(i_row_plot)
             axs_spk1 = plt.subplot2grid((i_rows, i_cols), (i_row_plot, i_col_offset),
                                         colspan=i_col_offset - 1, rowspan=1)
             ln_full = axs_spk1.plot(np_cl_spark[idx_spk].np_d_time, np_cl_spark[idx_spk].np_d_sig, 'k', linewidth=0.5)
@@ -517,6 +512,9 @@ class ClassPlotSupport:
             axs_spk1.set_ylim([d_ylim_min, d_ylim_max])
 
             # Add the marker, colored to match the first trace on the plot
+            dt_timestamp_start = np_cl_spark[idx_spk].dt_timestamp
+            dt_timestamp_end = dt_timestamp_start + timedelta(seconds=np_cl_spark[idx_spk].np_d_time[-1] -
+                                                                      np_cl_spark[idx_spk].np_d_time[0])
             dt_time_series = np.array([dt_timestamp_start + timedelta(seconds=dt_iter)
                                        for dt_iter in np_cl_spark[idx_spk].np_d_time])
             idx_marker = abs(dt_time_series - dt_timestamp_mark).argmin()
@@ -780,7 +778,8 @@ class ClSigReal(ClSig, ClSignalFeaturesEst):
     """
 
     def __init__(self, np_d_sig, d_fs, str_eu='volts', str_point_name='CH1', str_machine_name='Machine',
-                 dt_timestamp=datetime.fromisoformat('1990-01-01T00:00:00-00:00')):
+                 dt_timestamp=datetime.fromisoformat('1990-01-01T00:00:00-00:00'),
+                 dt_timestamp_mark=datetime.fromisoformat('1990-01-01T00:00:00-00:00')):
         """
         Parameters
         ----------
@@ -797,6 +796,8 @@ class ClSigReal(ClSig, ClSignalFeaturesEst):
         dt_timestamp : datetime
             Signal timestamp in datetime stamp. This is the timestamp when the first sample was acquired.
             Defaults to 1-Jan-1970 UTC Timezone
+        dt_timestamp_mark : datetime
+            Timestamp of feature measurement in the sparklines. Defaults to 1-Jan-1970 UTC Timezone
         """
         # Parent class
         super(ClSigReal, self).__init__()
@@ -826,6 +827,7 @@ class ClSigReal(ClSig, ClSignalFeaturesEst):
             self.__np_sparklines = np.append(self.__np_sparklines,
                                              [ClSigCompUneven(np.random.rand(np.size(np_x)), np_x)])
             self.__np_sparklines[idx_spark].str_point_name = 'Sparkline ' + '%0.0f' % idx_spark
+        self.__dt_timestamp_mark = dt_timestamp_mark
         self.__b_is_stale_sparkline = True
 
         # Timebase plot attributes. Some/many are derived from the signal
@@ -957,6 +959,14 @@ class ClSigReal(ClSig, ClSignalFeaturesEst):
     @dt_timestamp.setter
     def dt_timestamp(self, dt_timestamp):
         self.__dt_timestamp = dt_timestamp
+
+    @property
+    def dt_timestamp_mark(self):
+        return self.__dt_timestamp_mark
+
+    @dt_timestamp_mark.setter
+    def dt_timestamp_mark(self, dt_timestamp_mark):
+        self.__dt_timestamp_mark = dt_timestamp_mark
 
     @property
     def str_point_name(self):
@@ -2173,10 +2183,10 @@ class ClSigCompUneven(ClSig):
         if str_plot_apht_desc is not None:
             # Update class attribute
             self.__str_plot_desc = str_plot_apht_desc
-        else:
-            # Format and concatenate
-            self.__str_plot_desc = self.__str_plot_desc + '\n' + 'apht' + ' | ' + self.str_point_name + \
-                                   ' | ' + self.__str_format_dt
+
+        # Format and concatenate
+        str_plot_desc_local = self.__str_plot_desc + '\n' + 'apht' + ' | ' + self.str_point_name + \
+                               ' | ' + self.__str_format_dt
 
         # Figure with subplots
         plt.rcParams["font.family"] = ClassPlotSupport.get_font_plots()
@@ -2191,7 +2201,7 @@ class ClSigCompUneven(ClSig):
         axs[0].set_xlabel("Time, seconds")
         axs[0].set_ylabel("Phase, degrees")
         axs[0].set_ylim([-360.0, 360.0])
-        axs[0].set_title(self.__str_plot_desc)
+        axs[0].set_title(str_plot_desc_local)
 
         # Plot the magnitude
         axs[1].plot(self.__np_d_time, np.abs(self.__np_d_sig), color=ClassPlotSupport.get_trac_color(0))
@@ -2686,6 +2696,31 @@ class ClSigFeatures(ClassPlotSupport):
         """
         return self.__lst_cl_sgs[idx].dt_timestamp
 
+    def dt_timestamp_mark(self, idx=0):
+        """
+        Feature measurement date and time in sparkline
+
+        Parameter
+        ---------
+        idx : integer
+            Index of signal to pull description. Defaults to 0 (first signal)
+
+        """
+        return self.__lst_cl_sgs[idx].dt_timestamp_mark
+
+    def dt_timestamp_mark_update(self, dt_timestamp_mark, idx=0):
+        """
+        Set feature measurement date and time in sparklines
+
+        Parameter
+        ---------
+        dt_timestamp_mark : datetime
+            Timestamp of feature measurement in the sparklines. Defaults to 1-Jan-1970 UTC Timezone
+        idx : integer
+            Index of signal to pull description. Defaults to 0 (first signal)
+        """
+        self.__lst_cl_sgs[idx].dt_timestamp_mark = dt_timestamp_mark
+
     @property
     def str_plot_desc(self):
         """Plot description"""
@@ -2922,8 +2957,7 @@ class ClSigFeatures(ClassPlotSupport):
             dt_timestamp_end = (self.dt_timestamp(idx=idx_ch) + timedelta(seconds=d_offset))
             ClassPlotSupport.set_plot_sparkline(i_rows, i_cols, i_row_offset,
                                                 self.__lst_cl_sgs[idx_ch].np_sparklines,
-                                                self.dt_timestamp(idx=idx_ch), dt_timestamp_end,
-                                                self.dt_timestamp(idx=idx_ch))
+                                                self.dt_timestamp_mark(idx=idx_ch))
 
         # Save off the handle to the plot
         plot_handle = plt.gcf()
