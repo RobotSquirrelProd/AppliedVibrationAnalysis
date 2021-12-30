@@ -20,9 +20,10 @@ import abc as abc
 class ClassPlotSupport:
 
     @staticmethod
-    def get_dt_str(dt_timestamp):
+    def get_dt_str_utc_conv(dt_timestamp):
         """
-        Method to format date and time for plots, files, etc.
+        Method to format date and time for plots, files, etc. with a conversion
+        from UTC to local.
 
         Parameters
         ----------
@@ -39,7 +40,28 @@ class ClassPlotSupport:
         dt_timestamp_working = dt_timestamp
         dt_timestamp_working = dt_timestamp_working.replace(tzinfo=tz.tzutc())
         dt_local = dt_timestamp_working.astimezone(tz.tzlocal())
-        str_dt_timestamp = dt_local.isoformat(sep=' ', timespec='milliseconds')
+        str_dt_timestamp = ClassPlotSupport.get_dt_str(dt_local)
+
+        return str_dt_timestamp
+
+    @staticmethod
+    def get_dt_str(dt_timestamp):
+        """
+        Method to format date and time for plots, files, etc.
+
+        Parameters
+        ----------
+        dt_timestamp : datetime
+            Datetime for conversion
+
+        Returns
+        -------
+        str_dt_timestamp : string
+            Formatted date-time string
+
+        """
+        # Convert from datetime object to string
+        str_dt_timestamp = dt_timestamp.isoformat(sep=' ', timespec='milliseconds')
 
         return str_dt_timestamp
 
@@ -493,7 +515,7 @@ class ClassPlotSupport:
         axs_date.axis('off')
         axs_date.text(0, 1, 'Date(s):', horizontalalignment='right', verticalalignment='top',
                       fontweight='bold')
-        lst_str_timestamp = list(map(lambda x: ClassPlotSupport.get_dt_str(x), lst_dt_timestamp))
+        lst_str_timestamp = list(map(lambda x: ClassPlotSupport.get_dt_str_utc_conv(x), lst_dt_timestamp))
         lst_str_timestamp = list(map(lambda x: ' ' + x, lst_str_timestamp))
         ClassPlotSupport.draw_multi_color_text(0, 1, lst_str_timestamp, str_delim=', ', b_newline=True,
                                                horizontalalignment='left',
@@ -594,9 +616,9 @@ class ClassPlotSupport:
         axs_spk1 = plt.subplot2grid((i_rows, i_cols), (i_row_offset + idx_spk + 1, i_col_offset),
                                     colspan=i_col_offset - 1, rowspan=1)
         axs_spk1.axis('off')
-        axs_spk1.text(0, 0, ClassPlotSupport.get_dt_str(dt_timestamp_start),
+        axs_spk1.text(0, 0, ClassPlotSupport.get_dt_str_utc_conv(dt_timestamp_start),
                       horizontalalignment='center', verticalalignment='bottom', fontsize='small')
-        axs_spk1.text(1, 0, ClassPlotSupport.get_dt_str(dt_timestamp_end),
+        axs_spk1.text(1, 0, ClassPlotSupport.get_dt_str_utc_conv(dt_timestamp_end),
                       horizontalalignment='center', verticalalignment='bottom', fontsize='small')
 
     @staticmethod
@@ -1798,8 +1820,8 @@ class ClSigReal(ClSig, ClSignalFeaturesEst):
             lst_fmt = ClassPlotSupport.get_plot_round(d_crest_avg)
             str_point_spark = ClassPlotSupport.get_plot_sparkline_desc(lst_fmt[1],
                                                                        d_crest_avg,
-                                                                       self.str_eu,
-                                                                       'crest')
+                                                                       'crest factor',
+                                                                       '')
             self.__np_sparklines[2] = ClSigCompUneven(np_d_crest, self.d_time, str_eu=self.str_eu,
                                                       str_point_name=str_point_spark,
                                                       str_machine_name=self.str_machine_name,
@@ -2097,7 +2119,8 @@ class ClSigCompUneven(ClSig):
         self.__str_eu = str_eu
         self.str_point_name = str_point_name
         self.str_machine_name = str_machine_name
-        self.dt_timestamp = dt_timestamp
+        dt_timestamp_utc = dt_timestamp.astimezone(tz.tzutc())
+        self.dt_timestamp = dt_timestamp_utc
         self.__str_timedate_format = "%m/%d/%Y, %H:%M:%S.%f"
 
         # Plotting attributes
@@ -2869,7 +2892,7 @@ class ClSigFeatures(ClassPlotSupport):
 
         """
         # Convert from UTC to local time and then to string
-        return ClassPlotSupport.get_dt_str(self.dt_timestamp(idx=idx))
+        return ClassPlotSupport.get_dt_str_utc_conv(self.dt_timestamp(idx=idx))
 
     def __str_plt_support_title_meta(self, str_plot_type='timebase', idx=0):
         """
