@@ -3130,7 +3130,7 @@ class ClSigFeatures(ClassPlotSupport):
 
         # Local variables  to simplify code; update RPM trend
         np_d_eventtimes = self.np_d_eventtimes(idx=idx_eventtimes)
-        self.__lst_cl_sgs[idx].d_est_rpm(d_events_per_rev=d_events_per_rev, idx_eventtimes=idx_eventtimes)
+        self.__lst_cl_sgs[idx].d_est_rpm(d_events_per_rev=d_events_per_rev)
         [d_xlim_start, d_xlim_end] = self.__get_x_limit_events(idx_eventtimes=idx_eventtimes, idx=idx)
 
         lns1 = ax1.plot(self.__lst_cl_sgs[idx].d_time, self.np_d_sig, color=ClassPlotSupport.get_trac_color(0),
