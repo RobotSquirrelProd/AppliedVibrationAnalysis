@@ -192,7 +192,6 @@ class ClassPlotSupport:
         # y-axis grid and labels.
         d_mid_span = (max(y_limit_sig) - min(y_limit_sig)) / 2.0
         d_spacing = 1.1 * d_mid_span
-        d_mid_point = min(y_limit_sig) + d_mid_span
 
         # Set up the spacing and number format for the major axis
         lst_round = ClassPlotSupport.get_plot_round(d_spacing)
@@ -235,6 +234,26 @@ class ClassPlotSupport:
 
         """
         return 8
+
+    @staticmethod
+    def get_plot_sparkline_desc(str_format, d_value, str_eu, str_eu_secondary):
+        """
+        Helper function to provide consistent formatting for the spark line descriptions
+
+        Parameters
+        str_format : string
+            Formatting string for the value
+        d_value : float
+            Numerical value to be included in the header
+        str_eu : string
+            Primary engineering unit descriptor (volts, mils, g's, etc.)
+        str_eu_secondary : string
+            Secondary engineering unit descriptor (pp, pk, rms, etc.)
+
+        Returns
+            string : sparkline description
+        """
+        return str_format % d_value + ' ' + str_eu + ' ' + str_eu_secondary
 
     @staticmethod
     def get_font_plots():
@@ -485,6 +504,8 @@ class ClassPlotSupport:
         i_sparklines = min([ClassPlotSupport.get_plot_setup_row_sparklines(), len(np_cl_spark)])
 
         # Iterate through each sparkline that has data and plot it
+        dt_timestamp_start = []
+        dt_timestamp_end = []
         for idx_spk in range(i_sparklines):
             # Sparkline
             i_row_plot = (i_row_offset + ClassPlotSupport.get_plot_setup_row_sparklines() - idx_spk - 1)
@@ -499,16 +520,32 @@ class ClassPlotSupport:
             np_d_y = 0.9 * np_cl_spark[idx_spk].np_d_sig
             axs_spk1.plot(np_cl_spark[idx_spk].np_d_time, np_d_y,
                           'k', linewidth=0.35)
-            d_ylim_min = 0.9 * np.min(np_d_y)
-            d_ylim_max = 1.1 * np.max(np_d_y)
-            # Very small signal show up with numerical noise, this is an attempt
-            # to get the scaling large enough to show significant changes in trends,
-            # but not show numerical noise
-            # TODO: Ideally the scaling would be set to optimize feature detection,
-            #  something like the 45 degrees suggested by Tufte
-            if abs(d_ylim_max - d_ylim_min) < 0.5:
-                d_ylim_min = d_ylim_min - 0.5
-                d_ylim_max = d_ylim_max + 0.5
+
+            # Set the vertical limits on the sparkline. This is really important
+            # to have the correct aspect ratio so critical features surface, but
+            # computational noise does not. By default, the ylim_tb are set to
+            # None on instantiation. In that case, make a good faith effort to
+            # get the aspect ratio correct based on the signal amplitude.
+            if (np_cl_spark[idx_spk].ylim_tb is None) or (len(np_cl_spark[idx_spk].ylim_tb) < 2):
+                d_ylim_min = 0.9 * np.min(np_d_y)
+                d_ylim_max = 1.1 * np.max(np_d_y)
+                # Very small signal show up with numerical noise, this is an attempt
+                # to get the scaling large enough to show significant changes in trends,
+                # but not show numerical noise
+                # TODO: Ideally the scaling would be set to optimize feature detection,
+                #  something like the 45 degrees suggested by Tufte
+                if abs(d_ylim_max - d_ylim_min) < 0.5:
+                    d_ylim_min = d_ylim_min - 0.5
+                    d_ylim_max = d_ylim_max + 0.5
+
+            # The user as set the limits, use those values
+            else:
+                d_ylim_min = min(np_cl_spark[idx_spk].ylim_tb)
+                d_ylim_max = max(np_cl_spark[idx_spk].ylim_tb)
+                print('User limits')
+                print(np_cl_spark[idx_spk].ylim_tb)
+
+            # Set the y-axis limits
             axs_spk1.set_ylim([d_ylim_min, d_ylim_max])
 
             # Add the marker, colored to match the first trace on the plot
@@ -827,6 +864,7 @@ class ClSigReal(ClSig, ClSignalFeaturesEst):
             self.__np_sparklines = np.append(self.__np_sparklines,
                                              [ClSigCompUneven(np.random.rand(np.size(np_x)), np_x)])
             self.__np_sparklines[idx_spark].str_point_name = 'Sparkline ' + '%0.0f' % idx_spark
+            self.__np_sparklines[idx_spark].ylim_tb = None
         self.__dt_timestamp_mark = dt_timestamp_mark
         self.__b_is_stale_sparkline = True
 
@@ -1707,7 +1745,10 @@ class ClSigReal(ClSig, ClSignalFeaturesEst):
             np_d_pkpk = 2.0 * np_d_pk
             d_pkpk_mean = np.mean(np_d_pkpk)
             lst_fmt = ClassPlotSupport.get_plot_round(d_pkpk_mean)
-            str_point_spark = lst_fmt[1] % d_pkpk_mean + ' ' + self.str_eu + ' pp'
+            str_point_spark = ClassPlotSupport.get_plot_sparkline_desc(lst_fmt[1],
+                                                                       d_pkpk_mean,
+                                                                       self.str_eu,
+                                                                       'pp')
             self.__np_sparklines[0] = ClSigCompUneven(np_d_pkpk, self.d_time, str_eu=self.str_eu,
                                                       str_point_name=str_point_spark,
                                                       str_machine_name=self.str_machine_name,
@@ -1717,7 +1758,10 @@ class ClSigReal(ClSig, ClSignalFeaturesEst):
             np_d_rms = ClSignalFeaturesEst.np_d_est_rms(self.np_d_sig)
             d_rms_avg = np.mean(np_d_rms)
             lst_fmt = ClassPlotSupport.get_plot_round(d_rms_avg)
-            str_point_spark = lst_fmt[1] % d_rms_avg + ' ' + self.str_eu + ' rms'
+            str_point_spark = ClassPlotSupport.get_plot_sparkline_desc(lst_fmt[1],
+                                                                       d_rms_avg,
+                                                                       self.str_eu,
+                                                                       'rms')
             self.__np_sparklines[1] = ClSigCompUneven(np_d_rms, self.d_time, str_eu=self.str_eu,
                                                       str_point_name=str_point_spark,
                                                       str_machine_name=self.str_machine_name,
@@ -1727,7 +1771,10 @@ class ClSigReal(ClSig, ClSignalFeaturesEst):
             np_d_crest = np.divide(np_d_pk, np_d_rms)
             d_crest_avg = np.mean(np_d_crest)
             lst_fmt = ClassPlotSupport.get_plot_round(d_crest_avg)
-            str_point_spark = lst_fmt[1] % d_crest_avg + ' ' + self.str_eu + ' crest'
+            str_point_spark = ClassPlotSupport.get_plot_sparkline_desc(lst_fmt[1],
+                                                                       d_crest_avg,
+                                                                       self.str_eu,
+                                                                       'crest')
             self.__np_sparklines[2] = ClSigCompUneven(np_d_crest, self.d_time, str_eu=self.str_eu,
                                                       str_point_name=str_point_spark,
                                                       str_machine_name=self.str_machine_name,
@@ -1737,7 +1784,10 @@ class ClSigReal(ClSig, ClSignalFeaturesEst):
             np_d_mean = ClSignalFeaturesEst.np_d_est_mean(self.np_d_sig)
             d_mean_avg = np.mean(np_d_mean)
             lst_fmt = ClassPlotSupport.get_plot_round(d_mean_avg)
-            str_point_spark = lst_fmt[1] % d_mean_avg + ' ' + self.str_eu + ' mean'
+            str_point_spark = ClassPlotSupport.get_plot_sparkline_desc(lst_fmt[1],
+                                                                       d_mean_avg,
+                                                                       self.str_eu,
+                                                                       'mean')
             self.__np_sparklines[3] = ClSigCompUneven(np_d_mean, self.d_time, str_eu=self.str_eu,
                                                       str_point_name=str_point_spark,
                                                       str_machine_name=self.str_machine_name,
@@ -1757,7 +1807,10 @@ class ClSigReal(ClSig, ClSignalFeaturesEst):
 
             d_mean_rpm = np.mean(np_d_spark_rpm)
             lst_fmt = ClassPlotSupport.get_plot_round(d_mean_rpm)
-            str_point_spark = lst_fmt[1] % d_mean_rpm + ' RPM'
+            str_point_spark = ClassPlotSupport.get_plot_sparkline_desc(lst_fmt[1],
+                                                                       d_mean_rpm,
+                                                                       'RPM',
+                                                                       '')
             self.__np_sparklines[4] = ClSigCompUneven(np_d_spark_rpm, np_d_spark_eventtimes, str_eu=self.str_eu,
                                                       str_point_name=str_point_spark,
                                                       str_machine_name=self.str_machine_name,
@@ -2089,12 +2142,13 @@ class ClSigCompUneven(ClSig):
 
     def set_ylim_tb(self, ylim_tb):
         """Y limits for magnitude timebase plot"""
-        # Only use limits if they are valid
-        if len(ylim_tb) == 2:
-            self.__ylim_tb = ylim_tb
+        # Only use limits if they are valid. First check is if they
+        # are set to None
+        if ylim_tb is not None:
+            if len(ylim_tb) == 2:
+                self.__ylim_tb = ylim_tb
         else:
-
-            # Only change limits if the signal is valid
+            # Only change limits if the signal is valid and has samples
             if len(self.__np_d_sig) > 0:
                 self.__ylim_tb = np.array(
                     [np.max(np.abs(self.__np_d_sig)), np.abs(np.min(self.__np_d_sig))])

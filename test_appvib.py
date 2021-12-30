@@ -5,7 +5,7 @@ import math
 import numpy as np
 import time
 import pandas as pd
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 
 class TestClSig(TestCase):
@@ -111,11 +111,21 @@ class TestClSig(TestCase):
         self.i_direction_test_001_trigger_slope = 0
         self.d_threshold_test_001 = 0.125
 
+        # Test values for finding index to the closest timestamp
+        self.np_d_time_close_time = ([1.07754901e-01, 2.25514589e-01, 3.42310042e-01, 4.60151792e-01,
+                                      5.77884125e-01, 6.94631708e-01, 8.12446104e-01, 6.04685230e+01,
+                                      6.05901046e+01, 6.07109186e+01, 6.08323248e+01, 6.09531169e+01,
+                                      1.26010386e+02, 1.26094825e+02, 1.26179829e+02, 1.26264849e+02,
+                                      1.26349703e+02, 1.26434165e+02, 1.26519065e+02])
+        self.dt_timestamp_close_time = datetime(2021, 12, 9, 5, 36, 10, 782000,
+                                                tzinfo=timezone(timedelta(days=-1, seconds=57600)))
+        self.dt_timestamp_close_time_mark = datetime(2021, 12, 9, 5, 37, 11, 203000,
+                                                     tzinfo=timezone(timedelta(days=-1, seconds=57600)))
+
     def test_est_signal_features(self):
 
         # Begin with amplitude estimation
         np_d_test = appvib.ClSignalFeaturesEst.np_d_est_amplitude(self.np_test_trigger_ph)
-        print(float(np.mean(np_d_test)))
         self.assertAlmostEqual(float(np.mean(np_d_test)), self.d_test_trigger_amp_ph, 15)
 
         # Now for the rms estimation
@@ -138,10 +148,20 @@ class TestClSig(TestCase):
         self.assertAlmostEqual(float(np.mean(np_d_test_est_mean)), d_mean, 2)
 
         # Custom sparklines
-        np_sparklines = np.array([appvib.ClSigCompUneven(np_d_test_est_mean, class_test_est_mean.d_time_plot(0),
-                                                         str_eu='GOATS', str_point_name='Mean GOATS',
+        i_ns_test = len(np_d_test_est_mean)
+        np_d_sig_spark1 = np_d_test_est_mean + np.linspace(0, (i_ns_test - 1), i_ns_test) + \
+                          np.random.normal(0, 100, i_ns_test)
+        d_mean_max = max(np_d_sig_spark1)
+        lst_fmt = appvib.ClassPlotSupport.get_plot_round(d_mean_max)
+        str_point_spark1 = appvib.ClassPlotSupport.get_plot_sparkline_desc(lst_fmt[1],
+                                                                           d_mean_max,
+                                                                           'GOATS',
+                                                                           'max')
+        np_sparklines = np.array([appvib.ClSigCompUneven(np_d_sig_spark1, class_test_est_mean.d_time_plot(idx=0),
+                                                         str_eu='GOATS', str_point_name=str_point_spark1,
                                                          str_machine_name=class_test_est_mean.str_machine_name(idx=0),
                                                          dt_timestamp=class_test_est_mean.dt_timestamp(idx=0))])
+        np_sparklines[0].ylim_tb = [-300.0, 3000.0]
         class_test_est_mean.np_sparklines_update(np_sparklines, idx=0)
         class_test_est_mean.str_plot_desc = 'Test of custom sparkline'
         class_test_est_mean.plt_sigs()
