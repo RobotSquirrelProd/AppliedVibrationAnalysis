@@ -44,6 +44,33 @@ class ClassPlotSupport:
         return str_dt_timestamp
 
     @staticmethod
+    def get_idx_by_dt(np_d_time, dt_timestamp, dt_timestamp_mark):
+        """
+        Method to format date and time for plots, files, etc.
+
+        Parameters
+        ----------
+        np_d_time : numpy array, double
+            Time stamp for each sample, assumed to be seconds from the dt_timestamp value
+        dt_timestamp : datetime
+            Date time value for the first time sample in np_d_time
+        dt_timestamp_mark : datetime
+            Date time value for closest index
+
+        Returns
+        -------
+        integer : index of the closest value to dt_timestamp_mark
+
+        """
+
+        # Construct datetime array
+        np_dt_series = np.full(len(np_d_time), dt_timestamp, dtype=datetime)
+        for idx, dt in enumerate(np_dt_series):
+            np_dt_series[idx] = dt+timedelta(seconds=np_d_time[idx])
+
+        return (np.abs(np_dt_series-dt_timestamp_mark)).argmin()
+
+    @staticmethod
     def get_plot_round(d_num):
         """
         Why another round function? Indeed, this one is designed to give a reasonable
@@ -542,8 +569,6 @@ class ClassPlotSupport:
             else:
                 d_ylim_min = min(np_cl_spark[idx_spk].ylim_tb)
                 d_ylim_max = max(np_cl_spark[idx_spk].ylim_tb)
-                print('User limits')
-                print(np_cl_spark[idx_spk].ylim_tb)
 
             # Set the y-axis limits
             axs_spk1.set_ylim([d_ylim_min, d_ylim_max])
@@ -1583,7 +1608,7 @@ class ClSigReal(ClSig, ClSignalFeaturesEst):
         # Is the data stale?
         if self.__b_is_stale_rpm:
             self.np_d_est_triggers(self.np_d_sig)
-            self.d_est_rpm()
+            self.np_d_est_rpm()
 
         """Estimated RPM values"""
         return self.__np_d_rpm
@@ -1601,7 +1626,7 @@ class ClSigReal(ClSig, ClSignalFeaturesEst):
         self.__d_events_per_rev = d_events_per_rev
 
     # Method to estimate the RPM values
-    def d_est_rpm(self, d_events_per_rev=1.0):
+    def np_d_est_rpm(self, d_events_per_rev=1.0):
         """
         Estimate the RPM from the signal using eventtimes which must have
         calculated from a previous call to the method np_d_est_triggers.
@@ -2619,6 +2644,18 @@ class ClSigFeatures(ClassPlotSupport):
         return self.__lst_cl_sgs[idx].np_d_est_triggers(np_d_sig, i_direction, d_threshold,
                                                         d_hysteresis, b_verbose)
 
+    def np_d_rpm(self, idx=0):
+        """
+        Numpy array of rpm values
+
+        Parameter
+        ---------
+        idx : integer
+            Index of signal to pull description. Defaults to 0 (first signal)
+
+        """
+        return self.__lst_cl_sgs[idx].np_d_rpm
+
     # Estimate the filtered nX response
     def calc_nx(self, np_d_sig, np_d_eventtimes, b_verbose=True, idx=0):
         """
@@ -3184,7 +3221,7 @@ class ClSigFeatures(ClassPlotSupport):
 
         # Local variables  to simplify code; update RPM trend
         np_d_eventtimes = self.np_d_eventtimes(idx=idx_eventtimes)
-        self.__lst_cl_sgs[idx].d_est_rpm(d_events_per_rev=d_events_per_rev)
+        self.__lst_cl_sgs[idx].np_d_est_rpm(d_events_per_rev=d_events_per_rev)
         [d_xlim_start, d_xlim_end] = self.__get_x_limit_events(idx_eventtimes=idx_eventtimes, idx=idx)
 
         lns1 = ax1.plot(self.__lst_cl_sgs[idx].d_time, self.np_d_sig, color=ClassPlotSupport.get_trac_color(0),

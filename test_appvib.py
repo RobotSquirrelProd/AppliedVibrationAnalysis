@@ -124,6 +124,12 @@ class TestClSig(TestCase):
 
     def test_est_signal_features(self):
 
+        # Test helper functions
+        idx_test = appvib.ClassPlotSupport.get_idx_by_dt(self.np_d_time_close_time, self.dt_timestamp_close_time,
+                                                         self.dt_timestamp_close_time_mark)
+        print(idx_test)
+        self.assertEqual(idx_test, 7)
+
         # Begin with amplitude estimation
         np_d_test = appvib.ClSignalFeaturesEst.np_d_est_amplitude(self.np_test_trigger_ph)
         self.assertAlmostEqual(float(np.mean(np_d_test)), self.d_test_trigger_amp_ph, 15)
