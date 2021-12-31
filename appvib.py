@@ -168,7 +168,7 @@ class ClassPlotSupport:
         return 10
 
     @staticmethod
-    def set_plot_setup_sig_axis(ax, x_limit_sig=np.array([0.0, 1.0]), y_limit_sig=np.array([0.0, 1.0]),
+    def set_plot_setup_sig_axis(ax, d_fs, x_limit_sig=np.array([0.0, 1.0]), y_limit_sig=np.array([0.0, 1.0]),
                                 str_eu='volts', str_yaxis_desc='Amplitude'):
         """Set up the signal plotting axis
 
@@ -176,6 +176,8 @@ class ClassPlotSupport:
         ----------
         ax : matplotlib axes object
             Axis object for the signal plotting area
+        d_fs : double
+            Sampling frequency, hertz. Needed so it can be included in the label.
         x_limit_sig : list, double
             x-axis minimum and maximum values
         y_limit_sig : list, double
@@ -282,6 +284,12 @@ class ClassPlotSupport:
         ax.text(0, -0.1, str_yaxis_description, horizontalalignment='center', verticalalignment='top',
                 fontweight='bold', transform=ax.transAxes)
         ax.text(0, 1.09, str_yaxis_desc, horizontalalignment='center', verticalalignment='top',
+                fontweight='bold', transform=ax.transAxes)
+
+        # Center sampling frequency label
+        lst_format_fs = ClassPlotSupport.get_plot_round(d_fs)
+        str_fs_description = ('Sampling Freq.: ' + lst_format_fs[1] % d_fs + ' hertz' )
+        ax.text(0.42, -0.1, str_fs_description, horizontalalignment='center', verticalalignment='top',
                 fontweight='bold', transform=ax.transAxes)
 
         return
@@ -3082,7 +3090,7 @@ class ClSigFeatures(ClassPlotSupport):
             axs_sig.set_yticks(np.linspace(self.__lst_cl_sgs[idx_ch].ylim_tb[0],
                                            self.__lst_cl_sgs[idx_ch].ylim_tb[1],
                                            self.__lst_cl_sgs[idx_ch].i_y_divisions_tb))
-            ClassPlotSupport.set_plot_setup_sig_axis(axs_sig, self.__lst_cl_sgs[idx_ch].xlim_tb,
+            ClassPlotSupport.set_plot_setup_sig_axis(axs_sig, self.__lst_cl_sgs[idx_ch].d_fs, self.__lst_cl_sgs[idx_ch].xlim_tb,
                                                      self.__lst_cl_sgs[idx_ch].ylim_tb,
                                                      self.__lst_cl_sgs[idx_ch].str_eu,
                                                      "Channel output, " + self.__lst_cl_sgs[idx_ch].str_eu)
