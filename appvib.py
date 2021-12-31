@@ -109,15 +109,19 @@ class ClassPlotSupport:
             double : number rounded off
             string : format string
         """
+
+        # Perform the rounding
         d_exp = np.log10(abs(d_num))
         i_round = int(round(d_exp, 0)) - 1
+        d_round = round(d_num, -i_round)
 
+        # Set up the format string
         if i_round <= 0:
             str_format = '%0.' + '%0.0f' % -i_round + 'f'
         else:
             str_format = '%' + '%0.0f' % i_round + '.0f'
 
-        return [round(d_num, -i_round), str_format]
+        return [d_round, str_format]
 
     @staticmethod
     def get_plot_setup_rows():
@@ -200,8 +204,17 @@ class ClassPlotSupport:
 
         # x-axis grid and labels
         d_spacing = (max(x_limit_sig) - min(x_limit_sig)) / 5.0
+        # For small numbers, need to force a round to 5.
+        # TODO: Round to convenient numbers, this is awful below
+        d_base = 5.0
+        if 0.1 < d_spacing < 1.0:
+            d_spacing_minor = d_spacing / 5.0
+            d_spacing_minor = d_spacing_minor * 1000
+            d_spacing_minor = d_base * round(d_spacing_minor / d_base)
+            d_spacing = d_spacing_minor * (5.0 / 1000.0)
+
         lst_round = ClassPlotSupport.get_plot_round(d_spacing / float(i_xaxis_minor))
-        d_spacing_rounded = lst_round[0] * 5.0
+        d_spacing_rounded = lst_round[0] * 5.
         str_format = lst_round[1]
         ax.xaxis.set_major_locator(MultipleLocator(d_spacing_rounded))
         ax.xaxis.set_minor_locator(AutoMinorLocator(i_xaxis_minor))
@@ -229,6 +242,7 @@ class ClassPlotSupport:
         # X-axis label
         str_suffix = 'sec'
         d_spacing_rounded_minor = d_spacing_rounded / float(i_xaxis_minor)
+        # TODO: this should work with any engineering unit, not just time
         if d_spacing_rounded_minor < 1.0:
             d_spacing_rounded_minor = d_spacing_rounded_minor * 1000
             str_suffix = 'ms'
@@ -568,7 +582,7 @@ class ClassPlotSupport:
             Artist.remove(ln_full[0])
             np_d_y = 0.9 * np_cl_spark[idx_spk].np_d_sig
             axs_spk1.plot(np_cl_spark[idx_spk].np_d_time, np_d_y,
-                          'k', linewidth=0.35)
+                          'k', linewidth=0.50)
 
             # Set the vertical limits on the sparkline. This is really important
             # to have the correct aspect ratio so critical features surface, but
@@ -654,7 +668,7 @@ class ClSignalFeaturesEst:
     """This class has mostly static methods used to estimate signal features"""
 
     @staticmethod
-    def np_d_est_amplitude(np_d_sig=np.array([1., 2., 3.])):
+    def np_d_est_amplitude(np_d_sig=np.array([1., 2., 3.]), d_fs=200):
         """
         This method estimates the signal envelope (peak values) by analytic signals
 
@@ -662,6 +676,8 @@ class ClSignalFeaturesEst:
         ----------
         np_d_sig : numpy array
             Vector with the signal of interest. Assumed to be real-valued.
+        d_fs : double
+            Sampling frequency, hertz
 
         Return
         ------
@@ -671,8 +687,22 @@ class ClSignalFeaturesEst:
 
         """
 
+        # Signal features
+        i_ns = len(np_d_sig)
+
+        # Analytic signal to estimate envelope
         np_d_analytic = hilbert(np_d_sig - np.mean(np_d_sig))
-        return np.abs(np_d_analytic)
+        np_d_env_raw = np.abs(np_d_analytic)
+
+        # That estimator tends to be noisy, smooth with kernel length ~1 second
+        if d_fs > i_ns:
+            np_d_env = np.ones_like(np_d_sig) * np.mean(np_d_env_raw)
+        else:
+            i_poly_order = 1
+            i_win_len = int(np.ceil(d_fs) // 2 * 2 + 1)
+            np_d_env = sig.savgol_filter(np_d_env_raw, i_win_len, i_poly_order)
+
+        return np_d_env
 
     @staticmethod
     def np_d_est_pk():
@@ -680,9 +710,9 @@ class ClSignalFeaturesEst:
         return True
 
     @staticmethod
-    def np_d_est_rms(np_d_sig=np.array([1., 2., 3.]), i_break=128, i_kernel=200):
+    def np_d_est_rms(np_d_sig=np.array([1., 2., 3.]), i_break=128, i_kernel=200, d_fs=200):
         """
-        This method estimates the root-mean square (RMS) value of a signal. For
+        This method estimates the root-mean-square (RMS) value of a signal. For
         signal with less than i_break samples a single RMS value is calculated.
         For signals with more than i_break samples a rolling RMS is calculated
         where i_kernel defines the kernel sample count.
@@ -697,6 +727,8 @@ class ClSignalFeaturesEst:
             RMS calculate where the kernel length is defined by i_kernel
         i_kernel : integer
             Number of samples in the rolling RMS kernel
+        d_fs : double
+            Sampling frequency, hertz
 
         Return
         ------
@@ -726,8 +758,17 @@ class ClSignalFeaturesEst:
             np_d_rms_rolling = np.sqrt((xc[i_kernel:] - xc[:-i_kernel]) / i_kernel)
 
             # It takes i_kernel samples to accumulate the RMS value
-            np_d_rms[i_kernel:i_ns] = np_d_rms_rolling
-            np_d_rms[0:i_kernel] = np.mean(np_d_rms_rolling)
+            np_d_rms_raw = np.ones_like(np_d_sig)
+            np_d_rms_raw[i_kernel:i_ns] = np_d_rms_rolling
+            np_d_rms_raw[0:i_kernel] = np.mean(np_d_rms_rolling)
+
+            # That estimator tends to be noisy, smooth with kernel length ~1 second
+            if d_fs > i_ns:
+                np_d_env = np.ones_like(np_d_sig) * np.mean(np_d_rms_raw)
+            else:
+                i_poly_order = 1
+                i_win_len = int(np.ceil(d_fs) // 2 * 2 + 1)
+                np_d_rms = sig.savgol_filter(np_d_rms_raw, i_win_len, i_poly_order)
 
         return np_d_rms
 
