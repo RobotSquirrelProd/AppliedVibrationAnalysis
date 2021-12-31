@@ -88,9 +88,9 @@ class ClassPlotSupport:
         # Construct datetime array
         np_dt_series = np.full(len(np_d_time), dt_timestamp, dtype=datetime)
         for idx, dt in enumerate(np_dt_series):
-            np_dt_series[idx] = dt+timedelta(seconds=np_d_time[idx])
+            np_dt_series[idx] = dt + timedelta(seconds=np_d_time[idx])
 
-        return (np.abs(np_dt_series-dt_timestamp_mark)).argmin()
+        return (np.abs(np_dt_series - dt_timestamp_mark)).argmin()
 
     @staticmethod
     def get_plot_round(d_num):
@@ -133,7 +133,7 @@ class ClassPlotSupport:
 
 
         """
-        return 18
+        return 19
 
     @staticmethod
     def get_plot_setup_row_sig():
@@ -169,7 +169,8 @@ class ClassPlotSupport:
 
     @staticmethod
     def set_plot_setup_sig_axis(ax, d_fs, x_limit_sig=np.array([0.0, 1.0]), y_limit_sig=np.array([0.0, 1.0]),
-                                str_eu='volts', str_yaxis_desc='Amplitude'):
+                                str_eu='volts', str_yaxis_desc='Amplitude', str_plot_desc='Timebase',
+                                str_processing='Raw'):
         """Set up the signal plotting axis
 
         Parameters
@@ -186,11 +187,16 @@ class ClassPlotSupport:
             y-axis units
         str_yaxis_desc : string
             y-axis description
-
+        str_plot_desc : string
+            Plot description
+        str_processing : string
+            Processing stage and steps description
         """
 
         # grid features
         i_xaxis_minor = 5
+        d_footer_vert = -0.1
+        d_header_vert = 1.09
 
         # from: https://stackoverflow.com/questions/925024/how-can-i-remove-the-top-and-right-axis-in-matplotlib
 
@@ -251,7 +257,7 @@ class ClassPlotSupport:
         lst_format_xaxis_division = ClassPlotSupport.get_plot_round(d_spacing_rounded_minor)
         str_xaxis_description = ('Horizontal: ' + lst_format_xaxis_division[1] % d_spacing_rounded_minor +
                                  ' ' + str_suffix + '/division')
-        ax.text(1, -0.1, str_xaxis_description, horizontalalignment='right', verticalalignment='top',
+        ax.text(1, d_footer_vert, str_xaxis_description, horizontalalignment='right', verticalalignment='top',
                 fontweight='bold', transform=ax.transAxes)
 
         # y-axis grid and labels.
@@ -281,15 +287,23 @@ class ClassPlotSupport:
         d_spacing_rounded_minor = d_spacing_rounded / float(i_xaxis_minor)
         str_yaxis_description = ('Vertical: ' + str_format % d_spacing_rounded_minor +
                                  ' ' + str_eu + '/division')
-        ax.text(0, -0.1, str_yaxis_description, horizontalalignment='center', verticalalignment='top',
+        ax.text(0, d_footer_vert, str_yaxis_description, horizontalalignment='center', verticalalignment='top',
                 fontweight='bold', transform=ax.transAxes)
-        ax.text(0, 1.09, str_yaxis_desc, horizontalalignment='center', verticalalignment='top',
+        ax.text(0, d_header_vert, str_yaxis_desc, horizontalalignment='center', verticalalignment='top',
                 fontweight='bold', transform=ax.transAxes)
 
         # Center sampling frequency label
         lst_format_fs = ClassPlotSupport.get_plot_round(d_fs)
-        str_fs_description = ('Sampling Freq.: ' + lst_format_fs[1] % d_fs + ' hertz' )
-        ax.text(0.42, -0.1, str_fs_description, horizontalalignment='center', verticalalignment='top',
+        str_fs_description = ('Sampling Freq.: ' + lst_format_fs[1] % d_fs + ' hertz')
+        ax.text(0.42, d_footer_vert, str_fs_description, horizontalalignment='center', verticalalignment='top',
+                fontweight='bold', transform=ax.transAxes)
+
+        # Center plot description
+        ax.text(0.46, d_header_vert + 0.01, str_plot_desc, horizontalalignment='center', verticalalignment='top',
+                fontweight='bold', transform=ax.transAxes)
+
+        # Header, right: processing description
+        ax.text(1, d_header_vert, str_processing, horizontalalignment='right', verticalalignment='top',
                 fontweight='bold', transform=ax.transAxes)
 
         return
@@ -638,9 +652,9 @@ class ClassPlotSupport:
         axs_spk1 = plt.subplot2grid((i_rows, i_cols), (i_row_offset + idx_spk + 1, i_col_offset),
                                     colspan=i_col_offset - 1, rowspan=1)
         axs_spk1.axis('off')
-        axs_spk1.text(0, 0, ClassPlotSupport.get_dt_str_utc_conv(dt_timestamp_start),
+        axs_spk1.text(0, 0.3, ClassPlotSupport.get_dt_str_utc_conv(dt_timestamp_start),
                       horizontalalignment='center', verticalalignment='bottom', fontsize='small')
-        axs_spk1.text(1, 0, ClassPlotSupport.get_dt_str_utc_conv(dt_timestamp_end),
+        axs_spk1.text(1, 0.3, ClassPlotSupport.get_dt_str_utc_conv(dt_timestamp_end),
                       horizontalalignment='center', verticalalignment='bottom', fontsize='small')
 
     @staticmethod
@@ -772,7 +786,7 @@ class ClSignalFeaturesEst:
 
             # That estimator tends to be noisy, smooth with kernel length ~1 second
             if d_fs > i_ns:
-                np_d_env = np.ones_like(np_d_sig) * np.mean(np_d_rms_raw)
+                np_d_rms = np.ones_like(np_d_sig) * np.mean(np_d_rms_raw)
             else:
                 i_poly_order = 1
                 i_win_len = int(np.ceil(d_fs) // 2 * 2 + 1)
@@ -2337,7 +2351,7 @@ class ClSigCompUneven(ClSig):
 
         # Format and concatenate
         str_plot_desc_local = self.__str_plot_desc + '\n' + 'apht' + ' | ' + self.str_point_name + \
-                               ' | ' + self.__str_format_dt
+                              ' | ' + self.__str_format_dt
 
         # Figure with subplots
         plt.rcParams["font.family"] = ClassPlotSupport.get_font_plots()
@@ -3090,10 +3104,12 @@ class ClSigFeatures(ClassPlotSupport):
             axs_sig.set_yticks(np.linspace(self.__lst_cl_sgs[idx_ch].ylim_tb[0],
                                            self.__lst_cl_sgs[idx_ch].ylim_tb[1],
                                            self.__lst_cl_sgs[idx_ch].i_y_divisions_tb))
-            ClassPlotSupport.set_plot_setup_sig_axis(axs_sig, self.__lst_cl_sgs[idx_ch].d_fs, self.__lst_cl_sgs[idx_ch].xlim_tb,
+            ClassPlotSupport.set_plot_setup_sig_axis(axs_sig, self.__lst_cl_sgs[idx_ch].d_fs,
+                                                     self.__lst_cl_sgs[idx_ch].xlim_tb,
                                                      self.__lst_cl_sgs[idx_ch].ylim_tb,
                                                      self.__lst_cl_sgs[idx_ch].str_eu,
-                                                     "Channel output, " + self.__lst_cl_sgs[idx_ch].str_eu)
+                                                     "Channel output, " + self.__lst_cl_sgs[idx_ch].str_eu,
+                                                     "Timebase", "Asynchronous")
 
             # After the plots and signal have been plotted (forcing re-calculation of extracted
             # features) create the header, starting with the description
