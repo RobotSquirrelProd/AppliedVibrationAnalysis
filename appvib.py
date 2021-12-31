@@ -153,7 +153,7 @@ class ClassPlotSupport:
 
     @staticmethod
     def get_plot_setup_rows_header_buffer():
-        return 1
+        return 2
 
     @staticmethod
     def get_plot_setup_row_sig_span():
