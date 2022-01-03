@@ -1,6 +1,7 @@
 import time
 import numpy as np
 
+
 def d_get_delta_time(timebase_scale=1.0, i_ns=120):
     """Given the DS1054Z timebase scale, calculate the delta time between samples"""
     return (12. * float(timebase_scale)) / float(i_ns)
@@ -17,16 +18,16 @@ def b_set_trigger(scope_con, d_trigger_level=1e-01):
     Return values:
     [None]
     """
-    
+
     scope_con.write(':trigger:edge:source CHAN1')
     scope_con.write(':trigger:edge:level ' + format(d_trigger_level))
     scope_con.single()
 
 
-def b_setup_scope(scope_con, lst_ch_active=[True, False, False, False],
-                  lst_ac_coupled = [True, True, True, True],
-                  lst_ch_scale=[5.e-1, 1., 1., 1.], timebase_scale=5e-2, 
-                  d_trigger_level = 1e-01, b_single = True):
+def b_setup_scope(scope_con, lst_ch_active=np.array([True, False, False, False]),
+                  lst_ac_coupled=np.array([True, True, True, True]),
+                  lst_ch_scale=np.array([5.e-1, 1., 1., 1.]), timebase_scale=5e-2,
+                  d_trigger_level=1e-01, b_single=True):
     """Setup Rigol ds1054z to read data from one or more channels
     
     Parameters:
@@ -65,44 +66,43 @@ def b_setup_scope(scope_con, lst_ch_active=[True, False, False, False],
         scope_con.write(':CHANnel1:COUPling DC')
 
     # Setup channel 2
-    scope_con.display_channel(2,enable=lst_ch_active[1])
+    scope_con.display_channel(2, enable=lst_ch_active[1])
     if lst_ch_active[1]:
-        scope_con.set_probe_ratio(2,1)
-        scope_con.set_channel_scale(2,"{:e}".format(lst_ch_scale[1]) +'V')
+        scope_con.set_probe_ratio(2, 1)
+        scope_con.set_channel_scale(2, "{:e}".format(lst_ch_scale[1]) + 'V')
         if lst_ac_coupled[1]:
             scope_con.write(':CHANnel2:COUPling AC')
         else:
             scope_con.write(':CHANnel2:COUPling DC')
 
     # Setup channel 3
-    scope_con.display_channel(3,enable=lst_ch_active[2])
+    scope_con.display_channel(3, enable=lst_ch_active[2])
     if lst_ch_active[2]:
-        scope_con.set_probe_ratio(3,1)
-        scope_con.set_channel_scale(3,"{:e}".format(lst_ch_scale[2]) +'V')
+        scope_con.set_probe_ratio(3, 1)
+        scope_con.set_channel_scale(3, "{:e}".format(lst_ch_scale[2]) + 'V')
         if lst_ac_coupled[2]:
             scope_con.write(':CHANnel3:COUPling AC')
         else:
             scope_con.write(':CHANnel3:COUPling DC')
 
-
     # Setup channel 4
-    scope_con.display_channel(4,enable=lst_ch_active[3])
+    scope_con.display_channel(4, enable=lst_ch_active[3])
     if lst_ch_active[3]:
-        scope_con.set_probe_ratio(4,1)
-        scope_con.set_channel_scale(4,"{:e}".format(lst_ch_scale[3]) +'V')
+        scope_con.set_probe_ratio(4, 1)
+        scope_con.set_channel_scale(4, "{:e}".format(lst_ch_scale[3]) + 'V')
         if lst_ac_coupled[3]:
             scope_con.write(':CHANnel4:COUPling AC')
         else:
             scope_con.write(':CHANnel4:COUPling DC')
-    
+
     # Do we need a trigger?
     if b_single:
-        
+
         # Set the scope to capture after trigger
         b_set_trigger(scope_con, d_trigger_level)
-        
+
     else:
-        
+
         # No trigger, useful for seeing the scope data when you aren't sure
         # what the signal looks like
         scope_con.write(":TRIGger:SWEep AUTO")
@@ -112,12 +112,13 @@ def b_setup_scope(scope_con, lst_ch_active=[True, False, False, False],
 
     return [scope_con.get_channel_scale(1), d_timebase_scale_actual]
 
-# This one is a little tricky because it can take time to acquire the signal so there 
+
+# This one is a little tricky because it can take time to acquire the signal so there
 # are pause statements to allow data to accumulate at the scope. If the acquisition 
 # terminates before the sampling is complete there will be NaN's in the list. In this 
-# case the NaN's are converted to zeros to allow processing to continue. It can be helpful
+# case the NaN's are converted to zero to allow processing to continue. It can be helpful
 # to see a partial waveform to troubleshoot timing at the scope.
-def d_get_data(scope_con, lst_ch_active = [True, False, False, False], timebase_scale=5e-2):
+def d_get_data(scope_con, lst_ch_active=np.array([True, False, False, False]), timebase_scale=5e-2):
     """Get data from the scope
     
     Keyword arguments:
@@ -125,9 +126,9 @@ def d_get_data(scope_con, lst_ch_active = [True, False, False, False], timebase_
         the value returned from the 'DS1054Z('192.168.1.206')' call.
     lst_ch_active -- List of booleans describing active channels
         (default: [True, False, False, False] which sets only channel 1
-        active). This should exactly match the values used to setup the
+        active). This should exactly match the values used to set up the
         scope.
-    timebase_scale -- Scope time scale (default: 5e-2)
+    timebase_scale -- Scope timescale (default: 5e-2) per division
     
     Return values:
     lst_d_ch -- list of numpy array of values from the scope:
@@ -140,10 +141,11 @@ def d_get_data(scope_con, lst_ch_active = [True, False, False, False], timebase_
     d_ch2 = []
     d_ch3 = []
     d_ch4 = []
-    
-    # Calculate the delay time
-    d_time_delay = timebase_scale*32 + 1.
-    
+
+    # Calculate the delay time. This allows the scope time to acquire
+    # the waveforms
+    d_time_delay = timebase_scale * 32 + 1.
+
     # Acquire the data
     time.sleep(d_time_delay)
     if lst_ch_active[0]:
@@ -154,20 +156,20 @@ def d_get_data(scope_con, lst_ch_active = [True, False, False, False], timebase_
         d_ch3 = scope_con.get_waveform_samples(3, mode='NORM')
     if lst_ch_active[3]:
         d_ch4 = scope_con.get_waveform_samples(4, mode='NORM')
-        
+
     time.sleep(d_time_delay)
 
     # Back to run mode 
     scope_con.run()
-    
+
     # Convert the list to a numpy array and replace NaN's with zeros
-    np_d_ch1 = np.array(d_ch1) 
+    np_d_ch1 = np.array(d_ch1)
     np_d_ch1 = np.nan_to_num(np_d_ch1)
-    np_d_ch2 = np.array(d_ch2) 
+    np_d_ch2 = np.array(d_ch2)
     np_d_ch2 = np.nan_to_num(np_d_ch2)
-    np_d_ch3 = np.array(d_ch3) 
+    np_d_ch3 = np.array(d_ch3)
     np_d_ch3 = np.nan_to_num(np_d_ch3)
-    np_d_ch4 = np.array(d_ch4) 
+    np_d_ch4 = np.array(d_ch4)
     np_d_ch4 = np.nan_to_num(np_d_ch4)
-    
+
     return [np_d_ch1, np_d_ch2, np_d_ch3, np_d_ch4]

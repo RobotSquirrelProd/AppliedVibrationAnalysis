@@ -460,7 +460,20 @@ class TestClSig(TestCase):
                                               d_fs=self.d_fs_test_plt_eventtimes, str_point_name='CX2')
         class_test_plt_eventtimes.str_plot_desc = 'plt_eventtimes test (second channel)'
         class_test_plt_eventtimes.ylim_tb(ylim_tb_in=[-16.0, 16.0], idx=0)
-        class_test_plt_eventtimes.plt_eventtimes(idx_eventtimes=0, idx=1)
+        class_test_plt_eventtimes.plt_eventtimes(idx_eventtimes=0, idx_ch=1)
+
+        # Check the plot for a single channel, but with threshold set too high
+        class_test_plt_eventtimes_err = appvib.ClSigFeatures(self.np_test_plt_eventtimes, self.d_fs_test_plt_eventtimes)
+        print('Signal frequency, hertz: ' + '%0.6f' % self.d_freq_law_test_plt_eventtimes)
+        class_test_plt_eventtimes_err.np_d_est_triggers(np_d_sig=self.np_test_plt_eventtimes,
+                                                        i_direction=self.i_direction_test_plt_eventtimes_rising,
+                                                        d_threshold=self.d_threshold_test_plt_eventtimes,
+                                                        d_hysteresis=self.d_hysteresis_test_plt_eventtimes+20.0,
+                                                        b_verbose=False)
+        class_test_plt_eventtimes_err.str_plot_desc = 'plt_eventtimes test (single) on Error'
+        class_test_plt_eventtimes_err.str_point_name_set(str_point_name='CY1', idx=0)
+        with self.assertRaises(Exception):
+            class_test_plt_eventtimes_err.plt_eventtimes()
 
     def test_plt_rpm(self):
         # Signal feature class test, rising signal with threshold of 0.5

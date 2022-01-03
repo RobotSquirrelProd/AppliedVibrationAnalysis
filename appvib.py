@@ -640,8 +640,7 @@ class ClassPlotSupport:
             idx_marker = abs(dt_time_series - dt_timestamp_mark).argmin()
             d_x = np_cl_spark[idx_spk].np_d_time[idx_marker]
             d_y = 0.9 * np_cl_spark[idx_spk].np_d_sig[idx_marker]
-            axs_spk1.plot(d_x, d_y,
-                          '.', color=ClassPlotSupport.get_trac_color(0), ms=3)
+            axs_spk1.plot(d_x, d_y, '.', color=ClassPlotSupport.get_trac_color(0), ms=3)
 
             # Description
             ClassPlotSupport.set_plot_spark_desc(i_rows, i_cols, i_row_plot,
@@ -1171,15 +1170,18 @@ class ClSigReal(ClSig, ClSignalFeaturesEst):
         Parameters
         ----------
         ylim_tb : list
-            List of [min max] values for y-axis
+            [min max] values for y-axis
 
         """
         # Only use limits if they are valid
         if len(ylim_tb) == 2:
             self.__ylim_tb = ylim_tb
         else:
+            y_limit_minimum = np.min(self.__np_d_sig)
+            y_limit_maximum = np.max(self.__np_d_sig)
+            y_delta = abs(y_limit_minimum - y_limit_maximum) * 0.05
             self.__ylim_tb = np.array(
-                [np.min(self.__np_d_sig), np.max(self.__np_d_sig)])
+                [(y_limit_minimum - y_delta), (y_limit_maximum + y_delta)])
 
     @property
     def i_y_divisions_tb(self):
@@ -1894,6 +1896,12 @@ class ClSigReal(ClSig, ClSignalFeaturesEst):
             np_d_mean = ClSignalFeaturesEst.np_d_est_mean(self.np_d_sig)
             d_mean_avg = np.mean(np_d_mean)
             lst_fmt = ClassPlotSupport.get_plot_round(d_mean_avg)
+            # Clamps to zero for small values
+            if d_mean_avg < 1e-5:
+                d_mean_avg = 0.0
+                lst_fmt[1] = '%0.3f'
+
+            # Create the description
             str_point_spark = ClassPlotSupport.get_plot_sparkline_desc(lst_fmt[1],
                                                                        d_mean_avg,
                                                                        self.str_eu,
@@ -3225,7 +3233,7 @@ class ClSigFeatures(ClassPlotSupport):
         return [d_xlim_start, d_xlim_end]
 
     # Plotting method for the eventtimes
-    def plt_eventtimes(self, idx_eventtimes=0, idx=0):
+    def plt_eventtimes(self, idx_eventtimes=0, idx_ch=0, b_verbose=False):
         """
         Plot a signal and overlay event data in timebase format.
 
@@ -3233,8 +3241,11 @@ class ClSigFeatures(ClassPlotSupport):
         ---------
         idx_eventtimes : integer
             Index of signal eventtimes. Defaults to 0 (first signal)
-        idx : integer
+        idx_ch : integer
             Index of signal to be plotted. Defaults to 0 (first signal)
+        b_verbose : boolean
+            Print the intermediate steps (default: False). Useful for stepping through the
+            method to troubleshoot or understand it better.
 
         Returns
         -------
@@ -3245,32 +3256,63 @@ class ClSigFeatures(ClassPlotSupport):
         # The x-axis needs to be bounded by either x-limits or eventtimes, but should
         # not display data outside the events
         np_d_eventtimes = self.np_d_eventtimes(idx=idx_eventtimes)
-        [d_xlim_start, d_xlim_end] = self.__get_x_limit_events(idx_eventtimes=idx_eventtimes, idx=idx)
+        assert (len(np_d_eventtimes) > 1), "No events found: are threshold and hysteresis set correctly?"
+        [d_xlim_start, d_xlim_end] = self.__get_x_limit_events(idx_eventtimes=idx_eventtimes, idx=idx_ch)
 
-        # Put up the the plot time
+        # Plot configuration
         plt.rcParams["font.family"] = ClassPlotSupport.get_font_plots()
+        i_rows = ClassPlotSupport.get_plot_setup_rows()
+        i_cols = ClassPlotSupport.get_plot_setup_cols()
+        if b_verbose:
+            print('plt_eventtimes')
+            print('i_rows: ' + '%0.0f' % i_rows)
+            print('i_cols: ' + '%0.0f' % i_cols)
+
+        # Open the figure
         plt.figure()
-        plt.plot(self.__lst_cl_sgs[idx].d_time, self.__lst_cl_sgs[idx].np_d_sig,
-                 color=ClassPlotSupport.get_trac_color(0))
-        plt.plot(np_d_eventtimes,
-                 self.__lst_cl_sgs[idx].np_d_sig[self.__lst_cl_sgs[idx_eventtimes].idx_events], "ok")
-        plt.grid(True)
 
-        plt.xlabel("Time, " + self.__lst_cl_sgs[idx].str_eu_x)
-        # plt.xlim(self.__lst_cl_sgs[idx].xlim_tb)
-        plt.xlim([d_xlim_start, d_xlim_end])
-        plt.xticks(np.linspace(d_xlim_start,
-                               d_xlim_end,
-                               self.__lst_cl_sgs[idx].i_x_divisions_tb))
-        plt.gca().xaxis.set_major_formatter(FormatStrFormatter('%.2f'))
-        plt.ylabel("Amplitude, " + self.__lst_cl_sgs[idx].str_eu)
-        plt.ylim(self.__lst_cl_sgs[idx].ylim_tb)
-        plt.yticks(np.linspace(self.__lst_cl_sgs[idx].ylim_tb[0],
-                               self.__lst_cl_sgs[idx].ylim_tb[1],
-                               self.__lst_cl_sgs[idx].i_y_divisions_tb))
+        # Main signal pane, beginning with the signal
+        axs_sig = plt.subplot2grid((i_rows, i_cols), (ClassPlotSupport.get_plot_setup_row_sig(), 0),
+                                   colspan=i_cols, rowspan=ClassPlotSupport.get_plot_setup_row_sig_span())
+        axs_sig.plot(self.__lst_cl_sgs[idx_ch].d_time_plot, self.get_np_d_sig(idx=idx_ch),
+                     color=ClassPlotSupport.get_trac_color(0), linewidth=3.5)
+        axs_sig.plot(np_d_eventtimes,
+                     self.__lst_cl_sgs[idx_ch].np_d_sig[self.__lst_cl_sgs[idx_eventtimes].idx_events], "ok")
 
-        plt.legend(['as-acquired', 'eventtimes'])
-        plt.title(self.__str_plt_support_title_meta(str_plot_type='Triggered Timebase', idx=0))
+        # Grid, labels, ticks, and other plot features
+        axs_sig.set_xlim(self.__lst_cl_sgs[idx_ch].xlim_tb)
+        axs_sig.set_xticks(np.linspace(self.__lst_cl_sgs[idx_ch].xlim_tb[0],
+                                       self.__lst_cl_sgs[idx_ch].xlim_tb[1],
+                                       self.__lst_cl_sgs[idx_ch].i_x_divisions_tb))
+        axs_sig.xaxis.set_major_formatter(FormatStrFormatter('%.2f'))
+        axs_sig.set_ylim(self.__lst_cl_sgs[idx_ch].ylim_tb)
+        axs_sig.set_yticks(np.linspace(self.__lst_cl_sgs[idx_ch].ylim_tb[0],
+                                       self.__lst_cl_sgs[idx_ch].ylim_tb[1],
+                                       self.__lst_cl_sgs[idx_ch].i_y_divisions_tb))
+        ClassPlotSupport.set_plot_setup_sig_axis(axs_sig, self.__lst_cl_sgs[idx_ch].d_fs,
+                                                 self.__lst_cl_sgs[idx_ch].xlim_tb,
+                                                 self.__lst_cl_sgs[idx_ch].ylim_tb,
+                                                 self.__lst_cl_sgs[idx_ch].str_eu,
+                                                 "Amplitude, " + self.__lst_cl_sgs[idx_ch].str_eu,
+                                                 "Triggered Timebase", "Asynchronous")
+
+        # After the plots and signal have been plotted (forcing re-calculation of extracted
+        # features) create the header, starting with the description and machine type
+        ClassPlotSupport.set_plot_header_desc(i_rows, i_cols, 0, self.__str_plot_desc)
+        ClassPlotSupport.set_plot_header_machine(i_rows, i_cols, 1,
+                                                 self.str_machine_name(idx=idx_ch))
+        lst_points = [self.str_point_name(idx=idx_ch)]
+        lst_dates = [self.dt_timestamp(idx_ch)]
+
+        # Add the point and date information to the header
+        ClassPlotSupport.set_plot_header_point(i_rows, i_cols, 2, lst_points)
+        ClassPlotSupport.set_plot_header_date(i_rows, i_cols, 3, lst_dates)
+
+        # Header pane, sparklines
+        d_offset = self.__lst_cl_sgs[idx_ch].d_time_plot[-1] - self.__lst_cl_sgs[idx_ch].d_time_plot[0]
+        ClassPlotSupport.set_plot_sparkline(i_rows, i_cols, 0,
+                                            self.__lst_cl_sgs[idx_ch].np_sparklines,
+                                            self.dt_timestamp_mark(idx=idx_ch))
 
         # Save the handle prior to showing
         plot_handle = plt.gcf()
