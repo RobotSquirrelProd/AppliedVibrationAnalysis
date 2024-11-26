@@ -111,6 +111,37 @@ class TestClSig(TestCase):
         self.i_direction_test_001_trigger_slope = 0
         self.d_threshold_test_001 = 0.125
 
+        # This one caused the plotting to crash
+        self.str_filename_002 = 'Free Free, no damping'
+        self.d_fs_data_002 = 1.0
+        self.np_d_test_data_002 = np.array([2.00000000, 2.0078732 , 2.01574152, 2.02360008, 2.03144402,
+            2.03926845, 2.04706854, 2.05483945, 2.06257636, 2.07027448,
+            2.07792903, 2.08553526, 2.09308846, 2.10058396, 2.10801709,
+            2.11538326, 2.12267789, 2.12989647, 2.13703451, 2.1440876 ,
+            2.15105135, 2.15792146, 2.16469367, 2.17136377, 2.17792762,
+            2.18438117, 2.19072041, 2.19694141, 2.20304031, 2.20901333,
+            2.21485677, 2.220567  , 2.22614049, 2.23157378, 2.2368635 ,
+            2.24200638, 2.24699921, 2.25183892, 2.25652249, 2.26104702,
+            2.26540972, 2.26960787, 2.27363887, 2.27750022, 2.28118953,
+            2.28470451, 2.28804299, 2.29120289, 2.29418224, 2.29697922,
+            2.29959208, 2.3020192 , 2.30425908, 2.30631032, 2.30817166,
+            2.30984195, 2.31132014, 2.31260533, 2.31369671, 2.31459361,
+            2.31529546, 2.31580185, 2.31611245, 2.31622706, 2.31614563,
+            2.3158682 , 2.31539493, 2.31472614, 2.31386222, 2.31280371,
+            2.31155128, 2.3101057 , 2.30846786, 2.30663878, 2.30461959,
+            2.30241155, 2.30001602, 2.29743449, 2.29466856, 2.29171995,
+            2.28859048, 2.28528209, 2.28179683, 2.27813687, 2.27430448,
+            2.27030202, 2.26613199, 2.26179696, 2.25729962, 2.25264277,
+            2.24782928, 2.24286215, 2.23774445, 2.23247936, 2.22707014,
+            2.22152014, 2.21583281, 2.21001166, 2.20406032, 2.19798246,
+            2.19178187, 2.18546237, 2.17902789, 2.17248242, 2.16583002,
+            2.1590748 , 2.15222097, 2.14527276, 2.13823449, 2.13111051,
+            2.12390526, 2.11662318, 2.1092688 , 2.10184668, 2.09436142,
+            2.08681766, 2.07922007, 2.07157336, 2.06388229, 2.05615161,
+            2.04838612, 2.04059062, 2.03276997, 2.024929  , 2.01707257,
+            2.00920556, 2.00133284, 1.99345929])
+
+
         # Test values for finding index to the closest timestamp
         self.np_d_time_close_time = ([1.07754901e-01, 2.25514589e-01, 3.42310042e-01, 4.60151792e-01,
                                       5.77884125e-01, 6.94631708e-01, 8.12446104e-01, 6.04685230e+01,
@@ -338,6 +369,7 @@ class TestClSig(TestCase):
         self.assertEqual(self.str_point_name_ch2, class_test_sig_features.str_point_name(idx=idx_ch2))
 
     def test_plt_sigs(self):
+        
         # Signal feature class check of plotting on instantiation
         class_test_sig_features = appvib.ClSigFeatures(self.np_test, self.d_fs)
         class_test_sig_features.str_plot_desc = 'test_plt_sigs | CLSigFeatures | Defaults'
@@ -348,6 +380,12 @@ class TestClSig(TestCase):
         idx_new = class_test_sig_features.idx_add_sig(self.np_test_ch2, self.d_fs, str_point_name='CH2')
         class_test_sig_features.str_plot_desc = 'test_plt_sigs | CLSigFeatures | 2nd Point'
         self.assertEqual(idx_new, 1, msg='Failed to return correct index')
+        class_test_sig_features.plt_sigs()
+
+        # This use case caused the code to crash
+        class_test_sig_features = appvib.ClSigFeatures(self.np_d_test_data_002, self.d_fs_data_002 )
+        class_test_sig_features.str_plot_desc = 'test_plt_sigs | CLSigFeatures | Harmonic motion'
+        class_test_sig_features.str_machine_name_set('Harness')
         class_test_sig_features.plt_sigs()
 
         # Signal feature class, second signal manual y-limits, new data
