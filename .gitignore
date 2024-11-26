@@ -4,3 +4,10 @@ __pycache__/
 *.tmp
 *.pdf
 ~$ckageArchitecture.docx
+dependency_links.txt
+not-zip-safe
+PKG-INFO
+requires.txt
+SOURCES.TXT
+top_level.txt
+
