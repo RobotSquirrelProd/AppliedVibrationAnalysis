@@ -11,3 +11,5 @@ requires.txt
 SOURCES.TXT
 top_level.txt
 
+SignalFeatureTest_001.csv
+SignalFeatureTestCh2_001.csv
