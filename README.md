@@ -2,7 +2,9 @@
 
 ## Introduction
 
-Computation tools for looking at real-world signals
+Computation tools for looking at real-world signals for [applied vibration analysis](https://robotsquirrelproductions.com/applied-vibration-analysis/).
+
+![alt text](https://robotsquirrelproductions.com/wp-content/uploads/2024/07/VibAnalysisProcess_2k.png)
 
 As of this writing, the package is a work-in-progress and heavily in development. Structure and syntax will likely change prior to a formal release.
 
