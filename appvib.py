@@ -838,12 +838,17 @@ class ClSignalFeaturesEst:
             i_break = i_ns + 10
 
         # Process the signal
-        if len(np_d_sig) < i_break:
+        if i_ns < i_break:
 
             # One value for the signal, replicated for the length of the signal
             np_d_avg = np_d_avg * np.mean(np_d_sig)
 
         else:
+
+            # Check that the rolling average index does not over-run
+            # the vector
+            if i_kernel > i_ns:
+                i_kernel = ( i_ns - 1)
 
             # Rolling average
             np_d_avg_kernel = np.cumsum(np_d_sig, dtype=float)
