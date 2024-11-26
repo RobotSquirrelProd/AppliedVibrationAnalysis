@@ -2,7 +2,7 @@
 
 ## Introduction
 
-Computation tools for looking at real-world signals for [applied vibration analysis](https://robotsquirrelproductions.com/applied-vibration-analysis/).
+Computation tools for looking at real-world signals for [applied vibration analysis](https://robotsquirrelproductions.com/applied-vibration-analysis/):
 
 ![alt text](https://robotsquirrelproductions.com/wp-content/uploads/2024/07/VibAnalysisProcess_2k.png)
 
