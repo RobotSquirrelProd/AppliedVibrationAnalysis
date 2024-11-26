@@ -766,7 +766,15 @@ class ClSignalFeaturesEst:
         # for longer signals, a rolling RMS is needed
         np_d_rms = np.ones_like(np_d_sig)
         i_ns = len(np_d_sig)
-        if len(np_d_sig) < i_break:
+
+        # When the kernel length is greater than i_break and the signal length, i_ns, 
+        # is greater than i_kernel teh indexes exceed the vector length resulting
+        # in NaNs. This statement truncates the kerenel length to avoid that problem.
+        if i_kernel > i_ns:
+            i_kernel = i_ns
+
+        # Enough samples for more than one average?
+        if len(np_d_sig) <= i_break:
 
             # One value for the signal, replicated for the length of the signal
             d_rms = np.sqrt(np_d_sig.dot(np_d_sig) / np_d_sig.size)
