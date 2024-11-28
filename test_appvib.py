@@ -284,7 +284,7 @@ class TestClSig(TestCase):
         np_d_test_est_mean = appvib.ClSignalFeaturesEst.np_d_est_mean(np_d_mean_sig)
         class_test_est_mean = appvib.ClSigFeatures(np_d_mean_sig, d_fs=self.d_fs_test_trigger_ph)
         class_test_est_mean.d_threshold_update(d_mean, idx=0)
-        class_test_est_mean.ylim_tb([-2.7, 2.7], idx=0)
+        class_test_est_mean.ylim_tb([-2.8, 2.8], idx=0)
         class_test_est_mean.dt_timestamp_mark_update(class_test_est_mean.dt_timestamp(idx=0) +
                                                      timedelta(seconds=0.5), idx=0)
         class_test_est_mean.plt_sigs()

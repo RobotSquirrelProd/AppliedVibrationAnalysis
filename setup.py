@@ -1,7 +1,7 @@
 import setuptools
 
 setuptools.setup(name='appliedvibration',
-                 version = '0.11',
+                 version = '0.12',
                  description='PoC applied vibration analysis tools',
                  url = '#',
                  author='RobotSquirrel',

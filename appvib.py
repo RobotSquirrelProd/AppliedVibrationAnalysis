@@ -113,14 +113,19 @@ class ClassPlotSupport:
         # Set the format string
         d_exp = np.log10(abs(d_num))
         i_round = int(round(d_exp, 0)) - 1
-
+        d_round = d_num
+        
         # I'm tuning this a little bit because I want to see
         # decimal places when numbers are less than 10
         if abs(d_num) > 0.1 and abs(d_num) <=10:
             i_round = -1
+            d_round = 0.1 * round(d_round/0.1)
+        if abs(d_num) > 0.1 and abs(d_num) <=1:
+            i_round = -2
+            d_round = 0.05 * round(d_round/0.05)
 
         # Round the value
-        d_round = round(d_num, -i_round)
+        d_round = round(d_round, -i_round)
 
         # Set up the format string
         if i_round <= 0:
@@ -268,7 +273,7 @@ class ClassPlotSupport:
         ax.text(1, d_footer_vert, str_xaxis_description, horizontalalignment='right', verticalalignment='top',
                 fontweight='bold', transform=ax.transAxes)
 
-        # y-axis grid and labels.
+        # Determine the spacing from the 0-value.
         d_mid_span = (max(y_limit_sig) - min(y_limit_sig)) / 2.0
         d_spacing = 1.1 * d_mid_span
 
@@ -277,7 +282,12 @@ class ClassPlotSupport:
         d_spacing_rounded = lst_round[0]
         str_format = lst_round[1]
         ax.yaxis.set_major_locator(MultipleLocator(d_spacing_rounded))
-        ax.yaxis.set_minor_locator(AutoMinorLocator(y_yaxis_minor))
+        d_spacing_rounded_y_minor = d_spacing_rounded / float(y_yaxis_minor)
+        lst_format_yaxis_division = ClassPlotSupport.get_plot_round(d_spacing_rounded_y_minor)
+        d_spacing_rounded_y_minor_rounded = lst_format_yaxis_division[0]
+        str_format_minor = lst_format_yaxis_division[1]
+        # this line spaces the minor gridlines at round numbers
+        ax.yaxis.set_minor_locator(MultipleLocator(d_spacing_rounded_y_minor_rounded))
 
         # Remove vertical axis tick marks
         for tick in ax.yaxis.get_major_ticks():
@@ -291,12 +301,9 @@ class ClassPlotSupport:
         # Spacing is not quite right with ticks removed
         ax.tick_params(axis='y', pad=-2)
 
-        # Y-axis label
-        d_spacing_rounded_y_minor = d_spacing_rounded / float(y_yaxis_minor)
-        lst_format_yaxis_division = ClassPlotSupport.get_plot_round(d_spacing_rounded_y_minor)
-        d_spacing_rounded_y_minor = lst_format_yaxis_division[0]
-        str_format_minor = lst_format_yaxis_division[1]
-        str_yaxis_description = ('Vertical: ' + str_format_minor % d_spacing_rounded_y_minor +
+        # Y-axis label. Since we spaced the minor gridlines at the rounded values,
+        # the label must also show the rounded value
+        str_yaxis_description = ('Vertical: ' + str_format_minor % d_spacing_rounded_y_minor_rounded +
                                  ' ' + str_eu + '/division')
         ax.text(0, d_footer_vert, str_yaxis_description, horizontalalignment='center', verticalalignment='top',
                 fontweight='bold', transform=ax.transAxes)
