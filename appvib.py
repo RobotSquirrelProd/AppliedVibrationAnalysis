@@ -110,9 +110,16 @@ class ClassPlotSupport:
             string : format string
         """
 
-        # Perform the rounding
+        # Set the format string
         d_exp = np.log10(abs(d_num))
         i_round = int(round(d_exp, 0)) - 1
+
+        # I'm tuning this a little bit because I want to see
+        # decimal places when numbers are less than 10
+        if abs(d_num) > 0.1 and abs(d_num) <=10:
+            i_round = -1
+
+        # Round the value
         d_round = round(d_num, -i_round)
 
         # Set up the format string
@@ -195,6 +202,7 @@ class ClassPlotSupport:
 
         # grid features
         i_xaxis_minor = 5
+        y_yaxis_minor = 5
         d_footer_vert = -0.1
         d_header_vert = 1.09
 
@@ -264,12 +272,12 @@ class ClassPlotSupport:
         d_mid_span = (max(y_limit_sig) - min(y_limit_sig)) / 2.0
         d_spacing = 1.1 * d_mid_span
 
-        # Set up the spacing and number format for the major axis
+        # Set up the y-axis spacing and number format for the major axis
         lst_round = ClassPlotSupport.get_plot_round(d_spacing)
         d_spacing_rounded = lst_round[0]
         str_format = lst_round[1]
         ax.yaxis.set_major_locator(MultipleLocator(d_spacing_rounded))
-        ax.yaxis.set_minor_locator(AutoMinorLocator(i_xaxis_minor))
+        ax.yaxis.set_minor_locator(AutoMinorLocator(y_yaxis_minor))
 
         # Remove vertical axis tick marks
         for tick in ax.yaxis.get_major_ticks():
@@ -284,8 +292,11 @@ class ClassPlotSupport:
         ax.tick_params(axis='y', pad=-2)
 
         # Y-axis label
-        d_spacing_rounded_minor = d_spacing_rounded / float(i_xaxis_minor)
-        str_yaxis_description = ('Vertical: ' + str_format % d_spacing_rounded_minor +
+        d_spacing_rounded_y_minor = d_spacing_rounded / float(y_yaxis_minor)
+        lst_format_yaxis_division = ClassPlotSupport.get_plot_round(d_spacing_rounded_y_minor)
+        d_spacing_rounded_y_minor = lst_format_yaxis_division[0]
+        str_format_minor = lst_format_yaxis_division[1]
+        str_yaxis_description = ('Vertical: ' + str_format_minor % d_spacing_rounded_y_minor +
                                  ' ' + str_eu + '/division')
         ax.text(0, d_footer_vert, str_yaxis_description, horizontalalignment='center', verticalalignment='top',
                 fontweight='bold', transform=ax.transAxes)

@@ -45,7 +45,7 @@ class TestClSig(TestCase):
         self.d_fs_test_trigger_ph = 2048
         i_ns = (self.d_fs_test_trigger_ph * 1)
         self.d_freq_law_ph = 5.
-        self.d_test_trigger_amp_ph = 1.5
+        self.d_test_trigger_amp_ph = 1.65
         d_time_ext = np.linspace(0, (i_ns - 1), i_ns) / float(self.d_fs_test_trigger_ph)
         self.d_phase_ph_ch1 = np.deg2rad(80)
         self.np_test_trigger_ph = self.d_test_trigger_amp_ph * np.cos(2 * math.pi * self.d_freq_law_ph * d_time_ext -
