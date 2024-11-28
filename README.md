@@ -50,7 +50,7 @@ It takes about 3 steps to get the plot up:
     from datetime import datetime, timedelta, timezone
     from scipy import signal
     import matplotlib
-	from appvib import ClSigFeatures
+    from appvib import ClSigFeatures
 	
 ```	
 	
