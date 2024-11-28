@@ -43,14 +43,14 @@ It takes about 3 steps to get the plot up:
 -   Load the libraries:
 
 ```
-    import matplotlib.pyplot as plt
-    plt.rcParams['figure.dpi'] = 300
-    import numpy as np
-    import math
-    from datetime import datetime, timedelta, timezone
-    from scipy import signal
-    import matplotlib
-    from appvib import ClSigFeatures
+import matplotlib.pyplot as plt
+plt.rcParams['figure.dpi'] = 300
+import numpy as np
+import math
+from datetime import datetime, timedelta, timezone
+from scipy import signal
+import matplotlib
+from appvib import ClSigFeatures
 	
 ```	
 	
@@ -58,20 +58,29 @@ It takes about 3 steps to get the plot up:
 
 
 ```
-    d_fs_even = 2048
-    i_ns = (d_fs_even*2)`
-    d_freq_sig = 10./(float(i_ns)/d_fs_even)
-    print('Signal frequency, hertz: ' + '%0.10f' % d_freq_sig)
-    d_time_ext = np.linspace(0,(i_ns-1),i_ns)/float(d_fs_even)
-    np_d_test_even = np.sin(2 * math.pi * d_freq_sig * d_time_ext )
+d_fs_even = 2048
+i_ns = (d_fs_even*2)`
+d_freq_sig = 10./(float(i_ns)/d_fs_even)
+print('Signal frequency, hertz: ' + '%0.10f' % d_freq_sig)
+d_time_ext = np.linspace(0,(i_ns-1),i_ns)/float(d_fs_even)
+np_d_test_even = np.sin(2 * math.pi * d_freq_sig * d_time_ext )
 ```
 	
--   Create the plot:
+-   Create the plot starting with defining the data features:
 
 ```
-    plt.rcParams['figure.figsize'] = [8, 4.5]
-    lst_sig_even = ClSigEven.plt_sigs()
-    lst_sig_even.savefig('HelloWorld_Sinusoid.pdf')
+ClSigEven = ClSigFeatures(np_d_test_even, d_fs_even,
+    dt_timestamp=datetime.fromisoformat('2020-01-01T00:00:00-00:00'))
+ClSigEven.str_plot_desc = "Sinusoid"
+ClSigEven.str_machine_name_set("Simulated Data", idx=0)
+ClSigEven.str_eu_set("g's",idx=0)
+
+```
+
+```
+plt.rcParams['figure.figsize'] = [8, 4.5]
+lst_sig_even = ClSigEven.plt_sigs()
+lst_sig_even.savefig('HelloWorld_Sinusoid.pdf')
 ```
 	
 The code should produce a plot like this:
