@@ -49,30 +49,30 @@ It takes about 3 steps to get the plot up:
     import math
     from datetime import datetime, timedelta, timezone
     from scipy import signal
-    import matplotlib`
+    import matplotlib
 	from appvib import ClSigFeatures
+	
 ```	
 	
 -   Synthesize the signal:
 
-    `d_fs_even = 2048`
-	
-    `i_ns = (d_fs_even*2)`
-	
-    `d_freq_sig = 10./(float(i_ns)/d_fs_even)`
-	
-    `print('Signal frequency, hertz: ' + '%0.10f' % d_freq_sig)`
-	
-    `d_time_ext = np.linspace(0,(i_ns-1),i_ns)/float(d_fs_even)`
-	
-	
-    `np_d_test_even = np.sin(2 * math.pi * d_freq_sig * d_time_ext )`
+
+```
+    d_fs_even = 2048
+    i_ns = (d_fs_even*2)`
+    d_freq_sig = 10./(float(i_ns)/d_fs_even)
+    print('Signal frequency, hertz: ' + '%0.10f' % d_freq_sig)
+    d_time_ext = np.linspace(0,(i_ns-1),i_ns)/float(d_fs_even)
+    np_d_test_even = np.sin(2 * math.pi * d_freq_sig * d_time_ext )
+```
 	
 -   Create the plot:
 
-    `plt.rcParams['figure.figsize'] = [8, 4.5]`
-    `lst_sig_even = ClSigEven.plt_sigs()`
-    `lst_sig_even.savefig('HelloWorld_Sinusoid.pdf')`
+```
+    plt.rcParams['figure.figsize'] = [8, 4.5]
+    lst_sig_even = ClSigEven.plt_sigs()
+    lst_sig_even.savefig('HelloWorld_Sinusoid.pdf')
+```
 	
 The code should produce a plot like this:
 
