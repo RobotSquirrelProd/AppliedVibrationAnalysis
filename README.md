@@ -38,7 +38,7 @@ This section has some examples to get you startedd.
 
 A timebase plot shows an amplitude versus time waveform in a rectangular grid for one data series. This plot format can be thought of as a high-resolution trend with 1000s of points over a few hundred milliseconds. 
 
-It takes about 3 steps to get the plot up:
+The repo includes a [hello world](https://github.com/RobotSquirrelProd/AppliedVibrationAnalysis/blob/main/AppliedVibrationAnalysis%20HelloWorld.ipynb) with more examples. But to get started follow these 3 steps to get the plot up:
 
 -   Load the libraries:
 
