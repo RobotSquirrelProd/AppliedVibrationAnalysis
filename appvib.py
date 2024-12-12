@@ -281,13 +281,18 @@ class ClassPlotSupport:
         lst_round = ClassPlotSupport.get_plot_round(d_spacing)
         d_spacing_rounded = lst_round[0]
         str_format = lst_round[1]
-        ax.yaxis.set_major_locator(MultipleLocator(d_spacing_rounded))
+
+        # Use the major spacing to define the minor grids
         d_spacing_rounded_y_minor = d_spacing_rounded / float(y_yaxis_minor)
         lst_format_yaxis_division = ClassPlotSupport.get_plot_round(d_spacing_rounded_y_minor)
         d_spacing_rounded_y_minor_rounded = lst_format_yaxis_division[0]
         str_format_minor = lst_format_yaxis_division[1]
         # this line spaces the minor gridlines at round numbers
         ax.yaxis.set_minor_locator(MultipleLocator(d_spacing_rounded_y_minor_rounded))
+
+        # Finally, set the major grid to be a multiple of the minor
+        # grid marks
+        ax.yaxis.set_major_locator(MultipleLocator(5 * d_spacing_rounded_y_minor_rounded))
 
         # Remove vertical axis tick marks
         for tick in ax.yaxis.get_major_ticks():
